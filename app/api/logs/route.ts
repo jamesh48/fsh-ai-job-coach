@@ -1,6 +1,6 @@
-import { prisma } from '@/lib/prisma'
-import { Prisma } from '@/lib/generated/prisma/client'
 import { NextResponse } from 'next/server'
+import { Prisma } from '@/lib/generated/prisma/client'
+import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   const logs = await prisma.dailyLog.findMany({
@@ -17,7 +17,10 @@ export async function POST(request: Request) {
     })
     return NextResponse.json(log, { status: 201 })
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === 'P2002'
+    ) {
       return NextResponse.json(
         { error: 'An entry already exists for this date.' },
         { status: 409 },
