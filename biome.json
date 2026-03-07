@@ -14,10 +14,20 @@
     "indentStyle": "space",
     "indentWidth": 2
   },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "single",
+      "semicolons": "asNeeded"
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "correctness": {
+        "useExhaustiveDependencies": "info"
+      }
     },
     "domains": {
       "next": "recommended",
@@ -28,6 +38,7 @@
     "actions": {
       "source": {
         "organizeImports": "on"
+
       }
     }
   }
