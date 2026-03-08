@@ -1,5 +1,6 @@
 'use client'
 
+import dayjs from 'dayjs'
 import { useCallback, useState } from 'react'
 
 function stripMarkdown(text: string): string {
@@ -11,9 +12,8 @@ function stripMarkdown(text: string): string {
     .trim()
 }
 
-function formatDateUS(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-')
-  return `${month}-${day}-${year}`
+function localDateUS(): string {
+  return dayjs().format('MM-DD-YYYY')
 }
 
 function buildEscPosData(recommendation: string): Uint8Array {
@@ -30,7 +30,7 @@ function buildEscPosData(recommendation: string): Uint8Array {
     bytes([ESC, 0x45, 0x01]),                    // bold on
     encode('JOB SEARCH COACH\n'),
     bytes([ESC, 0x45, 0x00]),                    // bold off
-    encode(`${formatDateUS(new Date().toISOString().slice(0, 10))}\n`),
+    encode(`${localDateUS()}\n`),
     encode('--------------------------------\n'),
     encode('\n'),
     bytes([ESC, 0x61, 0x00]),                    // left align
@@ -89,7 +89,14 @@ export function useWebUsbPrinter() {
 
       if (endpointNumber === -1) throw new Error('No bulk OUT endpoint found on this device.')
 
-      await device.claimInterface(interfaceNumber)
+      try {
+        await device.claimInterface(interfaceNumber)
+      } catch (e) {
+        throw new Error(
+          'Could not claim the printer interface. If this printer is installed as a system printer, ' +
+          'remove it from your OS print settings and try again — WebUSB requires exclusive access to the USB interface.',
+        )
+      }
       setPrinter({ device, endpointNumber })
     } catch (e) {
       if (e instanceof Error && e.name !== 'NotFoundError') {

@@ -4,7 +4,8 @@ import type { AiRecommendationResponse } from '@/features/ai/types'
 import { prisma } from '@/lib/prisma'
 
 
-export async function POST(): Promise<NextResponse<AiRecommendationResponse | { error: string }>> {
+export async function POST(request: Request): Promise<NextResponse<AiRecommendationResponse | { error: string }>> {
+  const { date } = await request.json().catch(() => ({}))
   const settings = await prisma.settings.findUnique({ where: { id: 'singleton' } })
   const apiKey = settings?.anthropicApiKey
 
@@ -32,7 +33,7 @@ export async function POST(): Promise<NextResponse<AiRecommendationResponse | { 
       model: 'claude-sonnet-4-6',
       max_tokens: 512,
       system: `You are an expert job search coach. The user will share their job search activity log with one entry per day.
-Today's date is ${new Date().toISOString().slice(0, 10)}.
+Today's date is ${date ?? new Date().toISOString().slice(0, 10)}.
 Review the log and provide one specific, actionable task the user should complete TODAY to maximize their job search success.
 Be direct and concrete — name specific companies, roles, or contacts from their log where possible.
 Keep it to 2-4 sentences. No preamble, just the advice.`,

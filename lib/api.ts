@@ -24,8 +24,8 @@ export const api = createApi({
       query: (id) => ({ url: `/logs/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Log'],
     }),
-    getAiRecommendation: builder.mutation<AiRecommendationResponse, void>({
-      query: () => ({ url: '/ai/recommendation', method: 'POST' }),
+    getAiRecommendation: builder.mutation<AiRecommendationResponse, { date: string }>({
+      query: (body) => ({ url: '/ai/recommendation', method: 'POST', body }),
     }),
     getSettings: builder.query<AppSettings, void>({
       query: () => '/settings',

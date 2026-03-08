@@ -7,6 +7,7 @@ import PrintIcon from '@mui/icons-material/Print'
 import UsbIcon from '@mui/icons-material/Usb'
 import { Alert, Box, Button, Chip, CircularProgress, Divider, IconButton, Paper, Tooltip, Typography } from '@mui/material'
 import ReactMarkdown from 'react-markdown'
+import dayjs from 'dayjs'
 import { useGetAiRecommendationMutation } from '@/lib/api'
 import { useWebUsbPrinter } from '../hooks/useWebUsbPrinter'
 
@@ -116,7 +117,7 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                     <AutoAwesomeIcon sx={{ fontSize: 14 }} />
                   )
                 }
-                onClick={() => getRecommendation()}
+                onClick={() => getRecommendation({ date: dayjs().format('YYYY-MM-DD') })}
                 disabled={isLoading}
                 sx={{
                   borderColor: '#9c6fde',

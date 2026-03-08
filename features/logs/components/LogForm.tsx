@@ -13,6 +13,7 @@ import {
 import { useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import * as yup from 'yup'
+import dayjs from 'dayjs'
 import type { DailyLog, LogFormValues } from '../types'
 
 interface Props {
@@ -65,7 +66,7 @@ export function LogForm({
     reset(
       editing
         ? { date: editing.date, content: editing.content }
-        : { date: new Date().toISOString().slice(0, 10), content: '' },
+        : { date: dayjs().format('YYYY-MM-DD'), content: '' },
     )
   }, [editing, open, reset])
 
