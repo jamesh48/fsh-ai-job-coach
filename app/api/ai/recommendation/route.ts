@@ -3,10 +3,13 @@ import { NextResponse } from 'next/server'
 import type { AiRecommendationResponse } from '@/features/ai/types'
 import { prisma } from '@/lib/prisma'
 
-
-export async function POST(request: Request): Promise<NextResponse<AiRecommendationResponse | { error: string }>> {
+export async function POST(
+  request: Request,
+): Promise<NextResponse<AiRecommendationResponse | { error: string }>> {
   const { date } = await request.json().catch(() => ({}))
-  const settings = await prisma.settings.findUnique({ where: { id: 'singleton' } })
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+  })
   const apiKey = settings?.anthropicApiKey
 
   if (!apiKey) {
@@ -54,13 +57,16 @@ Keep it to 2-4 sentences. No preamble, just the advice.`,
   } catch (e) {
     if (e instanceof Anthropic.AuthenticationError) {
       return NextResponse.json(
-        { error: 'Invalid Anthropic API key. Check your key in Settings or .env.' },
+        { error: 'Invalid Anthropic API key. Check your key in Settings' },
         { status: 401 },
       )
     }
     if (e instanceof Anthropic.RateLimitError) {
       return NextResponse.json(
-        { error: 'Anthropic rate limit reached. Please wait a moment and try again.' },
+        {
+          error:
+            'Anthropic rate limit reached. Please wait a moment and try again.',
+        },
         { status: 429 },
       )
     }

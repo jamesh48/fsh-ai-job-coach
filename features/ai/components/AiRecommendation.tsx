@@ -5,9 +5,19 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import PrintIcon from '@mui/icons-material/Print'
 import UsbIcon from '@mui/icons-material/Usb'
-import { Alert, Box, Button, Chip, CircularProgress, Divider, IconButton, Paper, Tooltip, Typography } from '@mui/material'
-import ReactMarkdown from 'react-markdown'
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Divider,
+  IconButton,
+  Paper,
+  Tooltip,
+  Typography,
+} from '@mui/material'
 import dayjs from 'dayjs'
+import ReactMarkdown from 'react-markdown'
 import { useGetAiRecommendationMutation } from '@/lib/api'
 import { useWebUsbPrinter } from '../hooks/useWebUsbPrinter'
 
@@ -17,7 +27,8 @@ interface Props {
 }
 
 export function AiRecommendation({ collapsed, onToggle }: Props) {
-  const [getRecommendation, { data, isLoading, error }] = useGetAiRecommendationMutation()
+  const [getRecommendation, { data, isLoading, error }] =
+    useGetAiRecommendationMutation()
   const {
     printer,
     connecting,
@@ -30,7 +41,12 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
 
   const errorMessage = (() => {
     if (!error) return null
-    if ('data' in error && error.data && typeof error.data === 'object' && 'error' in error.data)
+    if (
+      'data' in error &&
+      error.data &&
+      typeof error.data === 'object' &&
+      'error' in error.data
+    )
       return (error.data as { error: string }).error
     if ('error' in error && typeof error.error === 'string') return error.error
     return 'Failed to reach the AI service. Please try again.'
@@ -54,7 +70,13 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
       }}
     >
       {/* Header */}
-      <Box sx={{ borderBottom: collapsed ? 'none' : '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+      <Box
+        sx={{
+          borderBottom: collapsed ? 'none' : '1px solid',
+          borderColor: 'divider',
+          flexShrink: 0,
+        }}
+      >
         <Box
           display='flex'
           alignItems='center'
@@ -72,12 +94,12 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
             >
               AI Coach
             </Typography>
-            <Chip label='Preview' size='small' sx={{ ml: 0.5, height: 18, fontSize: 10 }} />
           </Box>
 
           <Box display='flex' alignItems='center' gap={1}>
-            {!collapsed && isSupported && (
-              printer ? (
+            {!collapsed &&
+              isSupported &&
+              (printer ? (
                 <Tooltip title={printing ? 'Printing…' : 'Print via USB'}>
                   <span>
                     <IconButton
@@ -86,7 +108,11 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                       disabled={!data || printing}
                       sx={{ color: '#9c6fde' }}
                     >
-                      {printing ? <CircularProgress size={14} sx={{ color: '#9c6fde' }} /> : <PrintIcon fontSize='small' />}
+                      {printing ? (
+                        <CircularProgress size={14} sx={{ color: '#9c6fde' }} />
+                      ) : (
+                        <PrintIcon fontSize='small' />
+                      )}
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -99,12 +125,15 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                       disabled={connecting}
                       sx={{ color: 'text.disabled' }}
                     >
-                      {connecting ? <CircularProgress size={14} /> : <UsbIcon fontSize='small' />}
+                      {connecting ? (
+                        <CircularProgress size={14} />
+                      ) : (
+                        <UsbIcon fontSize='small' />
+                      )}
                     </IconButton>
                   </span>
                 </Tooltip>
-              )
-            )}
+              ))}
 
             {!collapsed && (
               <Button
@@ -117,21 +146,40 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                     <AutoAwesomeIcon sx={{ fontSize: 14 }} />
                   )
                 }
-                onClick={() => getRecommendation({ date: dayjs().format('YYYY-MM-DD') })}
+                onClick={() =>
+                  getRecommendation({ date: dayjs().format('YYYY-MM-DD') })
+                }
                 disabled={isLoading}
                 sx={{
                   borderColor: '#9c6fde',
                   color: '#9c6fde',
-                  '&:hover': { borderColor: '#7c4fbf', background: 'rgba(156,111,222,0.06)' },
+                  '&:hover': {
+                    borderColor: '#7c4fbf',
+                    background: 'rgba(156,111,222,0.06)',
+                  },
                 }}
               >
-                {isLoading ? 'Thinking…' : data ? 'Refresh' : errorMessage ? 'Retry' : 'Get Advice'}
+                {isLoading
+                  ? 'Thinking…'
+                  : data
+                    ? 'Refresh'
+                    : errorMessage
+                      ? 'Retry'
+                      : 'Get Advice'}
               </Button>
             )}
 
             <Tooltip title={collapsed ? 'Expand' : 'Collapse'}>
-              <IconButton size='small' onClick={onToggle} sx={{ color: '#9c6fde' }}>
-                {collapsed ? <ExpandLessIcon fontSize='small' /> : <ExpandMoreIcon fontSize='small' />}
+              <IconButton
+                size='small'
+                onClick={onToggle}
+                sx={{ color: '#9c6fde' }}
+              >
+                {collapsed ? (
+                  <ExpandLessIcon fontSize='small' />
+                ) : (
+                  <ExpandMoreIcon fontSize='small' />
+                )}
               </IconButton>
             </Tooltip>
           </Box>
@@ -154,14 +202,22 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
           )}
 
           {!data && !isLoading && !errorMessage && (
-            <Typography variant='body2' color='text.secondary' fontStyle='italic'>
-              Click "Get Advice" to receive a personalized next-step recommendation based on
-              your job search activity.
+            <Typography
+              variant='body2'
+              color='text.secondary'
+              fontStyle='italic'
+            >
+              Click "Get Advice" to receive a personalized next-step
+              recommendation based on your job search activity.
             </Typography>
           )}
 
           {isLoading && (
-            <Typography variant='body2' color='text.secondary' fontStyle='italic'>
+            <Typography
+              variant='body2'
+              color='text.secondary'
+              fontStyle='italic'
+            >
               Analyzing your job search activity…
             </Typography>
           )}
@@ -171,7 +227,13 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
               sx={{
                 '& p': { m: 0, mb: 1, fontSize: '0.875rem', lineHeight: 1.7 },
                 '& p:last-child': { mb: 0 },
-                '& ul, & ol': { mt: 0, mb: 1, pl: 2.5, fontSize: '0.875rem', lineHeight: 1.7 },
+                '& ul, & ol': {
+                  mt: 0,
+                  mb: 1,
+                  pl: 2.5,
+                  fontSize: '0.875rem',
+                  lineHeight: 1.7,
+                },
                 '& li': { mb: 0.5 },
                 '& strong': { fontWeight: 600 },
               }}
@@ -185,11 +247,15 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
       {/* Pinned footer */}
       <Box sx={{ flexShrink: 0, px: 2 }}>
         <Divider />
-        <Typography variant='caption' color='text.disabled' display='block' py={1}>
+        <Typography
+          variant='caption'
+          color='text.disabled'
+          display='block'
+          py={1}
+        >
           Powered by Claude
         </Typography>
       </Box>
-
     </Paper>
   )
 }
