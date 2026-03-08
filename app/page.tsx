@@ -1,5 +1,5 @@
-import { LogList } from '@/features/logs'
+import { HomeLayout } from './HomeLayout'
 
 export default function Home() {
-  return <LogList />
+  return <HomeLayout />
 }

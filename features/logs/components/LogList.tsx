@@ -1,17 +1,23 @@
 'use client'
 
 import AddIcon from '@mui/icons-material/Add'
+import LogoutIcon from '@mui/icons-material/Logout'
+import SettingsIcon from '@mui/icons-material/Settings'
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline'
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
+  IconButton,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material'
+import { useRouter } from 'next/navigation'
 import { useSnackbar } from 'notistack'
 import { useState } from 'react'
+import { SettingsDialog } from '@/features/settings'
 import { useLogs } from '../hooks/useLogs'
 import type { DailyLog, LogFormValues } from '../types'
 import { LogCard } from './LogCard'
@@ -20,8 +26,16 @@ import { LogForm } from './LogForm'
 export function LogList() {
   const { logs, isLoading, error, add, update, remove } = useLogs()
   const { enqueueSnackbar } = useSnackbar()
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<DailyLog | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+    router.refresh()
+  }
 
   function openAdd() {
     setEditing(null)
@@ -76,15 +90,27 @@ export function LogList() {
             Job Search Log
           </Typography>
         </Box>
-        <Button
-          variant='contained'
-          disableElevation
-          startIcon={<AddIcon />}
-          onClick={openAdd}
-          size='small'
-        >
-          Add Entry
-        </Button>
+        <Box display='flex' alignItems='center' gap={1}>
+          <Button
+            variant='contained'
+            disableElevation
+            startIcon={<AddIcon />}
+            onClick={openAdd}
+            size='small'
+          >
+            Add Entry
+          </Button>
+          <Tooltip title='Settings'>
+            <IconButton size='small' onClick={() => setSettingsOpen(true)}>
+              <SettingsIcon fontSize='small' />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title='Sign out'>
+            <IconButton size='small' onClick={handleLogout}>
+              <LogoutIcon fontSize='small' />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
       {isLoading && (
@@ -127,6 +153,8 @@ export function LogList() {
         onSubmit={handleSubmit}
         onClose={() => setOpen(false)}
       />
+
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Box>
   )
 }

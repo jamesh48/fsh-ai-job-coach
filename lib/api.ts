@@ -1,10 +1,12 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import type { AiRecommendationResponse } from '@/features/ai/types'
 import type { DailyLog, LogFormValues } from '@/features/logs/types'
+import type { AppSettings, Printer, SettingsFormValues } from '@/features/settings/types'
 
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Log'],
+  tagTypes: ['Log', 'Settings'],
   endpoints: (builder) => ({
     getLogs: builder.query<DailyLog[], void>({
       query: () => '/logs',
@@ -22,6 +24,20 @@ export const api = createApi({
       query: (id) => ({ url: `/logs/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Log'],
     }),
+    getAiRecommendation: builder.mutation<AiRecommendationResponse, void>({
+      query: () => ({ url: '/ai/recommendation', method: 'POST' }),
+    }),
+    getSettings: builder.query<AppSettings, void>({
+      query: () => '/settings',
+      providesTags: ['Settings'],
+    }),
+    updateSettings: builder.mutation<AppSettings, SettingsFormValues>({
+      query: (body) => ({ url: '/settings', method: 'PUT', body }),
+      invalidatesTags: ['Settings'],
+    }),
+    getPrinters: builder.query<Printer[], void>({
+      query: () => '/printers',
+    }),
   }),
 })
 
@@ -30,4 +46,8 @@ export const {
   useAddLogMutation,
   useUpdateLogMutation,
   useDeleteLogMutation,
+  useGetAiRecommendationMutation,
+  useGetSettingsQuery,
+  useUpdateSettingsMutation,
+  useGetPrintersQuery,
 } = api
