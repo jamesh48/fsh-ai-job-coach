@@ -1,33 +1,27 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
-import RefreshIcon from '@mui/icons-material/Refresh'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import {
   Box,
   Button,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
-  FormControl,
   IconButton,
   InputAdornment,
-  InputLabel,
-  MenuItem,
-  Select,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import * as yup from 'yup'
-import { useGetPrintersQuery, useGetSettingsQuery, useUpdateSettingsMutation } from '@/lib/api'
+import { useGetSettingsQuery, useUpdateSettingsMutation } from '@/lib/api'
 import type { PasswordFormValues, SettingsFormValues } from '../types'
 
 interface Props {
@@ -37,8 +31,6 @@ interface Props {
 
 const schema = yup.object({
   anthropicApiKey: yup.string().default(''),
-  defaultPrinter: yup.string().default(''),
-  printerType: yup.string().oneOf(['text', 'escpos']).default('text'),
 })
 
 const passwordSchema = yup.object({
@@ -55,17 +47,11 @@ export function SettingsDialog({ open, onClose }: Props) {
   const [showKey, setShowKey] = useState(false)
 
   const { data: settings } = useGetSettingsQuery(undefined, { skip: !open })
-  const {
-    data: printers,
-    isLoading: printersLoading,
-    refetch: refetchPrinters,
-    error: printersError,
-  } = useGetPrintersQuery(undefined, { skip: !open })
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
 
-  const { register, handleSubmit, reset, control } = useForm<SettingsFormValues>({
+  const { register, handleSubmit, reset } = useForm<SettingsFormValues>({
     resolver: yupResolver(schema),
-    defaultValues: { anthropicApiKey: '', defaultPrinter: '', printerType: 'text' },
+    defaultValues: { anthropicApiKey: '' },
   })
 
   const [savingPassword, setSavingPassword] = useState(false)
@@ -81,11 +67,7 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   useEffect(() => {
     if (settings) {
-      reset({
-        anthropicApiKey: settings.anthropicApiKey ?? '',
-        defaultPrinter: settings.defaultPrinter ?? '',
-        printerType: settings.printerType ?? 'text',
-      })
+      reset({ anthropicApiKey: settings.anthropicApiKey ?? '' })
     }
   }, [settings, reset])
 
@@ -154,67 +136,6 @@ export function SettingsDialog({ open, onClose }: Props) {
             </Box>
 
             <Divider />
-
-            {/* Printing */}
-            <Box>
-              <Box display='flex' alignItems='center' justifyContent='space-between'>
-                <Typography variant='overline' color='text.secondary' fontWeight={600}>
-                  Printing
-                </Typography>
-                <IconButton
-                  size='small'
-                  onClick={() => refetchPrinters()}
-                  disabled={printersLoading}
-                >
-                  <RefreshIcon fontSize='small' />
-                </IconButton>
-              </Box>
-              <Stack spacing={2} mt={1.5}>
-                {printersLoading ? (
-                  <CircularProgress size={20} />
-                ) : printersError ? (
-                  <Typography variant='caption' color='error'>
-                    Could not load printers. Make sure a print spooler is running.
-                  </Typography>
-                ) : (
-                  <Controller
-                    name='defaultPrinter'
-                    control={control}
-                    render={({ field }) => (
-                      <FormControl fullWidth>
-                        <InputLabel>Default Printer</InputLabel>
-                        <Select {...field} label='Default Printer'>
-                          <MenuItem value=''>None</MenuItem>
-                          {(printers ?? []).map((p) => (
-                            <MenuItem key={p.name} value={p.name}>
-                              {p.displayName || p.name}
-                              {p.isDefault ? ' ★' : ''}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
-                )}
-                <Controller
-                  name='printerType'
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth>
-                      <InputLabel>Printer Type</InputLabel>
-                      <Select {...field} label='Printer Type'>
-                        <MenuItem value='text'>Plain Text</MenuItem>
-                        <MenuItem value='escpos'>ESC/POS (thermal receipt)</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                />
-                <Typography variant='caption' color='text.secondary'>
-                  When set, AI recommendations will be automatically sent to this printer.
-                </Typography>
-              </Stack>
-            </Box>
-          <Divider />
 
             {/* Security */}
             <Box>

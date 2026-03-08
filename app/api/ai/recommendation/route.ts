@@ -3,56 +3,6 @@ import { NextResponse } from 'next/server'
 import type { AiRecommendationResponse } from '@/features/ai/types'
 import { prisma } from '@/lib/prisma'
 
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*(.*?)\*/g, '$1')
-    .replace(/^#+\s/gm, '')
-    .replace(/^[-*]\s/gm, '• ')
-    .trim()
-}
-
-function formatDateUS(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-')
-  return `${month}-${day}-${year}`
-}
-
-function buildEscPosBuffer(text: string): Buffer {
-  const ESC = 0x1b
-  const GS = 0x1d
-
-  const init = Buffer.from([ESC, 0x40])
-  const center = Buffer.from([ESC, 0x61, 0x01])
-  const left = Buffer.from([ESC, 0x61, 0x00])
-  const boldOn = Buffer.from([ESC, 0x45, 0x01])
-  const boldOff = Buffer.from([ESC, 0x45, 0x00])
-  const feed = (n: number) => Buffer.from([ESC, 0x64, n])
-  const cut = Buffer.from([GS, 0x56, 0x41, 0x05])
-
-  const sep = Buffer.from(`${'-'.repeat(32)}\n`, 'utf8')
-  const nl = Buffer.from('\n', 'utf8')
-  const today = formatDateUS(new Date().toISOString().slice(0, 10))
-
-  return Buffer.concat([
-    init,
-    feed(2),
-    center,
-    sep,
-    boldOn,
-    Buffer.from('JOB SEARCH COACH\n', 'utf8'),
-    boldOff,
-    Buffer.from(`${today}\n`, 'utf8'),
-    sep,
-    nl,
-    left,
-    Buffer.from(`${stripMarkdown(text)}\n`, 'utf8'),
-    nl,
-    center,
-    sep,
-    feed(5),
-    cut,
-  ])
-}
 
 export async function POST(): Promise<NextResponse<AiRecommendationResponse | { error: string }>> {
   const settings = await prisma.settings.findUnique({ where: { id: 'singleton' } })

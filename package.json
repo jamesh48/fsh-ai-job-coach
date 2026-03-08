@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "preinstall": "node scripts/preinstall.js",
-    "postinstall": "node scripts/postinstall.js",
-    "setup": "yarn install --ignore-scripts && node scripts/postinstall.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -22,7 +19,6 @@
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@reduxjs/toolkit": "^2.11.2",
-    "@thiagoelg/node-printer": "^0.6.2",
     "bcryptjs": "^3.0.3",
     "jose": "^6.2.0",
     "next": "16.1.6",

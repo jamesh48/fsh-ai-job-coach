@@ -18,8 +18,6 @@ model DailyLog {
 model Settings {
   id              String   @id @default("singleton")
   anthropicApiKey String?
-  defaultPrinter  String?
-  printerType     String?  @default("text")
   passwordHash    String?
   updatedAt       DateTime @updatedAt
 }

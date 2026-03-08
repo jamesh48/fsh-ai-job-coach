@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { AiRecommendationResponse } from '@/features/ai/types'
 import type { DailyLog, LogFormValues } from '@/features/logs/types'
-import type { AppSettings, Printer, SettingsFormValues } from '@/features/settings/types'
+import type { AppSettings, SettingsFormValues } from '@/features/settings/types'
 
 export const api = createApi({
   reducerPath: 'api',
@@ -35,9 +35,6 @@ export const api = createApi({
       query: (body) => ({ url: '/settings', method: 'PUT', body }),
       invalidatesTags: ['Settings'],
     }),
-    getPrinters: builder.query<Printer[], void>({
-      query: () => '/printers',
-    }),
   }),
 })
 
@@ -49,5 +46,4 @@ export const {
   useGetAiRecommendationMutation,
   useGetSettingsQuery,
   useUpdateSettingsMutation,
-  useGetPrintersQuery,
 } = api
