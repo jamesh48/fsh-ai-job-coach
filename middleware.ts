@@ -8,7 +8,7 @@ function getSecret() {
   return new TextEncoder().encode(secret)
 }
 
-const PUBLIC_PATHS = ['/login', '/api/auth/']
+const PUBLIC_PATHS = ['/login', '/api/auth/', '/api/healthcheck']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
