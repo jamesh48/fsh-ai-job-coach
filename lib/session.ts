@@ -1,8 +1,9 @@
-import { SignJWT, jwtVerify } from 'jose'
+import { SignJWT } from 'jose'
 import { cookies } from 'next/headers'
 
 const SESSION_COOKIE = 'session'
-const EXPIRES_IN = 60 * 60 * 24 * 30 // 30 days
+// 30 days
+const EXPIRES_IN = 60 * 60 * 24 * 30
 
 function getSecret() {
   const secret = process.env.SESSION_SECRET
