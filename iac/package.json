@@ -11,8 +11,9 @@
     "constructs": "^10.0.0"
   },
   "devDependencies": {
-    "@types/w3c-web-usb": "^1.0.13",
+    "@types/node": "^20",
     "aws-cdk": "^2.170.0",
+    "ts-node": "^10",
     "typescript": "^5"
   }
 }
