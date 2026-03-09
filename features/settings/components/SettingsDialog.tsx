@@ -31,6 +31,7 @@ interface Props {
 
 const schema = yup.object({
   anthropicApiKey: yup.string().default(''),
+  careerProfile: yup.string().default(''),
 })
 
 const passwordSchema = yup.object({
@@ -51,7 +52,7 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   const { register, handleSubmit, reset } = useForm<SettingsFormValues>({
     resolver: yupResolver(schema),
-    defaultValues: { anthropicApiKey: '' },
+    defaultValues: { anthropicApiKey: '', careerProfile: '' },
   })
 
   const [savingPassword, setSavingPassword] = useState(false)
@@ -71,7 +72,10 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   useEffect(() => {
     if (settings) {
-      reset({ anthropicApiKey: settings.anthropicApiKey ?? '' })
+      reset({
+        anthropicApiKey: settings.anthropicApiKey ?? '',
+        careerProfile: settings.careerProfile ?? '',
+      })
     }
   }, [settings, reset])
 
@@ -108,7 +112,7 @@ export function SettingsDialog({ open, onClose }: Props) {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth='md'>
       <DialogTitle>Settings</DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
@@ -149,6 +153,38 @@ export function SettingsDialog({ open, onClose }: Props) {
                   {...register('anthropicApiKey')}
                 />
               </Stack>
+            </Box>
+
+            <Divider />
+
+            {/* Career Profile */}
+            <Box>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
+                Career Profile
+              </Typography>
+              <Typography
+                variant='body2'
+                color='text.secondary'
+                mt={0.5}
+                mb={1.5}
+              >
+                Describe yourself as a candidate — target roles, years of
+                experience, key skills, what you're looking for, and any
+                dealbreakers. Claude reads this on every coaching request to
+                give personalized advice.
+              </Typography>
+              <TextField
+                label='Your Profile'
+                multiline
+                rows={8}
+                fullWidth
+                placeholder={`Example:\nI'm a senior full-stack engineer with 8 years of experience, primarily in React and Node.js. I'm targeting staff-level IC roles at Series B–D startups. I want remote or hybrid in the US, $180–220k base. I'm excited about developer tools, fintech, and climate tech. I'm not interested in defense, crypto, or pure front-end roles. I have a strong background in system design and have led teams of 3–5 engineers.`}
+                {...register('careerProfile')}
+              />
             </Box>
 
             <Divider />

@@ -9,6 +9,7 @@ export async function GET() {
     settings ?? {
       id: ID,
       anthropicApiKey: null,
+      careerProfile: null,
       updatedAt: new Date().toISOString(),
     },
   )
@@ -18,8 +19,15 @@ export async function PUT(request: Request) {
   const body = await request.json()
   const settings = await prisma.settings.upsert({
     where: { id: ID },
-    update: { anthropicApiKey: body.anthropicApiKey || null },
-    create: { id: ID, anthropicApiKey: body.anthropicApiKey || null },
+    update: {
+      anthropicApiKey: body.anthropicApiKey || null,
+      careerProfile: body.careerProfile || null,
+    },
+    create: {
+      id: ID,
+      anthropicApiKey: body.anthropicApiKey || null,
+      careerProfile: body.careerProfile || null,
+    },
   })
   return NextResponse.json(settings)
 }

@@ -21,5 +21,6 @@ model Settings {
   passwordHash           String?
   lastRecommendation     String?
   lastRecommendationDate String?
+  careerProfile          String?
   updatedAt              DateTime @updatedAt
 }

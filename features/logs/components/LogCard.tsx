@@ -60,6 +60,7 @@ interface ParsedApp {
   source?: string
   workArrangement?: string
   recruiter?: string
+  recruiterLinkedin?: string
   recruiterPhone?: string
   recruiterEmail?: string
   roleDescription?: string
@@ -84,9 +85,18 @@ function parseForDisplay(content: string): {
     if (header.endsWith(' (Easy Apply \u2014 low expectations)')) {
       header = header.slice(0, header.lastIndexOf(' (Easy Apply'))
     }
-    const atIdx = header.lastIndexOf(' at ')
-    const jobTitle = atIdx !== -1 ? header.slice(0, atIdx) : header
-    const company = atIdx !== -1 ? header.slice(atIdx + 4) : ''
+    // new delimiter :: ; fall back to ' at ' for old records
+    const sepIdx = header.lastIndexOf(' :: ')
+    let jobTitle: string
+    let company: string
+    if (sepIdx !== -1) {
+      jobTitle = header.slice(0, sepIdx)
+      company = header.slice(sepIdx + 4)
+    } else {
+      const atIdx = header.lastIndexOf(' at ')
+      jobTitle = atIdx !== -1 ? header.slice(0, atIdx) : header
+      company = atIdx !== -1 ? header.slice(atIdx + 4) : ''
+    }
     const app: ParsedApp = { jobTitle, company, priority: 'quick_apply' }
 
     const KEY_RE = /^ {3}([A-Z][A-Za-z ]+): (.+)/
@@ -110,6 +120,9 @@ function parseForDisplay(content: string): {
           break
         case 'Recruiter':
           app.recruiter = curVal
+          break
+        case 'Recruiter LinkedIn':
+          app.recruiterLinkedin = curVal
           break
         case 'Recruiter phone':
           app.recruiterPhone = curVal
@@ -330,6 +343,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                         </Typography>
                       )}
                       {(app.recruiter ||
+                        app.recruiterLinkedin ||
                         app.recruiterPhone ||
                         app.recruiterEmail) && (
                         <Typography
@@ -338,12 +352,32 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                           display='block'
                           mt={0.5}
                         >
-                          {app.recruiter && (
-                            <span>Recruiter: {app.recruiter}</span>
+                          {'Recruiter: '}
+                          {app.recruiter && app.recruiterLinkedin ? (
+                            <a
+                              href={app.recruiterLinkedin}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                              style={{ color: 'inherit' }}
+                            >
+                              {app.recruiter}
+                            </a>
+                          ) : app.recruiterLinkedin ? (
+                            <a
+                              href={app.recruiterLinkedin}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                              style={{ color: 'inherit' }}
+                            >
+                              LinkedIn
+                            </a>
+                          ) : (
+                            app.recruiter && <span>{app.recruiter}</span>
                           )}
                           {app.recruiterPhone && (
                             <>
-                              {app.recruiter && ' · '}
+                              {(app.recruiter || app.recruiterLinkedin) &&
+                                ' · '}
                               <a
                                 href={`tel:${app.recruiterPhone}`}
                                 style={{ color: 'inherit' }}
@@ -354,7 +388,10 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                           )}
                           {app.recruiterEmail && (
                             <>
-                              {(app.recruiter || app.recruiterPhone) && ' · '}
+                              {(app.recruiter ||
+                                app.recruiterLinkedin ||
+                                app.recruiterPhone) &&
+                                ' · '}
                               <a
                                 href={`mailto:${app.recruiterEmail}`}
                                 style={{ color: 'inherit' }}

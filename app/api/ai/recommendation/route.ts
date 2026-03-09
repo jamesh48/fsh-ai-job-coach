@@ -26,6 +26,7 @@ export async function POST(
     where: { id: ID },
   })
   const apiKey = settings?.anthropicApiKey
+  const careerProfile = settings?.careerProfile
 
   if (!apiKey) {
     return NextResponse.json(
@@ -79,7 +80,7 @@ export async function POST(
       max_tokens: 512,
       system: `You are an expert job search coach. The user shares their daily job search activity log, one entry per day.
 Today's date is ${today}.
-
+${careerProfile ? `\nCandidate profile:\n${careerProfile}\n` : ''}
 Job application entries may include a Priority field — use it to calibrate your advice:
 - Quick Apply: low-effort submission (e.g. LinkedIn Easy Apply). Low expectations. Do NOT recommend following up on these unless there is a compelling reason.
 - Standard: a genuine application worth following up after one week of silence.

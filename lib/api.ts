@@ -38,6 +38,23 @@ export const api = createApi({
       query: (body) => ({ url: '/ai/recommendation', method: 'POST', body }),
       invalidatesTags: ['AiRecommendation'],
     }),
+    summarizeJob: builder.mutation<
+      { summary: string },
+      { description: string }
+    >({
+      query: (body) => ({ url: '/ai/summarize', method: 'POST', body }),
+    }),
+    draftImpression: builder.mutation<
+      { impression: string },
+      {
+        jobTitle?: string
+        company?: string
+        priority?: string
+        roleDescription?: string
+      }
+    >({
+      query: (body) => ({ url: '/ai/impression', method: 'POST', body }),
+    }),
     getSettings: builder.query<AppSettings, void>({
       query: () => '/settings',
       providesTags: ['Settings'],
@@ -56,6 +73,8 @@ export const {
   useDeleteLogMutation,
   useGetStoredRecommendationQuery,
   useGetAiRecommendationMutation,
+  useSummarizeJobMutation,
+  useDraftImpressionMutation,
   useGetSettingsQuery,
   useUpdateSettingsMutation,
 } = api

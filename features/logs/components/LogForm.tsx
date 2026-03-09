@@ -1,6 +1,7 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -32,6 +33,7 @@ import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import * as yup from 'yup'
+import { useDraftImpressionMutation, useSummarizeJobMutation } from '@/lib/api'
 import type { DailyLog, LogFormValues } from '../types'
 
 interface JobApplicationEntry {
@@ -40,6 +42,7 @@ interface JobApplicationEntry {
   applicationUrl: string
   source: string
   recruiter: string
+  recruiterLinkedin: string
   recruiterPhone: string
   recruiterEmail: string
   workArrangement: string
@@ -69,6 +72,7 @@ const EMPTY_APPLICATION: JobApplicationEntry = {
   applicationUrl: '',
   source: '',
   recruiter: '',
+  recruiterLinkedin: '',
   recruiterPhone: '',
   recruiterEmail: '',
   workArrangement: '',
@@ -94,7 +98,7 @@ function serializeToContent(values: InternalFormValues): string {
 
   if (values.applications.length > 0) {
     const appLines = values.applications.map((app, i) => {
-      const lines = [`${i + 1}. ${app.jobTitle} at ${app.company}`]
+      const lines = [`${i + 1}. ${app.jobTitle} :: ${app.company}`]
       lines.push(`   Priority: ${PRIORITY_LABELS[app.priority]}`)
       if (app.applicationUrl)
         lines.push(`   Application URL: ${app.applicationUrl}`)
@@ -102,6 +106,8 @@ function serializeToContent(values: InternalFormValues): string {
       if (app.workArrangement)
         lines.push(`   Work arrangement: ${app.workArrangement}`)
       if (app.recruiter) lines.push(`   Recruiter: ${app.recruiter}`)
+      if (app.recruiterLinkedin)
+        lines.push(`   Recruiter LinkedIn: ${app.recruiterLinkedin}`)
       if (app.recruiterPhone)
         lines.push(`   Recruiter phone: ${app.recruiterPhone}`)
       if (app.recruiterEmail)
@@ -137,9 +143,18 @@ function parseContent(
       header = header.slice(0, header.lastIndexOf(' (Easy Apply'))
     }
 
-    const atIdx = header.lastIndexOf(' at ')
-    const jobTitle = atIdx !== -1 ? header.slice(0, atIdx) : header
-    const company = atIdx !== -1 ? header.slice(atIdx + 4) : ''
+    // new delimiter :: ; fall back to ' at ' for old records
+    const sepIdx = header.lastIndexOf(' :: ')
+    let jobTitle: string
+    let company: string
+    if (sepIdx !== -1) {
+      jobTitle = header.slice(0, sepIdx)
+      company = header.slice(sepIdx + 4)
+    } else {
+      const atIdx = header.lastIndexOf(' at ')
+      jobTitle = atIdx !== -1 ? header.slice(0, atIdx) : header
+      company = atIdx !== -1 ? header.slice(atIdx + 4) : ''
+    }
 
     const app: JobApplicationEntry = { ...EMPTY_APPLICATION, jobTitle, company }
 
@@ -171,6 +186,9 @@ function parseContent(
           break
         case 'Recruiter':
           app.recruiter = curVal
+          break
+        case 'Recruiter LinkedIn':
+          app.recruiterLinkedin = curVal
           break
         case 'Recruiter phone':
           app.recruiterPhone = curVal
@@ -249,6 +267,10 @@ export function LogForm({
                 .default(''),
               source: yup.string().default(''),
               recruiter: yup.string().default(''),
+              recruiterLinkedin: yup
+                .string()
+                .url('Must be a valid URL')
+                .default(''),
               recruiterPhone: yup.string().default(''),
               recruiterEmail: yup
                 .string()
@@ -278,6 +300,8 @@ export function LogForm({
     control,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<InternalFormValues>({
     resolver: yupResolver(schema),
@@ -290,6 +314,42 @@ export function LogForm({
   })
 
   const [appsExpanded, setAppsExpanded] = useState(true)
+  const [summarizingIndex, setSummarizingIndex] = useState<number | null>(null)
+  const [impressionIndex, setImpressionIndex] = useState<number | null>(null)
+  const [summarizeJob] = useSummarizeJobMutation()
+  const [draftImpression] = useDraftImpressionMutation()
+
+  const handleSummarize = async (index: number) => {
+    const description = getValues(`applications.${index}.roleDescription`)
+    if (!description?.trim()) return
+    setSummarizingIndex(index)
+    try {
+      const result = await summarizeJob({ description })
+      if (!('error' in result) && result.data) {
+        setValue(`applications.${index}.roleDescription`, result.data.summary)
+      }
+    } finally {
+      setSummarizingIndex(null)
+    }
+  }
+
+  const handleDraftImpression = async (index: number) => {
+    const app = getValues(`applications.${index}`)
+    setImpressionIndex(index)
+    try {
+      const result = await draftImpression({
+        jobTitle: app.jobTitle,
+        company: app.company,
+        priority: app.priority,
+        roleDescription: app.roleDescription,
+      })
+      if (!('error' in result) && result.data) {
+        setValue(`applications.${index}.impression`, result.data.impression)
+      }
+    } finally {
+      setImpressionIndex(null)
+    }
+  }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: open triggers reset when dialog reopens
   useEffect(() => {
@@ -344,7 +404,7 @@ export function LogForm({
               <TextField
                 label='Notes'
                 multiline
-                rows={3}
+                rows={5}
                 placeholder='What did you work on today? Networking, research, interviews…'
                 error={!!errors.notes}
                 helperText={errors.notes?.message}
@@ -491,14 +551,33 @@ export function LogForm({
                               {...register(`applications.${index}.source`)}
                             />
 
-                            {/* Recruiter + work arrangement */}
+                            {/* Recruiter */}
                             <Stack direction='row' spacing={2}>
                               <TextField
-                                label='Recruiter'
+                                label='Recruiter Name'
                                 fullWidth
-                                placeholder='Name or LinkedIn URL'
+                                placeholder='Jane Smith'
                                 {...register(`applications.${index}.recruiter`)}
                               />
+                              <TextField
+                                label='Recruiter LinkedIn'
+                                fullWidth
+                                type='url'
+                                placeholder='https://linkedin.com/in/…'
+                                error={
+                                  !!errors.applications?.[index]
+                                    ?.recruiterLinkedin
+                                }
+                                helperText={
+                                  errors.applications?.[index]
+                                    ?.recruiterLinkedin?.message
+                                }
+                                {...register(
+                                  `applications.${index}.recruiterLinkedin`,
+                                )}
+                              />
+                            </Stack>
+                            <Stack direction='row' spacing={2}>
                               <TextField
                                 label='Recruiter Phone'
                                 fullWidth
@@ -557,24 +636,54 @@ export function LogForm({
                             </Stack>
 
                             {/* Role description */}
-                            <TextField
-                              label='About the Role'
-                              multiline
-                              rows={2}
-                              placeholder='Key responsibilities, required skills, seniority level…'
-                              {...register(
-                                `applications.${index}.roleDescription`,
-                              )}
-                            />
+                            <Box>
+                              <TextField
+                                label='About the Role'
+                                multiline
+                                rows={6}
+                                fullWidth
+                                placeholder='Paste the full job description or write a brief summary…'
+                                {...register(
+                                  `applications.${index}.roleDescription`,
+                                )}
+                              />
+                              <Button
+                                size='small'
+                                startIcon={<AutoFixHighIcon fontSize='small' />}
+                                onClick={() => handleSummarize(index)}
+                                disabled={summarizingIndex === index}
+                                sx={{ mt: 0.5 }}
+                              >
+                                {summarizingIndex === index
+                                  ? 'Summarizing…'
+                                  : 'Summarize with AI'}
+                              </Button>
+                            </Box>
 
                             {/* Impression */}
-                            <TextField
-                              label='My Impression'
-                              multiline
-                              rows={2}
-                              placeholder='Excitement level, concerns, how well it fits your goals…'
-                              {...register(`applications.${index}.impression`)}
-                            />
+                            <Box>
+                              <TextField
+                                label='My Impression'
+                                multiline
+                                rows={4}
+                                fullWidth
+                                placeholder='Excitement level, concerns, how well it fits your goals…'
+                                {...register(
+                                  `applications.${index}.impression`,
+                                )}
+                              />
+                              <Button
+                                size='small'
+                                startIcon={<AutoFixHighIcon fontSize='small' />}
+                                onClick={() => handleDraftImpression(index)}
+                                disabled={impressionIndex === index}
+                                sx={{ mt: 0.5 }}
+                              >
+                                {impressionIndex === index
+                                  ? 'Drafting…'
+                                  : 'Draft with AI'}
+                              </Button>
+                            </Box>
                           </Stack>
                         </Paper>
                       ))}
