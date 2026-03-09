@@ -40,6 +40,8 @@ interface JobApplicationEntry {
   applicationUrl: string
   source: string
   recruiter: string
+  recruiterPhone: string
+  recruiterEmail: string
   workArrangement: string
   roleDescription: string
   impression: string
@@ -67,6 +69,8 @@ const EMPTY_APPLICATION: JobApplicationEntry = {
   applicationUrl: '',
   source: '',
   recruiter: '',
+  recruiterPhone: '',
+  recruiterEmail: '',
   workArrangement: '',
   roleDescription: '',
   impression: '',
@@ -98,6 +102,10 @@ function serializeToContent(values: InternalFormValues): string {
       if (app.workArrangement)
         lines.push(`   Work arrangement: ${app.workArrangement}`)
       if (app.recruiter) lines.push(`   Recruiter: ${app.recruiter}`)
+      if (app.recruiterPhone)
+        lines.push(`   Recruiter phone: ${app.recruiterPhone}`)
+      if (app.recruiterEmail)
+        lines.push(`   Recruiter email: ${app.recruiterEmail}`)
       if (app.roleDescription)
         lines.push(`   About the role: ${app.roleDescription}`)
       if (app.impression) lines.push(`   My impression: ${app.impression}`)
@@ -163,6 +171,12 @@ function parseContent(
           break
         case 'Recruiter':
           app.recruiter = curVal
+          break
+        case 'Recruiter phone':
+          app.recruiterPhone = curVal
+          break
+        case 'Recruiter email':
+          app.recruiterEmail = curVal
           break
         case 'About the role':
           app.roleDescription = curVal
@@ -235,6 +249,11 @@ export function LogForm({
                 .default(''),
               source: yup.string().default(''),
               recruiter: yup.string().default(''),
+              recruiterPhone: yup.string().default(''),
+              recruiterEmail: yup
+                .string()
+                .email('Must be a valid email')
+                .default(''),
               workArrangement: yup.string().default(''),
               roleDescription: yup.string().default(''),
               impression: yup.string().default(''),
@@ -480,6 +499,33 @@ export function LogForm({
                                 placeholder='Name or LinkedIn URL'
                                 {...register(`applications.${index}.recruiter`)}
                               />
+                              <TextField
+                                label='Recruiter Phone'
+                                fullWidth
+                                type='tel'
+                                placeholder='+1 (555) 000-0000'
+                                {...register(
+                                  `applications.${index}.recruiterPhone`,
+                                )}
+                              />
+                              <TextField
+                                label='Recruiter Email'
+                                fullWidth
+                                type='email'
+                                placeholder='recruiter@company.com'
+                                error={
+                                  !!errors.applications?.[index]?.recruiterEmail
+                                }
+                                helperText={
+                                  errors.applications?.[index]?.recruiterEmail
+                                    ?.message
+                                }
+                                {...register(
+                                  `applications.${index}.recruiterEmail`,
+                                )}
+                              />
+                            </Stack>
+                            <Stack direction='row' spacing={2}>
                               <FormControl fullWidth>
                                 <InputLabel>Work Arrangement</InputLabel>
                                 <Controller

@@ -60,6 +60,8 @@ interface ParsedApp {
   source?: string
   workArrangement?: string
   recruiter?: string
+  recruiterPhone?: string
+  recruiterEmail?: string
   roleDescription?: string
   impression?: string
 }
@@ -108,6 +110,12 @@ function parseForDisplay(content: string): {
           break
         case 'Recruiter':
           app.recruiter = curVal
+          break
+        case 'Recruiter phone':
+          app.recruiterPhone = curVal
+          break
+        case 'Recruiter email':
+          app.recruiterEmail = curVal
           break
         case 'About the role':
           app.roleDescription = curVal
@@ -283,11 +291,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
               <Stack spacing={2} pt={1.5}>
                 {applications.map((app) => {
                   const { label, color } = PRIORITY_DISPLAY[app.priority]
-                  const meta = [
-                    app.source,
-                    app.workArrangement,
-                    app.recruiter ? `Recruiter: ${app.recruiter}` : undefined,
-                  ]
+                  const meta = [app.source, app.workArrangement]
                     .filter(Boolean)
                     .join(' · ')
                   return (
@@ -323,6 +327,42 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                           mt={0.5}
                         >
                           {meta}
+                        </Typography>
+                      )}
+                      {(app.recruiter ||
+                        app.recruiterPhone ||
+                        app.recruiterEmail) && (
+                        <Typography
+                          variant='caption'
+                          color='text.secondary'
+                          display='block'
+                          mt={0.5}
+                        >
+                          {app.recruiter && (
+                            <span>Recruiter: {app.recruiter}</span>
+                          )}
+                          {app.recruiterPhone && (
+                            <>
+                              {app.recruiter && ' · '}
+                              <a
+                                href={`tel:${app.recruiterPhone}`}
+                                style={{ color: 'inherit' }}
+                              >
+                                {app.recruiterPhone}
+                              </a>
+                            </>
+                          )}
+                          {app.recruiterEmail && (
+                            <>
+                              {(app.recruiter || app.recruiterPhone) && ' · '}
+                              <a
+                                href={`mailto:${app.recruiterEmail}`}
+                                style={{ color: 'inherit' }}
+                              >
+                                {app.recruiterEmail}
+                              </a>
+                            </>
+                          )}
                         </Typography>
                       )}
                       {app.roleDescription && (
