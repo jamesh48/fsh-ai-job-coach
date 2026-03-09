@@ -2,6 +2,7 @@
 
 import AddIcon from '@mui/icons-material/Add'
 import LogoutIcon from '@mui/icons-material/Logout'
+import SearchIcon from '@mui/icons-material/Search'
 import SettingsIcon from '@mui/icons-material/Settings'
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline'
 import {
@@ -10,7 +11,9 @@ import {
   Button,
   CircularProgress,
   IconButton,
+  InputAdornment,
   Stack,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
@@ -30,6 +33,7 @@ export function LogList() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<DailyLog | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [search, setSearch] = useState('')
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -76,6 +80,15 @@ export function LogList() {
     }
   }
 
+  const term = search.trim().toLowerCase()
+  const filteredLogs = term
+    ? logs.filter(
+        (log) =>
+          log.content.toLowerCase().includes(term) ||
+          log.date.toLowerCase().includes(term),
+      )
+    : logs
+
   return (
     <Box width='100%' maxWidth={640} mx='auto' py={6} px={2}>
       <Box
@@ -113,6 +126,24 @@ export function LogList() {
         </Box>
       </Box>
 
+      <TextField
+        fullWidth
+        size='small'
+        placeholder='Search entries…'
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        sx={{ mb: 3 }}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position='start'>
+                <SearchIcon fontSize='small' />
+              </InputAdornment>
+            ),
+          },
+        }}
+      />
+
       {isLoading && (
         <Box display='flex' justifyContent='center' py={10}>
           <CircularProgress />
@@ -133,9 +164,17 @@ export function LogList() {
         </Box>
       )}
 
-      {!isLoading && logs.length > 0 && (
+      {!isLoading && logs.length > 0 && filteredLogs.length === 0 && (
+        <Box textAlign='center' py={10}>
+          <Typography color='text.secondary'>
+            No entries match your search.
+          </Typography>
+        </Box>
+      )}
+
+      {!isLoading && filteredLogs.length > 0 && (
         <Stack spacing={2}>
-          {logs.map((log) => (
+          {filteredLogs.map((log) => (
             <LogCard
               key={log.id}
               log={log}
