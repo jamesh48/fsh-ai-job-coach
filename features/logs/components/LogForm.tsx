@@ -37,6 +37,7 @@ import type { DailyLog, LogFormValues } from '../types'
 interface JobApplicationEntry {
   jobTitle: string
   company: string
+  applicationUrl: string
   source: string
   recruiter: string
   workArrangement: string
@@ -63,6 +64,7 @@ const PRIORITY_LABELS: Record<JobApplicationEntry['priority'], string> = {
 const EMPTY_APPLICATION: JobApplicationEntry = {
   jobTitle: '',
   company: '',
+  applicationUrl: '',
   source: '',
   recruiter: '',
   workArrangement: '',
@@ -90,6 +92,8 @@ function serializeToContent(values: InternalFormValues): string {
     const appLines = values.applications.map((app, i) => {
       const lines = [`${i + 1}. ${app.jobTitle} at ${app.company}`]
       lines.push(`   Priority: ${PRIORITY_LABELS[app.priority]}`)
+      if (app.applicationUrl)
+        lines.push(`   Application URL: ${app.applicationUrl}`)
       if (app.source) lines.push(`   Source: ${app.source}`)
       if (app.workArrangement)
         lines.push(`   Work arrangement: ${app.workArrangement}`)
@@ -131,7 +135,7 @@ function parseContent(
 
     const app: JobApplicationEntry = { ...EMPTY_APPLICATION, jobTitle, company }
 
-    const KEY_RE = /^ {3}([A-Z][a-z ]+): (.+)/
+    const KEY_RE = /^ {3}([A-Z][A-Za-z ]+): (.+)/
     let curKey = ''
     let curVal = ''
 
@@ -148,6 +152,9 @@ function parseContent(
           if (found) app.priority = found[0]
           break
         }
+        case 'Application URL':
+          app.applicationUrl = curVal
+          break
         case 'Source':
           app.source = curVal
           break
@@ -222,6 +229,10 @@ export function LogForm({
             yup.object({
               jobTitle: yup.string().required('Job title is required'),
               company: yup.string().required('Company is required'),
+              applicationUrl: yup
+                .string()
+                .url('Must be a valid URL')
+                .default(''),
               source: yup.string().default(''),
               recruiter: yup.string().default(''),
               workArrangement: yup.string().default(''),
@@ -404,6 +415,24 @@ export function LogForm({
                                 {...register(`applications.${index}.company`)}
                               />
                             </Stack>
+
+                            {/* Application URL */}
+                            <TextField
+                              label='Application URL'
+                              fullWidth
+                              placeholder='https://company.com/jobs/…'
+                              type='url'
+                              error={
+                                !!errors.applications?.[index]?.applicationUrl
+                              }
+                              helperText={
+                                errors.applications?.[index]?.applicationUrl
+                                  ?.message
+                              }
+                              {...register(
+                                `applications.${index}.applicationUrl`,
+                              )}
+                            />
 
                             {/* Priority toggle */}
                             <Controller

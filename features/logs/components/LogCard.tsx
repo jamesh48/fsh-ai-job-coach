@@ -56,6 +56,7 @@ interface ParsedApp {
   jobTitle: string
   company: string
   priority: Priority
+  applicationUrl?: string
   source?: string
   workArrangement?: string
   recruiter?: string
@@ -86,7 +87,7 @@ function parseForDisplay(content: string): {
     const company = atIdx !== -1 ? header.slice(atIdx + 4) : ''
     const app: ParsedApp = { jobTitle, company, priority: 'quick_apply' }
 
-    const KEY_RE = /^ {3}([A-Z][a-z ]+): (.+)/
+    const KEY_RE = /^ {3}([A-Z][A-Za-z ]+): (.+)/
     let curKey = ''
     let curVal = ''
 
@@ -95,6 +96,9 @@ function parseForDisplay(content: string): {
       switch (curKey) {
         case 'Priority':
           app.priority = PRIORITY_FROM_LABEL[curVal] ?? 'quick_apply'
+          break
+        case 'Application URL':
+          app.applicationUrl = curVal
           break
         case 'Source':
           app.source = curVal
@@ -299,6 +303,18 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                           {app.jobTitle} at {app.company}
                         </Typography>
                       </Box>
+                      {app.applicationUrl && (
+                        <Typography variant='caption' display='block' mt={0.5}>
+                          <a
+                            href={app.applicationUrl}
+                            target='_blank'
+                            rel='noopener noreferrer'
+                            style={{ color: 'inherit' }}
+                          >
+                            {app.applicationUrl}
+                          </a>
+                        </Typography>
+                      )}
                       {meta && (
                         <Typography
                           variant='caption'
