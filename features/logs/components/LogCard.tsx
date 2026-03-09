@@ -1,5 +1,6 @@
 'use client'
 
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -16,9 +17,12 @@ import {
   Typography,
 } from '@mui/material'
 import { useState } from 'react'
+import type { JobApplicationEntry } from '../applicationFormUtils'
+import { parseContent } from '../applicationFormUtils'
 import type { DailyLog } from '../types'
+import { AddApplicationDialog } from './AddApplicationDialog'
 
-type Priority = 'quick_apply' | 'standard' | 'strong_interest' | 'hot_lead'
+type Priority = JobApplicationEntry['priority']
 
 const PRIORITY_DISPLAY: Record<
   Priority,
@@ -45,116 +49,6 @@ const PRIORITY_ORDER: Priority[] = [
   'quick_apply',
 ]
 
-const PRIORITY_FROM_LABEL: Record<string, Priority> = {
-  'Quick Apply (low effort, low expectations)': 'quick_apply',
-  Standard: 'standard',
-  'Strong Interest (tailored application)': 'strong_interest',
-  'Hot Lead (referral or high-priority target)': 'hot_lead',
-}
-
-interface ParsedApp {
-  jobTitle: string
-  company: string
-  priority: Priority
-  applicationUrl?: string
-  source?: string
-  workArrangement?: string
-  recruiter?: string
-  recruiterLinkedin?: string
-  recruiterPhone?: string
-  recruiterEmail?: string
-  roleDescription?: string
-  impression?: string
-}
-
-function parseForDisplay(content: string): {
-  notes: string
-  applications: ParsedApp[]
-} {
-  const SECTION = '\nJob Applications Submitted Today:\n'
-  const idx = content.indexOf(SECTION)
-  if (idx === -1) return { notes: content, applications: [] }
-
-  const notes = content.slice(0, idx).trim()
-  const appsText = content.slice(idx + SECTION.length).trim()
-  const blocks = appsText.split(/\n\n+/)
-
-  const applications = blocks.map((block): ParsedApp => {
-    const lines = block.split('\n')
-    let header = lines[0].replace(/^\d+\.\s+/, '')
-    if (header.endsWith(' (Easy Apply \u2014 low expectations)')) {
-      header = header.slice(0, header.lastIndexOf(' (Easy Apply'))
-    }
-    // new delimiter :: ; fall back to ' at ' for old records
-    const sepIdx = header.lastIndexOf(' :: ')
-    let jobTitle: string
-    let company: string
-    if (sepIdx !== -1) {
-      jobTitle = header.slice(0, sepIdx)
-      company = header.slice(sepIdx + 4)
-    } else {
-      const atIdx = header.lastIndexOf(' at ')
-      jobTitle = atIdx !== -1 ? header.slice(0, atIdx) : header
-      company = atIdx !== -1 ? header.slice(atIdx + 4) : ''
-    }
-    const app: ParsedApp = { jobTitle, company, priority: 'quick_apply' }
-
-    const KEY_RE = /^ {3}([A-Z][A-Za-z ]+): (.+)/
-    let curKey = ''
-    let curVal = ''
-
-    const flush = () => {
-      if (!curKey) return
-      switch (curKey) {
-        case 'Priority':
-          app.priority = PRIORITY_FROM_LABEL[curVal] ?? 'quick_apply'
-          break
-        case 'Application URL':
-          app.applicationUrl = curVal
-          break
-        case 'Source':
-          app.source = curVal
-          break
-        case 'Work arrangement':
-          app.workArrangement = curVal
-          break
-        case 'Recruiter':
-          app.recruiter = curVal
-          break
-        case 'Recruiter LinkedIn':
-          app.recruiterLinkedin = curVal
-          break
-        case 'Recruiter phone':
-          app.recruiterPhone = curVal
-          break
-        case 'Recruiter email':
-          app.recruiterEmail = curVal
-          break
-        case 'About the role':
-          app.roleDescription = curVal
-          break
-        case 'My impression':
-          app.impression = curVal
-          break
-      }
-    }
-
-    for (const line of lines.slice(1)) {
-      const m = line.match(KEY_RE)
-      if (m) {
-        flush()
-        curKey = m[1]
-        curVal = m[2]
-      } else if (curKey && line.startsWith('   '))
-        curVal += `\n${line.slice(3)}`
-    }
-    flush()
-    return app
-  })
-
-  return { notes, applications }
-}
-
 interface Props {
   log: DailyLog
   onEdit: (log: DailyLog) => void
@@ -171,64 +65,65 @@ function formatDate(dateStr: string) {
 }
 
 export function LogCard({ log, onEdit, onDelete }: Props) {
-  const { notes, applications } = parseForDisplay(log.content)
+  const { notes, applications } = parseContent(log.content)
   const [expanded, setExpanded] = useState(false)
+  const [addingApp, setAddingApp] = useState(false)
 
   return (
-    <Card
-      variant='outlined'
-      sx={{
-        borderRadius: 2,
-        transition: 'box-shadow 0.2s',
-        '&:hover': { boxShadow: 3 },
-      }}
-    >
-      <CardContent sx={{ pb: '16px !important' }}>
-        <Box
-          display='flex'
-          justifyContent='space-between'
-          alignItems='flex-start'
-        >
-          <Typography
-            variant='overline'
-            color='text.secondary'
-            fontWeight={600}
-            letterSpacing={1}
+    <>
+      <Card
+        variant='outlined'
+        sx={{
+          borderRadius: 2,
+          transition: 'box-shadow 0.2s',
+          '&:hover': { boxShadow: 3 },
+        }}
+      >
+        <CardContent sx={{ pb: '16px !important' }}>
+          <Box
+            display='flex'
+            justifyContent='space-between'
+            alignItems='flex-start'
           >
-            {formatDate(log.date)}
-          </Typography>
-          <Box display='flex' gap={0.5} ml={1} flexShrink={0}>
-            <Tooltip title='Edit'>
-              <IconButton size='small' onClick={() => onEdit(log)}>
-                <EditOutlinedIcon fontSize='small' />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title='Delete'>
-              <IconButton
-                size='small'
-                color='error'
-                onClick={() => onDelete(log.id)}
-              >
-                <DeleteOutlineIcon fontSize='small' />
-              </IconButton>
-            </Tooltip>
+            <Typography
+              variant='overline'
+              color='text.secondary'
+              fontWeight={600}
+              letterSpacing={1}
+            >
+              {formatDate(log.date)}
+            </Typography>
+            <Box display='flex' gap={0.5} ml={1} flexShrink={0}>
+              <Tooltip title='Edit'>
+                <IconButton size='small' onClick={() => onEdit(log)}>
+                  <EditOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title='Delete'>
+                <IconButton
+                  size='small'
+                  color='error'
+                  onClick={() => onDelete(log.id)}
+                >
+                  <DeleteOutlineIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
-        </Box>
 
-        {notes && (
-          <Typography
-            variant='body2'
-            color='text.primary'
-            mt={1}
-            sx={{ whiteSpace: 'pre-wrap' }}
-          >
-            {notes}
-          </Typography>
-        )}
+          {notes && (
+            <Typography
+              variant='body2'
+              color='text.primary'
+              mt={1}
+              sx={{ whiteSpace: 'pre-wrap' }}
+            >
+              {notes}
+            </Typography>
+          )}
 
-        {applications.length > 0 && (
           <Box mt={notes ? 2 : 1}>
-            {/* Collapsible header */}
+            {/* Collapsible header — always shown so Add button is always accessible */}
             <Box
               component='button'
               onClick={() => setExpanded((e) => !e)}
@@ -258,36 +153,72 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                 fontWeight={600}
                 sx={{ flex: 1, textAlign: 'left', transition: 'color 0.15s' }}
               >
-                {applications.length === 1
-                  ? '1 JOB APPLICATION'
-                  : `${applications.length} JOB APPLICATIONS`}
+                {applications.length === 0
+                  ? 'JOB APPLICATIONS'
+                  : applications.length === 1
+                    ? '1 JOB APPLICATION'
+                    : `${applications.length} JOB APPLICATIONS`}
               </Typography>
-              {/* Collapsed preview: one chip per unique priority level, highest first */}
-              {!expanded && (
+
+              {/* Priority chips — collapsed preview */}
+              {!expanded && applications.length > 0 && (
                 <Box display='flex' gap={0.5} mr={0.5}>
                   {PRIORITY_ORDER.filter((p) =>
                     applications.some((a) => a.priority === p),
                   ).map((p) => {
-                    const { emoji, color } = PRIORITY_DISPLAY[p]
-                    const count = applications.filter(
+                    const { emoji, color, label } = PRIORITY_DISPLAY[p]
+                    const appsForPriority = applications.filter(
                       (a) => a.priority === p,
-                    ).length
+                    )
                     return (
-                      <Chip
+                      <Tooltip
                         key={p}
-                        label={`${emoji} ${count}`}
-                        color={color}
-                        size='small'
-                        sx={{
-                          height: 20,
-                          fontSize: '0.7rem',
-                          pointerEvents: 'none',
-                        }}
-                      />
+                        title={
+                          <Box>
+                            <Box
+                              sx={{
+                                fontWeight: 600,
+                                mb: 0.5,
+                                borderBottom: '1px solid rgba(255,255,255,0.2)',
+                                pb: 0.5,
+                              }}
+                            >
+                              {label}
+                            </Box>
+                            {appsForPriority.map((a) => (
+                              <div key={`${a.company}-${a.jobTitle}`}>
+                                {a.jobTitle} at {a.company}
+                              </div>
+                            ))}
+                          </Box>
+                        }
+                      >
+                        <Chip
+                          label={`${emoji} ${appsForPriority.length}`}
+                          color={color}
+                          size='small'
+                          sx={{ height: 20, fontSize: '0.7rem' }}
+                        />
+                      </Tooltip>
                     )
                   })}
                 </Box>
               )}
+
+              {/* Add application button */}
+              <Tooltip title='Add Job Application'>
+                <IconButton
+                  size='small'
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setAddingApp(true)
+                  }}
+                  sx={{ color: 'text.secondary' }}
+                >
+                  <AddCircleOutlineIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+
               <ExpandMoreIcon
                 sx={{
                   fontSize: 18,
@@ -300,137 +231,149 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
             </Box>
 
             {/* Expanded content */}
-            <Collapse in={expanded} unmountOnExit>
-              <Stack spacing={2} pt={1.5}>
-                {applications.map((app) => {
-                  const { label, color } = PRIORITY_DISPLAY[app.priority]
-                  const meta = [app.source, app.workArrangement]
-                    .filter(Boolean)
-                    .join(' · ')
-                  return (
-                    <Box key={`${app.company}-${app.jobTitle}`}>
-                      <Box
-                        display='flex'
-                        alignItems='center'
-                        gap={1}
-                        flexWrap='wrap'
-                      >
-                        <Chip label={label} color={color} size='small' />
-                        <Typography variant='body2' fontWeight={600}>
-                          {app.jobTitle} at {app.company}
-                        </Typography>
-                      </Box>
-                      {app.applicationUrl && (
-                        <Typography variant='caption' display='block' mt={0.5}>
-                          <a
-                            href={app.applicationUrl}
-                            target='_blank'
-                            rel='noopener noreferrer'
-                            style={{ color: 'inherit' }}
+            {applications.length > 0 && (
+              <Collapse in={expanded} unmountOnExit>
+                <Stack spacing={2} pt={1.5}>
+                  {applications.map((app) => {
+                    const { label, color } = PRIORITY_DISPLAY[app.priority]
+                    const meta = [app.source, app.workArrangement]
+                      .filter(Boolean)
+                      .join(' · ')
+                    return (
+                      <Box key={`${app.company}-${app.jobTitle}`}>
+                        <Box
+                          display='flex'
+                          alignItems='center'
+                          gap={1}
+                          flexWrap='wrap'
+                        >
+                          <Chip label={label} color={color} size='small' />
+                          <Typography variant='body2' fontWeight={600}>
+                            {app.jobTitle} at {app.company}
+                          </Typography>
+                        </Box>
+                        {app.applicationUrl && (
+                          <Typography
+                            variant='caption'
+                            display='block'
+                            mt={0.5}
                           >
-                            {app.applicationUrl}
-                          </a>
-                        </Typography>
-                      )}
-                      {meta && (
-                        <Typography
-                          variant='caption'
-                          color='text.secondary'
-                          display='block'
-                          mt={0.5}
-                        >
-                          {meta}
-                        </Typography>
-                      )}
-                      {(app.recruiter ||
-                        app.recruiterLinkedin ||
-                        app.recruiterPhone ||
-                        app.recruiterEmail) && (
-                        <Typography
-                          variant='caption'
-                          color='text.secondary'
-                          display='block'
-                          mt={0.5}
-                        >
-                          {'Recruiter: '}
-                          {app.recruiter && app.recruiterLinkedin ? (
                             <a
-                              href={app.recruiterLinkedin}
+                              href={app.applicationUrl}
                               target='_blank'
                               rel='noopener noreferrer'
                               style={{ color: 'inherit' }}
                             >
-                              {app.recruiter}
+                              {app.applicationUrl}
                             </a>
-                          ) : app.recruiterLinkedin ? (
-                            <a
-                              href={app.recruiterLinkedin}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              style={{ color: 'inherit' }}
-                            >
-                              LinkedIn
-                            </a>
-                          ) : (
-                            app.recruiter && <span>{app.recruiter}</span>
-                          )}
-                          {app.recruiterPhone && (
-                            <>
-                              {(app.recruiter || app.recruiterLinkedin) &&
-                                ' · '}
+                          </Typography>
+                        )}
+                        {meta && (
+                          <Typography
+                            variant='caption'
+                            color='text.secondary'
+                            display='block'
+                            mt={0.5}
+                          >
+                            {meta}
+                          </Typography>
+                        )}
+                        {(app.recruiter ||
+                          app.recruiterLinkedin ||
+                          app.recruiterPhone ||
+                          app.recruiterEmail) && (
+                          <Typography
+                            variant='caption'
+                            color='text.secondary'
+                            display='block'
+                            mt={0.5}
+                          >
+                            {'Recruiter: '}
+                            {app.recruiter && app.recruiterLinkedin ? (
                               <a
-                                href={`tel:${app.recruiterPhone}`}
+                                href={app.recruiterLinkedin}
+                                target='_blank'
+                                rel='noopener noreferrer'
                                 style={{ color: 'inherit' }}
                               >
-                                {app.recruiterPhone}
+                                {app.recruiter}
                               </a>
-                            </>
-                          )}
-                          {app.recruiterEmail && (
-                            <>
-                              {(app.recruiter ||
-                                app.recruiterLinkedin ||
-                                app.recruiterPhone) &&
-                                ' · '}
+                            ) : app.recruiterLinkedin ? (
                               <a
-                                href={`mailto:${app.recruiterEmail}`}
+                                href={app.recruiterLinkedin}
+                                target='_blank'
+                                rel='noopener noreferrer'
                                 style={{ color: 'inherit' }}
                               >
-                                {app.recruiterEmail}
+                                LinkedIn
                               </a>
-                            </>
-                          )}
-                        </Typography>
-                      )}
-                      {app.roleDescription && (
-                        <Typography
-                          variant='body2'
-                          color='text.secondary'
-                          mt={0.5}
-                          sx={{ whiteSpace: 'pre-wrap' }}
-                        >
-                          {app.roleDescription}
-                        </Typography>
-                      )}
-                      {app.impression && (
-                        <Typography
-                          variant='body2'
-                          color='text.secondary'
-                          mt={0.5}
-                          fontStyle='italic'
-                          sx={{ whiteSpace: 'pre-wrap' }}
-                        >
-                          {app.impression}
-                        </Typography>
-                      )}
-                    </Box>
-                  )
-                })}
-              </Stack>
-            </Collapse>
+                            ) : (
+                              app.recruiter && <span>{app.recruiter}</span>
+                            )}
+                            {app.recruiterPhone && (
+                              <>
+                                {(app.recruiter || app.recruiterLinkedin) &&
+                                  ' · '}
+                                <a
+                                  href={`tel:${app.recruiterPhone}`}
+                                  style={{ color: 'inherit' }}
+                                >
+                                  {app.recruiterPhone}
+                                </a>
+                              </>
+                            )}
+                            {app.recruiterEmail && (
+                              <>
+                                {(app.recruiter ||
+                                  app.recruiterLinkedin ||
+                                  app.recruiterPhone) &&
+                                  ' · '}
+                                <a
+                                  href={`mailto:${app.recruiterEmail}`}
+                                  style={{ color: 'inherit' }}
+                                >
+                                  {app.recruiterEmail}
+                                </a>
+                              </>
+                            )}
+                          </Typography>
+                        )}
+                        {app.roleDescription && (
+                          <Typography
+                            variant='body2'
+                            color='text.secondary'
+                            mt={0.5}
+                            sx={{ whiteSpace: 'pre-wrap' }}
+                          >
+                            {app.roleDescription}
+                          </Typography>
+                        )}
+                        {app.impression && (
+                          <Typography
+                            variant='body2'
+                            color='text.secondary'
+                            mt={0.5}
+                            fontStyle='italic'
+                            sx={{ whiteSpace: 'pre-wrap' }}
+                          >
+                            {app.impression}
+                          </Typography>
+                        )}
+                      </Box>
+                    )
+                  })}
+                </Stack>
+              </Collapse>
+            )}
           </Box>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <AddApplicationDialog
+        open={addingApp}
+        log={log}
+        onClose={() => setAddingApp(false)}
+      />
+    </>
   )
 }

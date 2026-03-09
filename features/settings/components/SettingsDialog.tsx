@@ -114,96 +114,91 @@ export function SettingsDialog({ open, onClose }: Props) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='md'>
       <DialogTitle>Settings</DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogContent>
-          <Stack spacing={3}>
-            {/* AI Integration */}
-            <Box>
-              <Typography
-                variant='overline'
-                color='text.secondary'
-                fontWeight={600}
-              >
-                AI Integration
-              </Typography>
-              <Stack spacing={2} mt={1.5}>
-                <TextField
-                  label='Anthropic API Key'
-                  type={showKey ? 'text' : 'password'}
-                  placeholder='sk-ant-...'
-                  helperText='Required to use AI coaching features.'
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position='end'>
-                          <IconButton
-                            size='small'
-                            onClick={() => setShowKey((s) => !s)}
-                          >
-                            {showKey ? (
-                              <VisibilityOffIcon fontSize='small' />
-                            ) : (
-                              <VisibilityIcon fontSize='small' />
-                            )}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                  {...register('anthropicApiKey')}
-                />
-              </Stack>
-            </Box>
-
-            <Divider />
-
-            {/* Career Profile */}
-            <Box>
-              <Typography
-                variant='overline'
-                color='text.secondary'
-                fontWeight={600}
-              >
-                Career Profile
-              </Typography>
-              <Typography
-                variant='body2'
-                color='text.secondary'
-                mt={0.5}
-                mb={1.5}
-              >
-                Describe yourself as a candidate — target roles, years of
-                experience, key skills, what you're looking for, and any
-                dealbreakers. Claude reads this on every coaching request to
-                give personalized advice.
-              </Typography>
+      <DialogContent>
+        <Stack spacing={3}>
+          {/* AI Integration */}
+          <Box>
+            <Typography
+              variant='overline'
+              color='text.secondary'
+              fontWeight={600}
+            >
+              AI Integration
+            </Typography>
+            <Stack spacing={2} mt={1.5}>
               <TextField
-                label='Your Profile'
-                multiline
-                rows={8}
-                fullWidth
-                placeholder={`Example:\nI'm a senior full-stack engineer with 8 years of experience, primarily in React and Node.js. I'm targeting staff-level IC roles at Series B–D startups. I want remote or hybrid in the US, $180–220k base. I'm excited about developer tools, fintech, and climate tech. I'm not interested in defense, crypto, or pure front-end roles. I have a strong background in system design and have led teams of 3–5 engineers.`}
-                {...register('careerProfile')}
+                label='Anthropic API Key'
+                type={showKey ? 'text' : 'password'}
+                placeholder='sk-ant-...'
+                helperText='Required to use AI coaching features.'
+                slotProps={{
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position='end'>
+                        <IconButton
+                          size='small'
+                          onClick={() => setShowKey((s) => !s)}
+                        >
+                          {showKey ? (
+                            <VisibilityOffIcon fontSize='small' />
+                          ) : (
+                            <VisibilityIcon fontSize='small' />
+                          )}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                {...register('anthropicApiKey')}
               />
-            </Box>
+            </Stack>
+          </Box>
 
-            <Divider />
+          <Divider />
 
-            {/* Security */}
-            <Box>
-              <Typography
-                variant='overline'
-                color='text.secondary'
-                fontWeight={600}
-              >
-                Security
-              </Typography>
-              <Stack
-                spacing={2}
-                mt={1.5}
-                component='form'
-                onSubmit={handleSubmitPw(onPasswordSubmit)}
-              >
+          {/* Career Profile */}
+          <Box>
+            <Typography
+              variant='overline'
+              color='text.secondary'
+              fontWeight={600}
+            >
+              Career Profile
+            </Typography>
+            <Typography
+              variant='body2'
+              color='text.secondary'
+              mt={0.5}
+              mb={1.5}
+            >
+              Describe yourself as a candidate — target roles, years of
+              experience, key skills, what you're looking for, and any
+              dealbreakers. Claude reads this on every coaching request to give
+              personalized advice.
+            </Typography>
+            <TextField
+              label='Your Profile'
+              multiline
+              rows={8}
+              fullWidth
+              placeholder={`Example:\nI'm a senior full-stack engineer with 8 years of experience, primarily in React and Node.js. I'm targeting staff-level IC roles at Series B–D startups. I want remote or hybrid in the US, $180–220k base. I'm excited about developer tools, fintech, and climate tech. I'm not interested in defense, crypto, or pure front-end roles. I have a strong background in system design and have led teams of 3–5 engineers.`}
+              {...register('careerProfile')}
+            />
+          </Box>
+
+          <Divider />
+
+          {/* Security — separate form so it doesn't nest inside the settings form */}
+          <Box>
+            <Typography
+              variant='overline'
+              color='text.secondary'
+              fontWeight={600}
+            >
+              Security
+            </Typography>
+            <form onSubmit={handleSubmitPw(onPasswordSubmit)}>
+              <Stack spacing={2} mt={1.5}>
                 <TextField
                   label='Current Password'
                   type='password'
@@ -236,19 +231,23 @@ export function SettingsDialog({ open, onClose }: Props) {
                   </Button>
                 </Box>
               </Stack>
-            </Box>
-          </Stack>
-        </DialogContent>
+            </form>
+          </Box>
+        </Stack>
+      </DialogContent>
 
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={onClose} color='inherit'>
-            Cancel
-          </Button>
-          <Button type='submit' variant='contained' disabled={saving}>
-            Save
-          </Button>
-        </DialogActions>
-      </form>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} color='inherit'>
+          Cancel
+        </Button>
+        <Button
+          variant='contained'
+          disabled={saving}
+          onClick={handleSubmit(onSubmit)}
+        >
+          Save
+        </Button>
+      </DialogActions>
     </Dialog>
   )
 }
