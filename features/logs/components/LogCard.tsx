@@ -4,6 +4,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ModeEditOutlineIcon from '@mui/icons-material/ModeEditOutline'
 import WorkIcon from '@mui/icons-material/Work'
 import {
   Box,
@@ -68,6 +69,9 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
   const { notes, applications } = parseContent(log.content)
   const [expanded, setExpanded] = useState(false)
   const [addingApp, setAddingApp] = useState(false)
+  const [editingApp, setEditingApp] = useState<
+    { app: JobApplicationEntry; index: number } | undefined
+  >(undefined)
 
   return (
     <>
@@ -248,9 +252,27 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                           flexWrap='wrap'
                         >
                           <Chip label={label} color={color} size='small' />
-                          <Typography variant='body2' fontWeight={600}>
+                          <Typography
+                            variant='body2'
+                            fontWeight={600}
+                            sx={{ flex: 1 }}
+                          >
                             {app.jobTitle} at {app.company}
                           </Typography>
+                          <Tooltip title='Edit application'>
+                            <IconButton
+                              size='small'
+                              onClick={() =>
+                                setEditingApp({
+                                  app,
+                                  index: applications.indexOf(app),
+                                })
+                              }
+                              sx={{ color: 'text.secondary' }}
+                            >
+                              <ModeEditOutlineIcon sx={{ fontSize: 15 }} />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                         {app.applicationUrl && (
                           <Typography
@@ -373,6 +395,12 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
         open={addingApp}
         log={log}
         onClose={() => setAddingApp(false)}
+      />
+      <AddApplicationDialog
+        open={editingApp !== undefined}
+        log={log}
+        editing={editingApp}
+        onClose={() => setEditingApp(undefined)}
       />
     </>
   )

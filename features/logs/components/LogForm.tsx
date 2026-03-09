@@ -306,8 +306,18 @@ export function LogForm({
                             </Tooltip>
                           </Box>
                           <Stack spacing={2}>
-                            {/* Job title + company */}
+                            {/* Company + job title */}
                             <Stack direction='row' spacing={2}>
+                              <TextField
+                                label='Company'
+                                fullWidth
+                                required
+                                error={!!errors.applications?.[index]?.company}
+                                helperText={
+                                  errors.applications?.[index]?.company?.message
+                                }
+                                {...register(`applications.${index}.company`)}
+                              />
                               <TextField
                                 label='Job Title'
                                 fullWidth
@@ -318,16 +328,6 @@ export function LogForm({
                                     ?.message
                                 }
                                 {...register(`applications.${index}.jobTitle`)}
-                              />
-                              <TextField
-                                label='Company'
-                                fullWidth
-                                required
-                                error={!!errors.applications?.[index]?.company}
-                                helperText={
-                                  errors.applications?.[index]?.company?.message
-                                }
-                                {...register(`applications.${index}.company`)}
                               />
                             </Stack>
 

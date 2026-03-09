@@ -39,6 +39,7 @@ import type { DailyLog } from '../types'
 interface Props {
   open: boolean
   log: DailyLog
+  editing?: { app: JobApplicationEntry; index: number }
   onClose: () => void
 }
 
@@ -60,7 +61,7 @@ const schema = yup.object({
     .default('quick_apply'),
 })
 
-export function AddApplicationDialog({ open, log, onClose }: Props) {
+export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   const { enqueueSnackbar } = useSnackbar()
   const [updateLog] = useUpdateLogMutation()
   const [summarizeJob] = useSummarizeJobMutation()
@@ -82,8 +83,8 @@ export function AddApplicationDialog({ open, log, onClose }: Props) {
   })
 
   useEffect(() => {
-    if (open) reset({ ...EMPTY_APPLICATION })
-  }, [open, reset])
+    if (open) reset(editing ? { ...editing.app } : { ...EMPTY_APPLICATION })
+  }, [open, reset, editing])
 
   const handleSummarize = async () => {
     const description = getValues('roleDescription')
@@ -119,35 +120,32 @@ export function AddApplicationDialog({ open, log, onClose }: Props) {
 
   const onSubmit = async (app: JobApplicationEntry) => {
     const { notes, applications } = parseContent(log.content)
-    const updated = serializeToContent({
-      notes,
-      applications: [...applications, app],
-    })
+    const updatedApps =
+      editing !== undefined
+        ? applications.map((a, i) => (i === editing.index ? app : a))
+        : [...applications, app]
+    const updated = serializeToContent({ notes, applications: updatedApps })
     const result = await updateLog({ ...log, content: updated })
     if ('error' in result) {
       enqueueSnackbar('Failed to save application.', { variant: 'error' })
     } else {
-      enqueueSnackbar('Application added.', { variant: 'success' })
+      enqueueSnackbar(editing ? 'Application updated.' : 'Application added.', {
+        variant: 'success',
+      })
       onClose()
     }
   }
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='md'>
-      <DialogTitle>Add Job Application</DialogTitle>
+      <DialogTitle>
+        {editing ? 'Edit Job Application' : 'Add Job Application'}
+      </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Stack spacing={2}>
-            {/* Job title + company */}
+            {/* Company + job title */}
             <Stack direction='row' spacing={2}>
-              <TextField
-                label='Job Title'
-                fullWidth
-                required
-                error={!!errors.jobTitle}
-                helperText={errors.jobTitle?.message}
-                {...register('jobTitle')}
-              />
               <TextField
                 label='Company'
                 fullWidth
@@ -155,6 +153,14 @@ export function AddApplicationDialog({ open, log, onClose }: Props) {
                 error={!!errors.company}
                 helperText={errors.company?.message}
                 {...register('company')}
+              />
+              <TextField
+                label='Job Title'
+                fullWidth
+                required
+                error={!!errors.jobTitle}
+                helperText={errors.jobTitle?.message}
+                {...register('jobTitle')}
               />
             </Stack>
 
@@ -306,7 +312,7 @@ export function AddApplicationDialog({ open, log, onClose }: Props) {
             Cancel
           </Button>
           <Button type='submit' variant='contained' disableElevation>
-            Add Application
+            {editing ? 'Update Application' : 'Add Application'}
           </Button>
         </DialogActions>
       </form>
