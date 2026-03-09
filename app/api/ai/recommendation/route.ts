@@ -34,7 +34,33 @@ export async function POST(
     )
   }
 
-  const logs = await prisma.dailyLog.findMany({ orderBy: { date: 'asc' } })
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 30)
+  const cutoffStr = cutoff.toISOString().slice(0, 10)
+
+  const [recentLogs, oldPriorityLogs] = await Promise.all([
+    prisma.dailyLog.findMany({
+      where: { date: { gte: cutoffStr } },
+      orderBy: { date: 'asc' },
+    }),
+    prisma.dailyLog.findMany({
+      where: {
+        date: { lt: cutoffStr },
+        OR: [
+          { content: { contains: 'Priority: Hot Lead' } },
+          { content: { contains: 'Priority: Strong Interest' } },
+        ],
+      },
+      orderBy: { date: 'asc' },
+    }),
+  ])
+
+  const seen = new Set<string>()
+  const logs = [...oldPriorityLogs, ...recentLogs].filter((l) => {
+    if (seen.has(l.id)) return false
+    seen.add(l.id)
+    return true
+  })
 
   if (logs.length === 0) {
     return NextResponse.json({
