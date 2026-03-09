@@ -16,8 +16,10 @@ model DailyLog {
 }
 
 model Settings {
-  id              String   @id @default("singleton")
-  anthropicApiKey String?
-  passwordHash    String?
-  updatedAt       DateTime @updatedAt
+  id                     String   @id @default("singleton")
+  anthropicApiKey        String?
+  passwordHash           String?
+  lastRecommendation     String?
+  lastRecommendationDate String?
+  updatedAt              DateTime @updatedAt
 }

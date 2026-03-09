@@ -18,7 +18,7 @@ import {
 } from '@mui/material'
 import dayjs from 'dayjs'
 import ReactMarkdown from 'react-markdown'
-import { useGetAiRecommendationMutation } from '@/lib/api'
+import { useGetAiRecommendationMutation, useGetStoredRecommendationQuery } from '@/lib/api'
 import { useWebUsbPrinter } from '../hooks/useWebUsbPrinter'
 
 interface Props {
@@ -27,7 +27,8 @@ interface Props {
 }
 
 export function AiRecommendation({ collapsed, onToggle }: Props) {
-  const [getRecommendation, { data, isLoading, error }] =
+  const { data: storedData } = useGetStoredRecommendationQuery()
+  const [getRecommendation, { data: freshData, isLoading, error }] =
     useGetAiRecommendationMutation()
   const {
     printer,
@@ -38,6 +39,11 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
     connect,
     print,
   } = useWebUsbPrinter()
+
+  const recommendation = freshData?.recommendation ?? storedData?.recommendation ?? null
+  const recommendationDate = freshData
+    ? dayjs().format('YYYY-MM-DD')
+    : storedData?.date ?? null
 
   const errorMessage = (() => {
     if (!error) return null
@@ -104,8 +110,8 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                   <span>
                     <IconButton
                       size='small'
-                      onClick={() => data && print(data.recommendation)}
-                      disabled={!data || printing}
+                      onClick={() => recommendation && print(recommendation)}
+                      disabled={!recommendation || printing}
                       sx={{ color: '#9c6fde' }}
                     >
                       {printing ? (
@@ -161,7 +167,7 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
               >
                 {isLoading
                   ? 'Thinking…'
-                  : data
+                  : recommendation
                     ? 'Refresh'
                     : errorMessage
                       ? 'Retry'
@@ -201,7 +207,7 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
             </Alert>
           )}
 
-          {!data && !isLoading && !errorMessage && (
+          {!recommendation && !isLoading && !errorMessage && (
             <Typography
               variant='body2'
               color='text.secondary'
@@ -222,7 +228,7 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
             </Typography>
           )}
 
-          {data && !isLoading && (
+          {recommendation && !isLoading && (
             <Box
               sx={{
                 '& p': { m: 0, mb: 1, fontSize: '0.875rem', lineHeight: 1.7 },
@@ -238,7 +244,7 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                 '& strong': { fontWeight: 600 },
               }}
             >
-              <ReactMarkdown>{data.recommendation}</ReactMarkdown>
+              <ReactMarkdown>{recommendation}</ReactMarkdown>
             </Box>
           )}
         </Box>
@@ -247,14 +253,16 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
       {/* Pinned footer */}
       <Box sx={{ flexShrink: 0, px: 2 }}>
         <Divider />
-        <Typography
-          variant='caption'
-          color='text.disabled'
-          display='block'
-          py={1}
-        >
-          Powered by Claude
-        </Typography>
+        <Box display='flex' justifyContent='space-between' alignItems='center' py={1}>
+          <Typography variant='caption' color='text.disabled'>
+            Powered by Claude
+          </Typography>
+          {recommendationDate && (
+            <Typography variant='caption' color='text.disabled'>
+              Last updated {recommendationDate}
+            </Typography>
+          )}
+        </Box>
       </Box>
     </Paper>
   )

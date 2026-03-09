@@ -1,14 +1,24 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-import type { AiRecommendationResponse } from '@/features/ai/types'
+import type { AiRecommendationResponse, StoredRecommendationResponse } from '@/features/ai/types'
 import { prisma } from '@/lib/prisma'
+
+const ID = 'singleton'
+
+export async function GET(): Promise<NextResponse<StoredRecommendationResponse>> {
+  const settings = await prisma.settings.findUnique({ where: { id: ID } })
+  return NextResponse.json({
+    recommendation: settings?.lastRecommendation ?? null,
+    date: settings?.lastRecommendationDate ?? null,
+  })
+}
 
 export async function POST(
   request: Request,
 ): Promise<NextResponse<AiRecommendationResponse | { error: string }>> {
   const { date } = await request.json().catch(() => ({}))
   const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+    where: { id: ID },
   })
   const apiKey = settings?.anthropicApiKey
 
@@ -29,16 +39,26 @@ export async function POST(
   }
 
   const logText = logs.map((log) => `${log.date}:\n${log.content}`).join('\n\n')
+  const today = date ?? new Date().toISOString().slice(0, 10)
 
   try {
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 512,
-      system: `You are an expert job search coach. The user will share their job search activity log with one entry per day.
-Today's date is ${date ?? new Date().toISOString().slice(0, 10)}.
-Review the log and provide one specific, actionable task the user should complete TODAY to maximize their job search success.
-Be direct and concrete — name specific companies, roles, or contacts from their log where possible.
+      system: `You are an expert job search coach. The user shares their daily job search activity log, one entry per day.
+Today's date is ${today}.
+
+Job application entries may include a Priority field — use it to calibrate your advice:
+- Quick Apply: low-effort submission (e.g. LinkedIn Easy Apply). Low expectations. Do NOT recommend following up on these unless there is a compelling reason.
+- Standard: a genuine application worth following up after one week of silence.
+- Strong Interest: the user is excited about this role — prioritize follow-up, interview prep, and tailoring outreach.
+- Hot Lead: highest priority — often a referral, networking connection, or dream company. Always recommend proactive outreach, preparation, or next steps for these.
+
+The Source field may name a specific person (e.g. "Referred by John Smith") — treat this as a warm networking lead and factor it into follow-up advice when relevant.
+
+Review the full log and provide one specific, actionable task the user should complete TODAY to maximize their job search success.
+Be direct and concrete — name specific companies, roles, or contacts from the log where possible.
 Keep it to 2-4 sentences. No preamble, just the advice.`,
       messages: [
         {
@@ -52,6 +72,12 @@ Keep it to 2-4 sentences. No preamble, just the advice.`,
       .filter((block) => block.type === 'text')
       .map((block) => block.text)
       .join('')
+
+    await prisma.settings.upsert({
+      where: { id: ID },
+      update: { lastRecommendation: recommendation, lastRecommendationDate: today },
+      create: { id: ID, lastRecommendation: recommendation, lastRecommendationDate: today },
+    })
 
     return NextResponse.json({ recommendation })
   } catch (e) {
