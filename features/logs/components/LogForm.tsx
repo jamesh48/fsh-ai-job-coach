@@ -2,10 +2,13 @@
 
 import { yupResolver } from '@hookform/resolvers/yup'
 import DeleteIcon from '@mui/icons-material/Delete'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import WorkIcon from '@mui/icons-material/Work'
 import {
   Box,
   Button,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -26,7 +29,7 @@ import {
   Typography,
 } from '@mui/material'
 import dayjs from 'dayjs'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import * as yup from 'yup'
 import type { DailyLog, LogFormValues } from '../types'
@@ -256,6 +259,8 @@ export function LogForm({
     name: 'applications',
   })
 
+  const [appsExpanded, setAppsExpanded] = useState(true)
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: open triggers reset when dialog reopens
   useEffect(() => {
     if (editing) {
@@ -279,191 +284,242 @@ export function LogForm({
       PaperProps={{ sx: { minHeight: '80vh' } }}
     >
       <DialogTitle>{editing ? 'Edit Entry' : 'New Entry'}</DialogTitle>
-      <form onSubmit={handleSubmit(handleFormSubmit)}>
-        <DialogContent>
-          <Stack spacing={3} pt={1}>
-            <TextField
-              label='Date'
-              type='date'
-              slotProps={{ inputLabel: { shrink: true } }}
-              error={!!errors.date}
-              helperText={errors.date?.message}
-              {...register('date')}
-            />
-            <TextField
-              label='Notes'
-              multiline
-              rows={3}
-              placeholder='What did you work on today? Networking, research, interviews…'
-              error={!!errors.notes}
-              helperText={errors.notes?.message}
-              {...register('notes')}
-            />
-
-            {fields.length > 0 && (
-              <>
-                <Divider textAlign='left'>
-                  <Typography
-                    variant='caption'
-                    color='text.secondary'
-                    fontWeight={600}
+      <form
+        onSubmit={handleSubmit(handleFormSubmit)}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+        }}
+      >
+        <DialogContent
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            p: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ px: 3, pt: 1, pb: 2, flexShrink: 0 }}>
+            <Stack spacing={3}>
+              <TextField
+                label='Date'
+                type='date'
+                slotProps={{ inputLabel: { shrink: true } }}
+                error={!!errors.date}
+                helperText={errors.date?.message}
+                {...register('date')}
+              />
+              <TextField
+                label='Notes'
+                multiline
+                rows={3}
+                placeholder='What did you work on today? Networking, research, interviews…'
+                error={!!errors.notes}
+                helperText={errors.notes?.message}
+                {...register('notes')}
+              />
+            </Stack>
+          </Box>
+          <Box sx={{ flex: 1, overflowY: 'auto', px: 3, pb: 2 }}>
+            <Stack spacing={2}>
+              {fields.length > 0 && (
+                <>
+                  <Box
+                    display='flex'
+                    alignItems='center'
+                    sx={{ cursor: 'pointer', userSelect: 'none' }}
+                    onClick={() => setAppsExpanded((v) => !v)}
                   >
-                    JOB APPLICATIONS ({fields.length})
-                  </Typography>
-                </Divider>
-                <Stack spacing={2}>
-                  {fields.map((field, index) => (
-                    <Paper key={field.id} variant='outlined' sx={{ p: 2 }}>
-                      <Box
-                        display='flex'
-                        justifyContent='space-between'
-                        alignItems='center'
-                        mb={2}
+                    <Divider sx={{ flex: 1 }} />
+                    <Box display='flex' alignItems='center' gap={0.5} px={1}>
+                      <Typography
+                        variant='caption'
+                        color='text.secondary'
+                        fontWeight={600}
                       >
-                        <Typography variant='subtitle2' color='text.secondary'>
-                          Application #{index + 1}
-                        </Typography>
-                        <Tooltip title='Remove application'>
-                          <IconButton
-                            size='small'
-                            onClick={() => remove(index)}
-                            color='error'
+                        JOB APPLICATIONS ({fields.length})
+                      </Typography>
+                      {appsExpanded ? (
+                        <ExpandLessIcon
+                          sx={{ fontSize: 16, color: 'text.secondary' }}
+                        />
+                      ) : (
+                        <ExpandMoreIcon
+                          sx={{ fontSize: 16, color: 'text.secondary' }}
+                        />
+                      )}
+                    </Box>
+                    <Divider sx={{ flex: 1 }} />
+                  </Box>
+                  <Collapse in={appsExpanded}>
+                    <Stack spacing={2}>
+                      {fields.map((field, index) => (
+                        <Paper key={field.id} variant='outlined' sx={{ p: 2 }}>
+                          <Box
+                            display='flex'
+                            justifyContent='space-between'
+                            alignItems='center'
+                            mb={2}
                           >
-                            <DeleteIcon fontSize='small' />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                      <Stack spacing={2}>
-                        {/* Job title + company */}
-                        <Stack direction='row' spacing={2}>
-                          <TextField
-                            label='Job Title'
-                            fullWidth
-                            required
-                            error={!!errors.applications?.[index]?.jobTitle}
-                            helperText={
-                              errors.applications?.[index]?.jobTitle?.message
-                            }
-                            {...register(`applications.${index}.jobTitle`)}
-                          />
-                          <TextField
-                            label='Company'
-                            fullWidth
-                            required
-                            error={!!errors.applications?.[index]?.company}
-                            helperText={
-                              errors.applications?.[index]?.company?.message
-                            }
-                            {...register(`applications.${index}.company`)}
-                          />
-                        </Stack>
-
-                        {/* Priority toggle */}
-                        <Controller
-                          name={`applications.${index}.priority`}
-                          control={control}
-                          render={({ field }) => (
-                            <ToggleButtonGroup
-                              exclusive
-                              fullWidth
-                              size='small'
-                              value={field.value}
-                              onChange={(_, val) => val && field.onChange(val)}
+                            <Typography
+                              variant='subtitle2'
+                              color='text.secondary'
                             >
-                              <ToggleButton value='quick_apply'>
-                                ⚡ Quick Apply
-                              </ToggleButton>
-                              <ToggleButton value='standard'>
-                                📋 Standard
-                              </ToggleButton>
-                              <ToggleButton value='strong_interest'>
-                                ⭐ Strong Interest
-                              </ToggleButton>
-                              <ToggleButton value='hot_lead'>
-                                🔥 Hot Lead
-                              </ToggleButton>
-                            </ToggleButtonGroup>
-                          )}
-                        />
-
-                        {/* Source */}
-                        <TextField
-                          label='How did you find this?'
-                          fullWidth
-                          placeholder='LinkedIn Easy Apply, company website, referred by [name]…'
-                          {...register(`applications.${index}.source`)}
-                        />
-
-                        {/* Recruiter + work arrangement */}
-                        <Stack direction='row' spacing={2}>
-                          <TextField
-                            label='Recruiter'
-                            fullWidth
-                            placeholder='Name or LinkedIn URL'
-                            {...register(`applications.${index}.recruiter`)}
-                          />
-                          <FormControl fullWidth>
-                            <InputLabel>Work Arrangement</InputLabel>
-                            <Controller
-                              name={`applications.${index}.workArrangement`}
-                              control={control}
-                              render={({ field }) => (
-                                <Select label='Work Arrangement' {...field}>
-                                  <MenuItem value=''>Not specified</MenuItem>
-                                  {WORK_ARRANGEMENTS.map((w) => (
-                                    <MenuItem key={w} value={w}>
-                                      {w}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              )}
-                            />
-                            {errors.applications?.[index]?.workArrangement && (
-                              <FormHelperText error>
-                                {
-                                  errors.applications[index].workArrangement
+                              Application #{index + 1}
+                            </Typography>
+                            <Tooltip title='Remove application'>
+                              <IconButton
+                                size='small'
+                                onClick={() => remove(index)}
+                                color='error'
+                              >
+                                <DeleteIcon fontSize='small' />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                          <Stack spacing={2}>
+                            {/* Job title + company */}
+                            <Stack direction='row' spacing={2}>
+                              <TextField
+                                label='Job Title'
+                                fullWidth
+                                required
+                                error={!!errors.applications?.[index]?.jobTitle}
+                                helperText={
+                                  errors.applications?.[index]?.jobTitle
                                     ?.message
                                 }
-                              </FormHelperText>
-                            )}
-                          </FormControl>
-                        </Stack>
+                                {...register(`applications.${index}.jobTitle`)}
+                              />
+                              <TextField
+                                label='Company'
+                                fullWidth
+                                required
+                                error={!!errors.applications?.[index]?.company}
+                                helperText={
+                                  errors.applications?.[index]?.company?.message
+                                }
+                                {...register(`applications.${index}.company`)}
+                              />
+                            </Stack>
 
-                        {/* Role description */}
-                        <TextField
-                          label='About the Role'
-                          multiline
-                          rows={2}
-                          placeholder='Key responsibilities, required skills, seniority level…'
-                          {...register(`applications.${index}.roleDescription`)}
-                        />
+                            {/* Priority toggle */}
+                            <Controller
+                              name={`applications.${index}.priority`}
+                              control={control}
+                              render={({ field }) => (
+                                <ToggleButtonGroup
+                                  exclusive
+                                  fullWidth
+                                  size='small'
+                                  value={field.value}
+                                  onChange={(_, val) =>
+                                    val && field.onChange(val)
+                                  }
+                                >
+                                  <ToggleButton value='quick_apply'>
+                                    ⚡ Quick Apply
+                                  </ToggleButton>
+                                  <ToggleButton value='standard'>
+                                    📋 Standard
+                                  </ToggleButton>
+                                  <ToggleButton value='strong_interest'>
+                                    ⭐ Strong Interest
+                                  </ToggleButton>
+                                  <ToggleButton value='hot_lead'>
+                                    🔥 Hot Lead
+                                  </ToggleButton>
+                                </ToggleButtonGroup>
+                              )}
+                            />
 
-                        {/* Impression */}
-                        <TextField
-                          label='My Impression'
-                          multiline
-                          rows={2}
-                          placeholder='Excitement level, concerns, how well it fits your goals…'
-                          {...register(`applications.${index}.impression`)}
-                        />
-                      </Stack>
-                    </Paper>
-                  ))}
-                </Stack>
-              </>
-            )}
+                            {/* Source */}
+                            <TextField
+                              label='How did you find this?'
+                              fullWidth
+                              placeholder='LinkedIn Easy Apply, company website, referred by [name]…'
+                              {...register(`applications.${index}.source`)}
+                            />
 
-            <Button
-              variant='outlined'
-              startIcon={<WorkIcon />}
-              onClick={() => append({ ...EMPTY_APPLICATION })}
-              sx={{ alignSelf: 'flex-start' }}
-            >
-              {fields.length === 0
-                ? 'Log a Job Application'
-                : 'Add Another Application'}
-            </Button>
-          </Stack>
+                            {/* Recruiter + work arrangement */}
+                            <Stack direction='row' spacing={2}>
+                              <TextField
+                                label='Recruiter'
+                                fullWidth
+                                placeholder='Name or LinkedIn URL'
+                                {...register(`applications.${index}.recruiter`)}
+                              />
+                              <FormControl fullWidth>
+                                <InputLabel>Work Arrangement</InputLabel>
+                                <Controller
+                                  name={`applications.${index}.workArrangement`}
+                                  control={control}
+                                  render={({ field }) => (
+                                    <Select label='Work Arrangement' {...field}>
+                                      <MenuItem value=''>
+                                        Not specified
+                                      </MenuItem>
+                                      {WORK_ARRANGEMENTS.map((w) => (
+                                        <MenuItem key={w} value={w}>
+                                          {w}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  )}
+                                />
+                                {errors.applications?.[index]
+                                  ?.workArrangement && (
+                                  <FormHelperText error>
+                                    {
+                                      errors.applications[index].workArrangement
+                                        ?.message
+                                    }
+                                  </FormHelperText>
+                                )}
+                              </FormControl>
+                            </Stack>
+
+                            {/* Role description */}
+                            <TextField
+                              label='About the Role'
+                              multiline
+                              rows={2}
+                              placeholder='Key responsibilities, required skills, seniority level…'
+                              {...register(
+                                `applications.${index}.roleDescription`,
+                              )}
+                            />
+
+                            {/* Impression */}
+                            <TextField
+                              label='My Impression'
+                              multiline
+                              rows={2}
+                              placeholder='Excitement level, concerns, how well it fits your goals…'
+                              {...register(`applications.${index}.impression`)}
+                            />
+                          </Stack>
+                        </Paper>
+                      ))}
+                    </Stack>
+                  </Collapse>
+                </>
+              )}
+
+              <Button
+                variant='outlined'
+                startIcon={<WorkIcon />}
+                onClick={() => append({ ...EMPTY_APPLICATION })}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                {fields.length === 0
+                  ? 'Log a Job Application'
+                  : 'Add Another Application'}
+              </Button>
+            </Stack>
+          </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={onClose} color='inherit'>
