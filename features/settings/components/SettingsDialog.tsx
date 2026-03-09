@@ -62,7 +62,11 @@ export function SettingsDialog({ open, onClose }: Props) {
     formState: { errors: pwErrors },
   } = useForm<PasswordFormValues>({
     resolver: yupResolver(passwordSchema),
-    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
   })
 
   useEffect(() => {
@@ -76,12 +80,17 @@ export function SettingsDialog({ open, onClose }: Props) {
     const res = await fetch('/api/auth/password', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentPassword: values.currentPassword, newPassword: values.newPassword }),
+      body: JSON.stringify({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      }),
     })
     setSavingPassword(false)
     const data = await res.json()
     if (!res.ok) {
-      enqueueSnackbar(data.error ?? 'Failed to update password.', { variant: 'error' })
+      enqueueSnackbar(data.error ?? 'Failed to update password.', {
+        variant: 'error',
+      })
     } else {
       enqueueSnackbar('Password updated.', { variant: 'success' })
       resetPw()
@@ -106,7 +115,11 @@ export function SettingsDialog({ open, onClose }: Props) {
           <Stack spacing={3}>
             {/* AI Integration */}
             <Box>
-              <Typography variant='overline' color='text.secondary' fontWeight={600}>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
                 AI Integration
               </Typography>
               <Stack spacing={2} mt={1.5}>
@@ -119,7 +132,10 @@ export function SettingsDialog({ open, onClose }: Props) {
                     input: {
                       endAdornment: (
                         <InputAdornment position='end'>
-                          <IconButton size='small' onClick={() => setShowKey((s) => !s)}>
+                          <IconButton
+                            size='small'
+                            onClick={() => setShowKey((s) => !s)}
+                          >
                             {showKey ? (
                               <VisibilityOffIcon fontSize='small' />
                             ) : (
@@ -139,10 +155,19 @@ export function SettingsDialog({ open, onClose }: Props) {
 
             {/* Security */}
             <Box>
-              <Typography variant='overline' color='text.secondary' fontWeight={600}>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
                 Security
               </Typography>
-              <Stack spacing={2} mt={1.5} component='form' onSubmit={handleSubmitPw(onPasswordSubmit)}>
+              <Stack
+                spacing={2}
+                mt={1.5}
+                component='form'
+                onSubmit={handleSubmitPw(onPasswordSubmit)}
+              >
                 <TextField
                   label='Current Password'
                   type='password'
@@ -165,7 +190,12 @@ export function SettingsDialog({ open, onClose }: Props) {
                   helperText={pwErrors.confirmPassword?.message}
                 />
                 <Box>
-                  <Button type='submit' variant='outlined' size='small' disabled={savingPassword}>
+                  <Button
+                    type='submit'
+                    variant='outlined'
+                    size='small'
+                    disabled={savingPassword}
+                  >
                     Change Password
                   </Button>
                 </Box>

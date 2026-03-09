@@ -18,7 +18,10 @@ import {
 } from '@mui/material'
 import dayjs from 'dayjs'
 import ReactMarkdown from 'react-markdown'
-import { useGetAiRecommendationMutation, useGetStoredRecommendationQuery } from '@/lib/api'
+import {
+  useGetAiRecommendationMutation,
+  useGetStoredRecommendationQuery,
+} from '@/lib/api'
 import { useWebUsbPrinter } from '../hooks/useWebUsbPrinter'
 
 interface Props {
@@ -40,10 +43,11 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
     print,
   } = useWebUsbPrinter()
 
-  const recommendation = freshData?.recommendation ?? storedData?.recommendation ?? null
+  const recommendation =
+    freshData?.recommendation ?? storedData?.recommendation ?? null
   const recommendationDate = freshData
     ? dayjs().format('YYYY-MM-DD')
-    : storedData?.date ?? null
+    : (storedData?.date ?? null)
 
   const errorMessage = (() => {
     if (!error) return null
@@ -253,7 +257,12 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
       {/* Pinned footer */}
       <Box sx={{ flexShrink: 0, px: 2 }}>
         <Divider />
-        <Box display='flex' justifyContent='space-between' alignItems='center' py={1}>
+        <Box
+          display='flex'
+          justifyContent='space-between'
+          alignItems='center'
+          py={1}
+        >
           <Typography variant='caption' color='text.disabled'>
             Powered by Claude
           </Typography>

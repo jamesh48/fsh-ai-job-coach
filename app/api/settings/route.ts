@@ -1,12 +1,16 @@
-import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
 const ID = 'singleton'
 
 export async function GET() {
   const settings = await prisma.settings.findUnique({ where: { id: ID } })
   return NextResponse.json(
-    settings ?? { id: ID, anthropicApiKey: null, updatedAt: new Date().toISOString() },
+    settings ?? {
+      id: ID,
+      anthropicApiKey: null,
+      updatedAt: new Date().toISOString(),
+    },
   )
 }
 

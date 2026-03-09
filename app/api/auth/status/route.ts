@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
-  const settings = await prisma.settings.findUnique({ where: { id: 'singleton' } })
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+  })
   return NextResponse.json({ hasPassword: !!settings?.passwordHash })
 }

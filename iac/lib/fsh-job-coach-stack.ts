@@ -32,18 +32,22 @@ export class FshJobCoachStack extends cdk.Stack {
       vpcId: props.aws_env.AWS_VPC_ID,
     })
 
-    const cluster = ecs.Cluster.fromClusterAttributes(this, 'jh-imported-cluster', {
-      clusterName: 'jh-e1-ecs-cluster',
-      clusterArn: props.aws_env.AWS_CLUSTER_ARN,
-      securityGroups: [
-        ec2.SecurityGroup.fromSecurityGroupId(
-          this,
-          'imported-default-sg',
-          props.aws_env.AWS_DEFAULT_SG,
-        ),
-      ],
-      vpc,
-    })
+    const cluster = ecs.Cluster.fromClusterAttributes(
+      this,
+      'jh-imported-cluster',
+      {
+        clusterName: 'jh-e1-ecs-cluster',
+        clusterArn: props.aws_env.AWS_CLUSTER_ARN,
+        securityGroups: [
+          ec2.SecurityGroup.fromSecurityGroupId(
+            this,
+            'imported-default-sg',
+            props.aws_env.AWS_DEFAULT_SG,
+          ),
+        ],
+        vpc,
+      },
+    )
 
     const taskRole = iam.Role.fromRoleName(
       this,
@@ -63,7 +67,11 @@ export class FshJobCoachStack extends cdk.Stack {
 
     taskDef.addContainer('fsh-job-coach-container', {
       image: ecs.ContainerImage.fromAsset('../'),
-      command: ['sh', '-c', `npx prisma migrate deploy && npx next start -p ${PORT}`],
+      command: [
+        'sh',
+        '-c',
+        `npx prisma migrate deploy && npx next start -p ${PORT}`,
+      ],
       environment: {
         DATABASE_URL: databaseUrl,
         SESSION_SECRET: props.sessionSecret,
@@ -81,29 +89,39 @@ export class FshJobCoachStack extends cdk.Stack {
       taskDefinition: taskDef,
       assignPublicIp: true,
       desiredCount: 1,
-      capacityProviderStrategies: [{ capacityProvider: 'FARGATE_SPOT', weight: 1 }],
+      capacityProviderStrategies: [
+        { capacityProvider: 'FARGATE_SPOT', weight: 1 },
+      ],
       enableExecuteCommand: true,
     })
 
-    const listener = elbv2.ApplicationListener.fromLookup(this, 'imported-listener', {
-      listenerArn: props.aws_env.ALB_LISTENER_ARN,
-    })
-
-    const targetGroup = new elbv2.ApplicationTargetGroup(this, 'fsh-job-coach-tg', {
-      port: PORT,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      targets: [service],
-      vpc,
-      healthCheck: {
-        path: '/api/healthcheck',
-        healthyHttpCodes: '200',
-        unhealthyThresholdCount: 2,
-        healthyThresholdCount: 4,
-        interval: cdk.Duration.seconds(30),
-        port: PORT.toString(),
-        timeout: cdk.Duration.seconds(10),
+    const listener = elbv2.ApplicationListener.fromLookup(
+      this,
+      'imported-listener',
+      {
+        listenerArn: props.aws_env.ALB_LISTENER_ARN,
       },
-    })
+    )
+
+    const targetGroup = new elbv2.ApplicationTargetGroup(
+      this,
+      'fsh-job-coach-tg',
+      {
+        port: PORT,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        targets: [service],
+        vpc,
+        healthCheck: {
+          path: '/api/healthcheck',
+          healthyHttpCodes: '200',
+          unhealthyThresholdCount: 2,
+          healthyThresholdCount: 4,
+          interval: cdk.Duration.seconds(30),
+          port: PORT.toString(),
+          timeout: cdk.Duration.seconds(10),
+        },
+      },
+    )
 
     listener.addTargetGroups('fsh-listener-tg', {
       targetGroups: [targetGroup],

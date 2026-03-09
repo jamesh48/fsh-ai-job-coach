@@ -38,7 +38,6 @@
     "actions": {
       "source": {
         "organizeImports": "on"
-
       }
     }
   }

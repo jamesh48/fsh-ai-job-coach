@@ -1,11 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-import type { AiRecommendationResponse, StoredRecommendationResponse } from '@/features/ai/types'
+import type {
+  AiRecommendationResponse,
+  StoredRecommendationResponse,
+} from '@/features/ai/types'
 import { prisma } from '@/lib/prisma'
 
 const ID = 'singleton'
 
-export async function GET(): Promise<NextResponse<StoredRecommendationResponse>> {
+export async function GET(): Promise<
+  NextResponse<StoredRecommendationResponse>
+> {
   const settings = await prisma.settings.findUnique({ where: { id: ID } })
   return NextResponse.json({
     recommendation: settings?.lastRecommendation ?? null,
@@ -75,8 +80,15 @@ Keep it to 2-4 sentences. No preamble, just the advice.`,
 
     await prisma.settings.upsert({
       where: { id: ID },
-      update: { lastRecommendation: recommendation, lastRecommendationDate: today },
-      create: { id: ID, lastRecommendation: recommendation, lastRecommendationDate: today },
+      update: {
+        lastRecommendation: recommendation,
+        lastRecommendationDate: today,
+      },
+      create: {
+        id: ID,
+        lastRecommendation: recommendation,
+        lastRecommendationDate: today,
+      },
     })
 
     return NextResponse.json({ recommendation })

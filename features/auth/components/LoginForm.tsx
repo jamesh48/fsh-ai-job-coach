@@ -54,7 +54,12 @@ export function LoginForm() {
 
   if (hasPassword === null) {
     return (
-      <Box display='flex' justifyContent='center' alignItems='center' minHeight='100vh'>
+      <Box
+        display='flex'
+        justifyContent='center'
+        alignItems='center'
+        minHeight='100vh'
+      >
         <CircularProgress />
       </Box>
     )
@@ -63,8 +68,18 @@ export function LoginForm() {
   const isSetup = !hasPassword
 
   return (
-    <Box display='flex' justifyContent='center' alignItems='center' minHeight='100vh' px={2}>
-      <Paper elevation={0} variant='outlined' sx={{ width: '100%', maxWidth: 400, p: 4 }}>
+    <Box
+      display='flex'
+      justifyContent='center'
+      alignItems='center'
+      minHeight='100vh'
+      px={2}
+    >
+      <Paper
+        elevation={0}
+        variant='outlined'
+        sx={{ width: '100%', maxWidth: 400, p: 4 }}
+      >
         <Box display='flex' alignItems='center' gap={1} mb={3}>
           <WorkOutlineIcon color='action' />
           <Typography variant='h6' fontWeight={700}>
@@ -87,12 +102,17 @@ export function LoginForm() {
             fullWidth
             autoFocus
             error={!!error}
-            helperText={error || (isSetup ? 'Minimum 8 characters.' : undefined)}
+            helperText={
+              error || (isSetup ? 'Minimum 8 characters.' : undefined)
+            }
             slotProps={{
               input: {
                 endAdornment: (
                   <InputAdornment position='end'>
-                    <IconButton size='small' onClick={() => setShowPassword((s) => !s)}>
+                    <IconButton
+                      size='small'
+                      onClick={() => setShowPassword((s) => !s)}
+                    >
                       {showPassword ? (
                         <VisibilityOffIcon fontSize='small' />
                       ) : (
@@ -113,7 +133,13 @@ export function LoginForm() {
             disabled={loading}
             sx={{ mt: 2 }}
           >
-            {loading ? <CircularProgress size={20} /> : isSetup ? 'Create Password' : 'Sign In'}
+            {loading ? (
+              <CircularProgress size={20} />
+            ) : isSetup ? (
+              'Create Password'
+            ) : (
+              'Sign In'
+            )}
           </Button>
         </form>
       </Paper>

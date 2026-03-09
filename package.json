@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "prepare": "husky"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -32,6 +33,12 @@
     "react-redux": "^9.2.0",
     "yup": "^1.7.1"
   },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json}": [
+      "biome format --write",
+      "biome check --write"
+    ]
+  },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
     "@types/bcryptjs": "^3.0.0",
@@ -40,6 +47,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/w3c-web-usb": "^1.0.13",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2",
     "prisma": "^7.4.2",
     "typescript": "^5"
   }

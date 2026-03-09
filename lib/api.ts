@@ -1,5 +1,8 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import type { AiRecommendationResponse, StoredRecommendationResponse } from '@/features/ai/types'
+import type {
+  AiRecommendationResponse,
+  StoredRecommendationResponse,
+} from '@/features/ai/types'
 import type { DailyLog, LogFormValues } from '@/features/logs/types'
 import type { AppSettings, SettingsFormValues } from '@/features/settings/types'
 
@@ -28,7 +31,10 @@ export const api = createApi({
       query: () => '/ai/recommendation',
       providesTags: ['AiRecommendation'],
     }),
-    getAiRecommendation: builder.mutation<AiRecommendationResponse, { date: string }>({
+    getAiRecommendation: builder.mutation<
+      AiRecommendationResponse,
+      { date: string }
+    >({
       query: (body) => ({ url: '/ai/recommendation', method: 'POST', body }),
       invalidatesTags: ['AiRecommendation'],
     }),

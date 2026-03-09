@@ -154,7 +154,10 @@ export function LogList() {
         onClose={() => setOpen(false)}
       />
 
-      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </Box>
   )
 }

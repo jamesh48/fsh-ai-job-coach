@@ -1,8 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { AiRecommendation } from '@/features/ai'
 import { LogList } from '@/features/logs'
-import { useState } from 'react'
 
 const PANEL_EXPANDED_HEIGHT = '40vh'
 const PANEL_COLLAPSED_HEIGHT = '49px'
@@ -26,7 +26,10 @@ export function HomeLayout() {
           overflow: 'hidden',
         }}
       >
-        <AiRecommendation collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+        <AiRecommendation
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((c) => !c)}
+        />
       </div>
     </div>
   )

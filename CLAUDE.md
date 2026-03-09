@@ -3,6 +3,12 @@
 ## Instructions for Claude
 Keep this file up to date. After any session where new libraries are added, architectural decisions are made, conventions are established, or features are built, update the relevant sections of this file. If a section becomes outdated, correct it. This file is the source of truth for project context across conversations.
 
+After editing any `*.ts`, `*.tsx`, `*.js`, `*.jsx`, or `*.json` file, run:
+```bash
+yarn format && yarn lint
+```
+This auto-formats and lints the affected files so code is always clean before the user commits.
+
 ## Project Overview
 An AI-powered job search coaching app. The core MVP is a daily activity log where users record what they did each day in their job search. An AI coach (Claude) analyzes the log and gives actionable daily recommendations. A gear icon in the header opens a Settings dialog for API key configuration. Printing is handled client-side via WebUSB (ESC/POS).
 

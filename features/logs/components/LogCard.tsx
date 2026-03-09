@@ -20,18 +20,34 @@ import type { DailyLog } from '../types'
 
 type Priority = 'quick_apply' | 'standard' | 'strong_interest' | 'hot_lead'
 
-const PRIORITY_DISPLAY: Record<Priority, { label: string; emoji: string; color: 'default' | 'info' | 'warning' | 'error' }> = {
+const PRIORITY_DISPLAY: Record<
+  Priority,
+  {
+    label: string
+    emoji: string
+    color: 'default' | 'info' | 'warning' | 'error'
+  }
+> = {
   quick_apply: { label: '⚡ Quick Apply', emoji: '⚡', color: 'default' },
   standard: { label: '📋 Standard', emoji: '📋', color: 'info' },
-  strong_interest: { label: '⭐ Strong Interest', emoji: '⭐', color: 'warning' },
+  strong_interest: {
+    label: '⭐ Strong Interest',
+    emoji: '⭐',
+    color: 'warning',
+  },
   hot_lead: { label: '🔥 Hot Lead', emoji: '🔥', color: 'error' },
 }
 
-const PRIORITY_ORDER: Priority[] = ['hot_lead', 'strong_interest', 'standard', 'quick_apply']
+const PRIORITY_ORDER: Priority[] = [
+  'hot_lead',
+  'strong_interest',
+  'standard',
+  'quick_apply',
+]
 
 const PRIORITY_FROM_LABEL: Record<string, Priority> = {
   'Quick Apply (low effort, low expectations)': 'quick_apply',
-  'Standard': 'standard',
+  Standard: 'standard',
   'Strong Interest (tailored application)': 'strong_interest',
   'Hot Lead (referral or high-priority target)': 'hot_lead',
 }
@@ -47,7 +63,10 @@ interface ParsedApp {
   impression?: string
 }
 
-function parseForDisplay(content: string): { notes: string; applications: ParsedApp[] } {
+function parseForDisplay(content: string): {
+  notes: string
+  applications: ParsedApp[]
+} {
   const SECTION = '\nJob Applications Submitted Today:\n'
   const idx = content.indexOf(SECTION)
   if (idx === -1) return { notes: content, applications: [] }
@@ -74,19 +93,35 @@ function parseForDisplay(content: string): { notes: string; applications: Parsed
     const flush = () => {
       if (!curKey) return
       switch (curKey) {
-        case 'Priority': app.priority = PRIORITY_FROM_LABEL[curVal] ?? 'quick_apply'; break
-        case 'Source': app.source = curVal; break
-        case 'Work arrangement': app.workArrangement = curVal; break
-        case 'Recruiter': app.recruiter = curVal; break
-        case 'About the role': app.roleDescription = curVal; break
-        case 'My impression': app.impression = curVal; break
+        case 'Priority':
+          app.priority = PRIORITY_FROM_LABEL[curVal] ?? 'quick_apply'
+          break
+        case 'Source':
+          app.source = curVal
+          break
+        case 'Work arrangement':
+          app.workArrangement = curVal
+          break
+        case 'Recruiter':
+          app.recruiter = curVal
+          break
+        case 'About the role':
+          app.roleDescription = curVal
+          break
+        case 'My impression':
+          app.impression = curVal
+          break
       }
     }
 
     for (const line of lines.slice(1)) {
       const m = line.match(KEY_RE)
-      if (m) { flush(); curKey = m[1]; curVal = m[2] }
-      else if (curKey && line.startsWith('   ')) curVal += `\n${line.slice(3)}`
+      if (m) {
+        flush()
+        curKey = m[1]
+        curVal = m[2]
+      } else if (curKey && line.startsWith('   '))
+        curVal += `\n${line.slice(3)}`
     }
     flush()
     return app
@@ -124,8 +159,17 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
       }}
     >
       <CardContent sx={{ pb: '16px !important' }}>
-        <Box display='flex' justifyContent='space-between' alignItems='flex-start'>
-          <Typography variant='overline' color='text.secondary' fontWeight={600} letterSpacing={1}>
+        <Box
+          display='flex'
+          justifyContent='space-between'
+          alignItems='flex-start'
+        >
+          <Typography
+            variant='overline'
+            color='text.secondary'
+            fontWeight={600}
+            letterSpacing={1}
+          >
             {formatDate(log.date)}
           </Typography>
           <Box display='flex' gap={0.5} ml={1} flexShrink={0}>
@@ -135,7 +179,11 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
               </IconButton>
             </Tooltip>
             <Tooltip title='Delete'>
-              <IconButton size='small' color='error' onClick={() => onDelete(log.id)}>
+              <IconButton
+                size='small'
+                color='error'
+                onClick={() => onDelete(log.id)}
+              >
                 <DeleteOutlineIcon fontSize='small' />
               </IconButton>
             </Tooltip>
@@ -143,7 +191,12 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
         </Box>
 
         {notes && (
-          <Typography variant='body2' color='text.primary' mt={1} sx={{ whiteSpace: 'pre-wrap' }}>
+          <Typography
+            variant='body2'
+            color='text.primary'
+            mt={1}
+            sx={{ whiteSpace: 'pre-wrap' }}
+          >
             {notes}
           </Typography>
         )}
@@ -170,7 +223,9 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                 '&:hover .apps-label': { color: 'text.primary' },
               }}
             >
-              <WorkIcon sx={{ fontSize: 13, color: 'text.secondary', flexShrink: 0 }} />
+              <WorkIcon
+                sx={{ fontSize: 13, color: 'text.secondary', flexShrink: 0 }}
+              />
               <Typography
                 className='apps-label'
                 variant='caption'
@@ -185,16 +240,24 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
               {/* Collapsed preview: one chip per unique priority level, highest first */}
               {!expanded && (
                 <Box display='flex' gap={0.5} mr={0.5}>
-                  {PRIORITY_ORDER.filter((p) => applications.some((a) => a.priority === p)).map((p) => {
+                  {PRIORITY_ORDER.filter((p) =>
+                    applications.some((a) => a.priority === p),
+                  ).map((p) => {
                     const { emoji, color } = PRIORITY_DISPLAY[p]
-                    const count = applications.filter((a) => a.priority === p).length
+                    const count = applications.filter(
+                      (a) => a.priority === p,
+                    ).length
                     return (
                       <Chip
                         key={p}
                         label={`${emoji} ${count}`}
                         color={color}
                         size='small'
-                        sx={{ height: 20, fontSize: '0.7rem', pointerEvents: 'none' }}
+                        sx={{
+                          height: 20,
+                          fontSize: '0.7rem',
+                          pointerEvents: 'none',
+                        }}
                       />
                     )
                   })}
@@ -220,27 +283,50 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                     app.source,
                     app.workArrangement,
                     app.recruiter ? `Recruiter: ${app.recruiter}` : undefined,
-                  ].filter(Boolean).join(' · ')
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
                   return (
                     <Box key={`${app.company}-${app.jobTitle}`}>
-                      <Box display='flex' alignItems='center' gap={1} flexWrap='wrap'>
+                      <Box
+                        display='flex'
+                        alignItems='center'
+                        gap={1}
+                        flexWrap='wrap'
+                      >
                         <Chip label={label} color={color} size='small' />
                         <Typography variant='body2' fontWeight={600}>
                           {app.jobTitle} at {app.company}
                         </Typography>
                       </Box>
                       {meta && (
-                        <Typography variant='caption' color='text.secondary' display='block' mt={0.5}>
+                        <Typography
+                          variant='caption'
+                          color='text.secondary'
+                          display='block'
+                          mt={0.5}
+                        >
                           {meta}
                         </Typography>
                       )}
                       {app.roleDescription && (
-                        <Typography variant='body2' color='text.secondary' mt={0.5} sx={{ whiteSpace: 'pre-wrap' }}>
+                        <Typography
+                          variant='body2'
+                          color='text.secondary'
+                          mt={0.5}
+                          sx={{ whiteSpace: 'pre-wrap' }}
+                        >
                           {app.roleDescription}
                         </Typography>
                       )}
                       {app.impression && (
-                        <Typography variant='body2' color='text.secondary' mt={0.5} fontStyle='italic' sx={{ whiteSpace: 'pre-wrap' }}>
+                        <Typography
+                          variant='body2'
+                          color='text.secondary'
+                          mt={0.5}
+                          fontStyle='italic'
+                          sx={{ whiteSpace: 'pre-wrap' }}
+                        >
                           {app.impression}
                         </Typography>
                       )}

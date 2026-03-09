@@ -23,23 +23,23 @@ function buildEscPosData(recommendation: string): Uint8Array {
   const bytes = (arr: number[]) => new Uint8Array(arr)
 
   const parts: Uint8Array[] = [
-    bytes([ESC, 0x40]),                         // init
-    bytes([ESC, 0x64, 2]),                       // feed 2
-    bytes([ESC, 0x61, 0x01]),                    // center
+    bytes([ESC, 0x40]), // init
+    bytes([ESC, 0x64, 2]), // feed 2
+    bytes([ESC, 0x61, 0x01]), // center
     encode('--------------------------------\n'),
-    bytes([ESC, 0x45, 0x01]),                    // bold on
+    bytes([ESC, 0x45, 0x01]), // bold on
     encode('JOB SEARCH COACH\n'),
-    bytes([ESC, 0x45, 0x00]),                    // bold off
+    bytes([ESC, 0x45, 0x00]), // bold off
     encode(`${localDateUS()}\n`),
     encode('--------------------------------\n'),
     encode('\n'),
-    bytes([ESC, 0x61, 0x00]),                    // left align
+    bytes([ESC, 0x61, 0x00]), // left align
     encode(`${stripMarkdown(recommendation)}\n`),
     encode('\n'),
-    bytes([ESC, 0x61, 0x01]),                    // center
+    bytes([ESC, 0x61, 0x01]), // center
     encode('--------------------------------\n'),
-    bytes([ESC, 0x64, 5]),                       // feed 5
-    bytes([GS, 0x56, 0x41, 0x05]),              // partial cut
+    bytes([ESC, 0x64, 5]), // feed 5
+    bytes([GS, 0x56, 0x41, 0x05]), // partial cut
   ]
 
   const totalLength = parts.reduce((sum, p) => sum + p.length, 0)
@@ -87,14 +87,15 @@ export function useWebUsbPrinter() {
         }
       }
 
-      if (endpointNumber === -1) throw new Error('No bulk OUT endpoint found on this device.')
+      if (endpointNumber === -1)
+        throw new Error('No bulk OUT endpoint found on this device.')
 
       try {
         await device.claimInterface(interfaceNumber)
       } catch (e) {
         throw new Error(
           'Could not claim the printer interface. If this printer is installed as a system printer, ' +
-          'remove it from your OS print settings and try again — WebUSB requires exclusive access to the USB interface.',
+            'remove it from your OS print settings and try again — WebUSB requires exclusive access to the USB interface.',
         )
       }
       setPrinter({ device, endpointNumber })
@@ -123,7 +124,10 @@ export function useWebUsbPrinter() {
       setError(null)
       try {
         const data = buildEscPosData(recommendation)
-        await printer.device.transferOut(printer.endpointNumber, data.buffer as ArrayBuffer)
+        await printer.device.transferOut(
+          printer.endpointNumber,
+          data.buffer as ArrayBuffer,
+        )
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Print failed.')
       } finally {
@@ -133,5 +137,14 @@ export function useWebUsbPrinter() {
     [printer],
   )
 
-  return { printer, connecting, printing, error, isSupported, connect, disconnect, print }
+  return {
+    printer,
+    connecting,
+    printing,
+    error,
+    isSupported,
+    connect,
+    disconnect,
+    print,
+  }
 }

@@ -12,12 +12,20 @@ export async function PUT(request: Request) {
     )
   }
 
-  const settings = await prisma.settings.findUnique({ where: { id: 'singleton' } })
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+  })
 
   if (settings?.passwordHash) {
-    const valid = await bcrypt.compare(currentPassword ?? '', settings.passwordHash)
+    const valid = await bcrypt.compare(
+      currentPassword ?? '',
+      settings.passwordHash,
+    )
     if (!valid) {
-      return NextResponse.json({ error: 'Current password is incorrect.' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Current password is incorrect.' },
+        { status: 401 },
+      )
     }
   }
 

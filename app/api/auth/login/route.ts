@@ -1,12 +1,14 @@
 import bcrypt from 'bcryptjs'
 import { NextResponse } from 'next/server'
-import { createSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
+import { createSession } from '@/lib/session'
 
 export async function POST(request: Request) {
   const { password } = await request.json()
 
-  const settings = await prisma.settings.findUnique({ where: { id: 'singleton' } })
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+  })
 
   // First-time setup: no password set yet
   if (!settings?.passwordHash) {
