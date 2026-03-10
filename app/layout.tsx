@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { cookies } from 'next/headers'
+import type { ThemeModePreference } from '@/lib/themeModeContext'
 import './globals.css'
 import { Providers } from './providers'
 
@@ -18,15 +20,20 @@ export const metadata: Metadata = {
   description: 'AI-powered job search assistant',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const cookieStore = await cookies()
+  const raw = cookieStore.get('themeMode')?.value
+  const initialThemeMode: ThemeModePreference =
+    raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'system'
+
   return (
     <html lang='en'>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <Providers>{children}</Providers>
+        <Providers initialThemeMode={initialThemeMode}>{children}</Providers>
       </body>
     </html>
   )

@@ -1,6 +1,9 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
+import LightModeIcon from '@mui/icons-material/LightMode'
+import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import {
@@ -15,6 +18,8 @@ import {
   InputAdornment,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
 import { useSnackbar } from 'notistack'
@@ -22,6 +27,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as yup from 'yup'
 import { useGetSettingsQuery, useUpdateSettingsMutation } from '@/lib/api'
+import { type ThemeModePreference, useThemeMode } from '@/lib/themeModeContext'
 import type { PasswordFormValues, SettingsFormValues } from '../types'
 
 interface Props {
@@ -46,6 +52,8 @@ const passwordSchema = yup.object({
 export function SettingsDialog({ open, onClose }: Props) {
   const { enqueueSnackbar } = useSnackbar()
   const [showKey, setShowKey] = useState(false)
+  const { preference: themePreference, setPreference: setThemePreference } =
+    useThemeMode()
 
   const { data: settings } = useGetSettingsQuery(undefined, { skip: !open })
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
@@ -116,6 +124,42 @@ export function SettingsDialog({ open, onClose }: Props) {
       <DialogTitle>Settings</DialogTitle>
       <DialogContent>
         <Stack spacing={3}>
+          {/* Appearance */}
+          <Box>
+            <Typography
+              variant='overline'
+              color='text.secondary'
+              fontWeight={600}
+            >
+              Appearance
+            </Typography>
+            <Box mt={1.5}>
+              <ToggleButtonGroup
+                exclusive
+                value={themePreference}
+                onChange={(_, val: ThemeModePreference | null) => {
+                  if (val) setThemePreference(val)
+                }}
+                size='small'
+              >
+                <ToggleButton value='light'>
+                  <LightModeIcon fontSize='small' sx={{ mr: 0.75 }} />
+                  Light
+                </ToggleButton>
+                <ToggleButton value='dark'>
+                  <DarkModeIcon fontSize='small' sx={{ mr: 0.75 }} />
+                  Dark
+                </ToggleButton>
+                <ToggleButton value='system'>
+                  <SettingsBrightnessIcon fontSize='small' sx={{ mr: 0.75 }} />
+                  System
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          </Box>
+
+          <Divider />
+
           {/* AI Integration */}
           <Box>
             <Typography
@@ -132,6 +176,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                 placeholder='sk-ant-...'
                 helperText='Required to use AI coaching features.'
                 slotProps={{
+                  inputLabel: { shrink: true },
                   input: {
                     endAdornment: (
                       <InputAdornment position='end'>
@@ -182,6 +227,7 @@ export function SettingsDialog({ open, onClose }: Props) {
               rows={8}
               fullWidth
               placeholder={`Example:\nI'm a senior full-stack engineer with 8 years of experience, primarily in React and Node.js. I'm targeting staff-level IC roles at Series B–D startups. I want remote or hybrid in the US, $180–220k base. I'm excited about developer tools, fintech, and climate tech. I'm not interested in defense, crypto, or pure front-end roles. I have a strong background in system design and have led teams of 3–5 engineers.`}
+              slotProps={{ inputLabel: { shrink: true } }}
               {...register('careerProfile')}
             />
           </Box>
@@ -223,7 +269,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                 <Box>
                   <Button
                     type='submit'
-                    variant='outlined'
+                    variant='contained'
                     size='small'
                     disabled={savingPassword}
                   >

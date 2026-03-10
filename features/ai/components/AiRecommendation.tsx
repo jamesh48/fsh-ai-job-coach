@@ -69,11 +69,9 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
         width: '100%',
         maxWidth: 640,
         height: '100%',
-        borderRadius: 0,
+        borderRadius: '12px 12px 0 0',
         background: (theme) =>
-          theme.palette.mode === 'dark'
-            ? 'linear-gradient(160deg, #1a1130 0%, #0d0d0d 100%)'
-            : 'linear-gradient(160deg, #f3eeff 0%, #fafafa 100%)',
+          `linear-gradient(160deg, ${theme.palette.secondary.light}22 0%, ${theme.palette.background.paper} 100%)`,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -95,12 +93,12 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
           py={1.5}
         >
           <Box display='flex' alignItems='center' gap={1}>
-            <AutoAwesomeIcon sx={{ fontSize: 16, color: '#9c6fde' }} />
+            <AutoAwesomeIcon sx={{ fontSize: 16, color: 'secondary.main' }} />
             <Typography
               variant='overline'
               fontWeight={700}
               letterSpacing={1.2}
-              sx={{ color: '#9c6fde', lineHeight: 1 }}
+              sx={{ color: 'secondary.main', lineHeight: 1 }}
             >
               AI Coach
             </Typography>
@@ -116,10 +114,13 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                       size='small'
                       onClick={() => recommendation && print(recommendation)}
                       disabled={!recommendation || printing}
-                      sx={{ color: '#9c6fde' }}
+                      sx={{ color: 'secondary.main' }}
                     >
                       {printing ? (
-                        <CircularProgress size={14} sx={{ color: '#9c6fde' }} />
+                        <CircularProgress
+                          size={14}
+                          sx={{ color: 'secondary.main' }}
+                        />
                       ) : (
                         <PrintIcon fontSize='small' />
                       )}
@@ -151,7 +152,10 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                 variant='outlined'
                 startIcon={
                   isLoading ? (
-                    <CircularProgress size={12} sx={{ color: '#9c6fde' }} />
+                    <CircularProgress
+                      size={12}
+                      sx={{ color: 'secondary.main' }}
+                    />
                   ) : (
                     <AutoAwesomeIcon sx={{ fontSize: 14 }} />
                   )
@@ -160,14 +164,7 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                   getRecommendation({ date: dayjs().format('YYYY-MM-DD') })
                 }
                 disabled={isLoading}
-                sx={{
-                  borderColor: '#9c6fde',
-                  color: '#9c6fde',
-                  '&:hover': {
-                    borderColor: '#7c4fbf',
-                    background: 'rgba(156,111,222,0.06)',
-                  },
-                }}
+                color='secondary'
               >
                 {isLoading
                   ? 'Thinking…'
@@ -183,7 +180,7 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
               <IconButton
                 size='small'
                 onClick={onToggle}
-                sx={{ color: '#9c6fde' }}
+                sx={{ color: 'secondary.main' }}
               >
                 {collapsed ? (
                   <ExpandLessIcon fontSize='small' />

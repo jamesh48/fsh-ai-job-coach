@@ -11,6 +11,7 @@ export interface JobApplicationEntry {
   roleDescription: string
   impression: string
   priority: 'quick_apply' | 'standard' | 'strong_interest' | 'hot_lead'
+  status: 'applied' | 'recruiter_screen' | 'interviewing' | 'offer' | 'rejected'
 }
 
 export interface ParsedContent {
@@ -19,6 +20,14 @@ export interface ParsedContent {
 }
 
 export const WORK_ARRANGEMENTS = ['Remote', 'Hybrid', 'On-site']
+
+export const STATUS_LABELS: Record<JobApplicationEntry['status'], string> = {
+  applied: 'Applied',
+  recruiter_screen: 'Recruiter Screen',
+  interviewing: 'Interviewing',
+  offer: 'Offer',
+  rejected: 'Rejected',
+}
 
 export const PRIORITY_LABELS: Record<JobApplicationEntry['priority'], string> =
   {
@@ -41,6 +50,7 @@ export const EMPTY_APPLICATION: JobApplicationEntry = {
   roleDescription: '',
   impression: '',
   priority: 'quick_apply',
+  status: 'applied',
 }
 
 export function serializeToContent(values: ParsedContent): string {
@@ -54,6 +64,7 @@ export function serializeToContent(values: ParsedContent): string {
     const appLines = values.applications.map((app, i) => {
       const lines = [`${i + 1}. ${app.jobTitle} :: ${app.company}`]
       lines.push(`   Priority: ${PRIORITY_LABELS[app.priority]}`)
+      lines.push(`   Status: ${STATUS_LABELS[app.status]}`)
       if (app.applicationUrl)
         lines.push(`   Application URL: ${app.applicationUrl}`)
       if (app.source) lines.push(`   Source: ${app.source}`)
@@ -122,6 +133,16 @@ export function parseContent(content: string): ParsedContent {
             ][]
           ).find(([, label]) => label === curVal)
           if (found) app.priority = found[0]
+          break
+        }
+        case 'Status': {
+          const found = (
+            Object.entries(STATUS_LABELS) as [
+              JobApplicationEntry['status'],
+              string,
+            ][]
+          ).find(([, label]) => label === curVal)
+          if (found) app.status = found[0]
           break
         }
         case 'Application URL':

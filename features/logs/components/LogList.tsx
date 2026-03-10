@@ -90,7 +90,7 @@ export function LogList() {
     : logs
 
   return (
-    <Box width='100%' maxWidth={640} mx='auto' py={6} px={2}>
+    <Box width='100%' maxWidth={672} mx='auto' py={6} px={2}>
       <Box
         display='flex'
         justifyContent='space-between'

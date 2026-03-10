@@ -19,7 +19,7 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import type { JobApplicationEntry } from '../applicationFormUtils'
-import { parseContent } from '../applicationFormUtils'
+import { parseContent, STATUS_LABELS } from '../applicationFormUtils'
 import type { DailyLog } from '../types'
 import { AddApplicationDialog } from './AddApplicationDialog'
 
@@ -30,11 +30,11 @@ const PRIORITY_DISPLAY: Record<
   {
     label: string
     emoji: string
-    color: 'default' | 'info' | 'warning' | 'error'
+    color: 'default' | 'primary' | 'info' | 'warning' | 'error'
   }
 > = {
   quick_apply: { label: '⚡ Quick Apply', emoji: '⚡', color: 'default' },
-  standard: { label: '📋 Standard', emoji: '📋', color: 'info' },
+  standard: { label: '📋 Standard', emoji: '📋', color: 'primary' },
   strong_interest: {
     label: '⭐ Strong Interest',
     emoji: '⭐',
@@ -128,9 +128,14 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
 
           <Box mt={notes ? 2 : 1}>
             {/* Collapsible header — always shown so Add button is always accessible */}
+            {/* biome-ignore lint/a11y/useSemanticElements: cannot use <button> because it contains nested IconButtons */}
             <Box
-              component='button'
+              role='button'
+              tabIndex={0}
               onClick={() => setExpanded((e) => !e)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') setExpanded((v) => !v)
+              }}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -138,12 +143,11 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                 width: '100%',
                 py: 0.75,
                 px: 0,
-                background: 'none',
-                border: 'none',
                 borderTop: '1px solid',
                 borderColor: 'divider',
                 cursor: 'pointer',
                 color: 'inherit',
+                userSelect: 'none',
                 '&:hover .apps-label': { color: 'text.primary' },
               }}
             >
@@ -243,6 +247,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                     const meta = [app.source, app.workArrangement]
                       .filter(Boolean)
                       .join(' · ')
+                    const statusLabel = STATUS_LABELS[app.status] ?? app.status
                     return (
                       <Box key={`${app.company}-${app.jobTitle}`}>
                         <Box
@@ -252,6 +257,11 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                           flexWrap='wrap'
                         >
                           <Chip label={label} color={color} size='small' />
+                          <Chip
+                            label={statusLabel}
+                            size='small'
+                            variant='outlined'
+                          />
                           <Typography
                             variant='body2'
                             fontWeight={600}

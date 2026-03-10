@@ -38,6 +38,7 @@ import type { JobApplicationEntry } from '../applicationFormUtils'
 import {
   EMPTY_APPLICATION,
   parseContent,
+  STATUS_LABELS,
   serializeToContent,
   WORK_ARRANGEMENTS,
 } from '../applicationFormUtils'
@@ -124,6 +125,16 @@ export function LogForm({
                   'hot_lead',
                 ])
                 .default('quick_apply'),
+              status: yup
+                .string()
+                .oneOf([
+                  'applied',
+                  'recruiter_screen',
+                  'interviewing',
+                  'offer',
+                  'rejected',
+                ])
+                .default('applied'),
             }),
           )
           .default([]),
@@ -378,6 +389,29 @@ export function LogForm({
                                 </ToggleButtonGroup>
                               )}
                             />
+
+                            {/* Status */}
+                            <FormControl fullWidth>
+                              <InputLabel>Status</InputLabel>
+                              <Controller
+                                name={`applications.${index}.status`}
+                                control={control}
+                                render={({ field }) => (
+                                  <Select label='Status' {...field}>
+                                    {(
+                                      Object.entries(STATUS_LABELS) as [
+                                        JobApplicationEntry['status'],
+                                        string,
+                                      ][]
+                                    ).map(([value, label]) => (
+                                      <MenuItem key={value} value={value}>
+                                        {label}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                )}
+                              />
+                            </FormControl>
 
                             {/* Source */}
                             <TextField
