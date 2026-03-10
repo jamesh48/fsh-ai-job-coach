@@ -83,9 +83,16 @@ function createAppTheme(mode: 'light' | 'dark') {
           root: { fontWeight: 500 },
         },
       },
-      MuiInputLabel: {
-        styleOverrides: {
-          root: { fontWeight: 500 },
+      MuiTextField: {
+        defaultProps: {
+          slotProps: {
+            inputLabel: {
+              shrink: true,
+            },
+          },
+          inputProps: {
+            autoComplete: 'off',
+          },
         },
       },
       MuiOutlinedInput: {
@@ -100,6 +107,11 @@ function createAppTheme(mode: 'light' | 'dark') {
             // in the correct color scheme so they're visible on dark backgrounds
             colorScheme: mode,
           },
+        },
+      },
+      MuiInputLabel: {
+        styleOverrides: {
+          root: { fontWeight: 500 },
         },
       },
       MuiDivider: {
