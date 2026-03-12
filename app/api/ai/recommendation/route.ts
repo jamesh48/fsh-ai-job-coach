@@ -14,7 +14,7 @@ export async function GET(): Promise<
   const settings = await prisma.settings.findUnique({ where: { id: ID } })
   return NextResponse.json({
     recommendation: settings?.lastRecommendation ?? null,
-    date: settings?.lastRecommendationDate ?? null,
+    date: settings?.lastRecommendationAt?.toISOString() ?? null,
   })
 }
 
@@ -109,12 +109,12 @@ Keep it to 2-4 sentences. No preamble, just the advice.`,
       where: { id: ID },
       update: {
         lastRecommendation: recommendation,
-        lastRecommendationDate: today,
+        lastRecommendationAt: new Date(),
       },
       create: {
         id: ID,
         lastRecommendation: recommendation,
-        lastRecommendationDate: today,
+        lastRecommendationAt: new Date(),
       },
     })
 

@@ -17,11 +17,13 @@ import {
   Typography,
 } from '@mui/material'
 import dayjs from 'dayjs'
+import { useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import {
   useGetAiRecommendationMutation,
   useGetStoredRecommendationQuery,
 } from '@/lib/api'
+import { useAutoPrint } from '@/lib/useAutoPrint'
 import { useWebUsbPrinter } from '../hooks/useWebUsbPrinter'
 
 interface Props {
@@ -43,11 +45,29 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
     print,
   } = useWebUsbPrinter()
 
+  const [autoPrint] = useAutoPrint()
+  const printedRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (
+      freshData?.recommendation &&
+      autoPrint &&
+      printer &&
+      printedRef.current !== freshData.recommendation
+    ) {
+      printedRef.current = freshData.recommendation
+      print(freshData.recommendation, dayjs().format('MM-DD-YYYY hh:mm:ss'))
+    }
+  }, [freshData, autoPrint, printer, print])
+
   const recommendation =
     freshData?.recommendation ?? storedData?.recommendation ?? null
+
   const recommendationDate = freshData
-    ? dayjs().format('YYYY-MM-DD')
-    : (storedData?.date ?? null)
+    ? dayjs().format('MM-DD-YYYY hh:mm:ss')
+    : ((storedData?.date &&
+        dayjs(storedData.date).format('MM-DD-YYYY hh:mm:ss')) ??
+      null)
 
   const errorMessage = (() => {
     if (!error) return null
@@ -112,7 +132,10 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                   <span>
                     <IconButton
                       size='small'
-                      onClick={() => recommendation && print(recommendation)}
+                      onClick={() =>
+                        recommendation &&
+                        print(recommendation, recommendationDate ?? undefined)
+                      }
                       disabled={!recommendation || printing}
                       sx={{ color: 'secondary.main' }}
                     >

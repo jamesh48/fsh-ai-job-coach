@@ -20,7 +20,7 @@ model Settings {
   anthropicApiKey        String?
   passwordHash           String?
   lastRecommendation     String?
-  lastRecommendationDate String?
+  lastRecommendationAt   DateTime?
   careerProfile          String?
   updatedAt              DateTime @updatedAt
 }

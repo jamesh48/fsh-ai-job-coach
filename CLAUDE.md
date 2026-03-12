@@ -10,7 +10,7 @@ yarn format && yarn lint
 This auto-formats and lints the affected files so code is always clean before the user commits.
 
 ## Project Overview
-An AI-powered job search coaching app. The core MVP is a daily activity log where users record what they did each day in their job search. An AI coach (Claude) analyzes the log and gives actionable daily recommendations. A gear icon in the header opens a Settings dialog for API key configuration. Printing is handled client-side via WebUSB (ESC/POS).
+An AI-powered job search coaching app. The core MVP is a daily activity log where users record what they did each day in their job search. An AI coach (Claude) analyzes the log and gives actionable daily recommendations. A gear icon in the header opens a Settings dialog for API key configuration, career profile, appearance, and printing. Printing is handled client-side via WebUSB (ESC/POS).
 
 ## Tech Stack
 - **Framework**: Next.js 16 (App Router)
@@ -35,41 +35,45 @@ An AI-powered job search coaching app. The core MVP is a daily activity log wher
 app/                          # Next.js App Router — routes, layouts, API routes
   api/logs/route.ts           # GET all, POST new log
   api/logs/[id]/route.ts      # PUT update, DELETE log
-  api/ai/recommendation/route.ts  # POST — calls Claude
+  api/ai/recommendation/route.ts  # GET stored recommendation, POST — calls Claude
+  api/ai/summarize/route.ts   # POST — summarize job description with Claude
+  api/ai/impression/route.ts  # POST — draft impression with Claude
   api/settings/route.ts       # GET/PUT settings singleton
   api/auth/login/route.ts     # POST — verify password, create session
   api/auth/logout/route.ts    # POST — destroy session
   api/auth/status/route.ts    # GET — { hasPassword: boolean }
   api/auth/password/route.ts  # PUT — change password
   api/healthcheck/route.ts    # GET — ALB health check
-  layout.tsx                  # Root layout — wraps with <Providers>
+  layout.tsx                  # Root layout — reads themeMode cookie, wraps with <Providers>
   login/page.tsx              # Login / first-time setup page
-  providers.tsx               # Client: Redux Provider + MUI ThemeProvider + SnackbarProvider
-  HomeLayout.tsx              # Client: owns collapsed state, 75/25 vertical split
+  providers.tsx               # Client: Redux + MUI ThemeProvider + Snackbar; createAppTheme(mode)
+  HomeLayout.tsx              # Client: owns collapsed state, 50/50 vertical split
   page.tsx                    # Home page — renders <HomeLayout>
 features/                     # Feature modules (co-located components, hooks, types)
   logs/
+    applicationFormUtils.ts   # Shared: JobApplicationEntry type, STATUS/PRIORITY labels, serialize/parse
     components/
-      LogCard.tsx             # Single day card with edit/delete buttons
-      LogForm.tsx             # MUI Dialog + react-hook-form + yup for add/edit
-      LogList.tsx             # Main view: header, card stack, snackbars, settings + logout triggers
+      LogCard.tsx             # Single day card; collapsible app list; add/edit app buttons; status chips
+      LogForm.tsx             # MUI Dialog + react-hook-form + yup for add/edit full log entry
+      AddApplicationDialog.tsx  # Standalone dialog for adding/editing a single job application
+      LogList.tsx             # Main view: header, search, card stack, settings + logout triggers
     hooks/
       useLogs.ts              # Wraps RTK Query hooks (add, update, remove, sorted list)
     types.ts                  # DailyLog, LogFormValues types
     index.ts                  # Barrel export
   ai/
     components/
-      AiRecommendation.tsx    # Collapsible purple panel; "Get Advice" button; WebUSB print; ReactMarkdown
+      AiRecommendation.tsx    # Collapsible panel (50vh / 49px); "Get Advice"; auto-print; ReactMarkdown
     hooks/
-      useWebUsbPrinter.ts     # WebUSB hook — connect, print ESC/POS, disconnect
-    types.ts                  # AiRecommendationResponse
+      useWebUsbPrinter.ts     # WebUSB hook — connect, markdown-aware ESC/POS print, disconnect
+    types.ts                  # AiRecommendationResponse, StoredRecommendationResponse
     index.ts
   auth/
     components/
       LoginForm.tsx           # Detects first-time setup vs login; handles both flows
   settings/
     components/
-      SettingsDialog.tsx      # MUI Dialog: AI key field + change password section
+      SettingsDialog.tsx      # MUI Dialog: Appearance, Printing, AI key, Career Profile, Security
     types.ts                  # AppSettings, SettingsFormValues, PasswordFormValues
     index.ts
   resume/                     # Placeholder feature
@@ -84,6 +88,8 @@ lib/
   store.ts                    # Redux configureStore (API slice only)
   prisma.ts                   # PrismaClient singleton (uses PrismaPg adapter)
   session.ts                  # createSession / destroySession (jose JWT cookie)
+  themeModeContext.tsx        # ThemeModeProvider + useThemeMode; preference in cookie + localStorage
+  useAutoPrint.ts             # useAutoPrint hook; auto-print preference in localStorage
   utils.ts                    # cn() class merge utility
   generated/prisma/           # Prisma-generated client (gitignored)
 middleware.ts                 # Protects all routes; redirects to /login if no valid session
@@ -125,10 +131,13 @@ model DailyLog {
 }
 
 model Settings {
-  id              String   @id @default("singleton")
-  anthropicApiKey String?
-  passwordHash    String?
-  updatedAt       DateTime @updatedAt
+  id                   String    @id @default("singleton")
+  anthropicApiKey      String?
+  passwordHash         String?
+  lastRecommendation   String?
+  lastRecommendationAt DateTime?  // full timestamp, not just date
+  careerProfile        String?
+  updatedAt            DateTime  @updatedAt
 }
 ```
 
@@ -143,19 +152,40 @@ model Settings {
 - Snackbars via `useSnackbar()` from notistack for all user-facing feedback
 - Form validation via Yup schemas passed through `yupResolver`
 - Biome enforces single quotes and semicolons only as needed
+- Do NOT add `* { box-sizing: border-box }` to globals.css — MUI CssBaseline owns box-sizing via the `inherit` pattern and a duplicate rule breaks width calculations
+
+## Theme
+- Defined in `app/providers.tsx` via `createAppTheme(mode: 'light' | 'dark')`
+- **Primary**: Indigo — `#4F46E5` (light) / `#818CF8` (dark)
+- **Secondary**: Violet — `#9333EA` (light) / `#C084FC` (dark) — used for AI panel accents
+- **Backgrounds**: `#F8FAFC` / `#FFFFFF` (light), `#0F172A` / `#1E293B` (dark)
+- Dark/light/system preference stored in `themeMode` cookie (read server-side in `layout.tsx` to avoid flash) and mirrored to localStorage
+- `ThemeModeProvider` in `lib/themeModeContext.tsx` exposes `useThemeMode()` hook
+- Toggle in Settings dialog → Appearance section
+
+## Job Application Fields
+Defined in `features/logs/applicationFormUtils.ts`:
+- `jobTitle`, `company`, `applicationUrl`, `source`
+- `recruiter`, `recruiterLinkedin`, `recruiterPhone`, `recruiterEmail`
+- `workArrangement` (Remote / Hybrid / On-site)
+- `roleDescription`, `impression`
+- `priority`: `quick_apply` | `standard` | `strong_interest` | `hot_lead`
+- `status`: `applied` | `recruiter_screen` | `interviewing` | `offer` | `rejected`
+
+Content is serialized as structured plain text in `DailyLog.content` via `serializeToContent` / `parseContent`.
 
 ## AI Feature
-- `app/api/ai/recommendation/route.ts` — reads API key from DB settings, calls Claude, returns recommendation
-- Sends full log history to Claude with today's date; prompts for 2-4 sentence actionable advice for today
-- `AiRecommendation.tsx` — collapsible panel (40vh expanded / 49px collapsed); uses `getAiRecommendation` RTK mutation; renders response through react-markdown
-- Print button (USB icon → print icon) sends ESC/POS bytes via WebUSB when a printer is connected
+- `app/api/ai/recommendation/route.ts` — smart windowing: last 30 days + older hot/strong-interest entries; injects career profile as system context; stores result + timestamp in Settings
+- `app/api/ai/summarize/route.ts` — summarizes pasted job description to 4-6 sentences
+- `app/api/ai/impression/route.ts` — drafts a 2-3 sentence first-person impression
+- `AiRecommendation.tsx` — collapsible panel (50vh expanded / 49px collapsed); auto-prints if USB printer connected and auto-print setting enabled
+- Recommendation timestamp stored as `DateTime` (`lastRecommendationAt`), displayed as `MM-DD-YYYY hh:mm:ss`
 
 ## Printing (WebUSB)
-- `features/ai/hooks/useWebUsbPrinter.ts` — manages WebUSB device lifecycle and ESC/POS byte building
+- `features/ai/hooks/useWebUsbPrinter.ts` — manages WebUSB device lifecycle and markdown-aware ESC/POS rendering
 - Chrome/Edge only; requires HTTPS (works on lmkn.net)
-- Click USB icon in AI panel header to pair printer; icon becomes print icon once connected
-- ESC/POS receipt layout: init → feed → separator → bold "JOB SEARCH COACH" → MM-DD-YYYY date → separator → plain text recommendation → separator → feed → partial cut
-- Automatically finds bulk OUT endpoint across all interfaces
+- ESC/POS renderer handles: `**bold**` inline, `# H1` (centered bold), `## H2` (left bold), `- bullets`, `1. numbered lists`
+- Auto-print setting: `lib/useAutoPrint.ts` (localStorage key `autoPrint`); toggle in Settings → Printing
 
 ## Auth (Password Gate)
 - Single-user password protection via bcrypt hash stored in Settings DB

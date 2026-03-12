@@ -14,9 +14,11 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControlLabel,
   IconButton,
   InputAdornment,
   Stack,
+  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -28,6 +30,7 @@ import { useForm } from 'react-hook-form'
 import * as yup from 'yup'
 import { useGetSettingsQuery, useUpdateSettingsMutation } from '@/lib/api'
 import { type ThemeModePreference, useThemeMode } from '@/lib/themeModeContext'
+import { useAutoPrint } from '@/lib/useAutoPrint'
 import type { PasswordFormValues, SettingsFormValues } from '../types'
 
 interface Props {
@@ -54,6 +57,7 @@ export function SettingsDialog({ open, onClose }: Props) {
   const [showKey, setShowKey] = useState(false)
   const { preference: themePreference, setPreference: setThemePreference } =
     useThemeMode()
+  const [autoPrint, setAutoPrint] = useAutoPrint()
 
   const { data: settings } = useGetSettingsQuery(undefined, { skip: !open })
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
@@ -155,6 +159,46 @@ export function SettingsDialog({ open, onClose }: Props) {
                   System
                 </ToggleButton>
               </ToggleButtonGroup>
+            </Box>
+          </Box>
+
+          <Divider />
+
+          {/* Printing */}
+          <Box>
+            <Typography
+              variant='overline'
+              color='text.secondary'
+              fontWeight={600}
+            >
+              Printing
+            </Typography>
+            <Box mt={1}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={autoPrint}
+                    onChange={(e) => setAutoPrint(e.target.checked)}
+                    color='primary'
+                    sx={{
+                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                        { opacity: 1 },
+                      '& .MuiSwitch-track': { borderRadius: 11 },
+                      '& .MuiSwitch-thumb': { borderRadius: 11 },
+                    }}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant='body2'>
+                      Auto-print when advice is generated
+                    </Typography>
+                    <Typography variant='caption' color='text.secondary'>
+                      Prints immediately if a USB printer is connected.
+                    </Typography>
+                  </Box>
+                }
+              />
             </Box>
           </Box>
 

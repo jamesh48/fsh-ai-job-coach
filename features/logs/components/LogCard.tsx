@@ -18,6 +18,7 @@ import {
   Typography,
 } from '@mui/material'
 import { useState } from 'react'
+import { formatDate } from '@/lib/utils'
 import type { JobApplicationEntry } from '../applicationFormUtils'
 import { parseContent, STATUS_LABELS } from '../applicationFormUtils'
 import type { DailyLog } from '../types'
@@ -54,15 +55,6 @@ interface Props {
   log: DailyLog
   onEdit: (log: DailyLog) => void
   onDelete: (id: string) => void
-}
-
-function formatDate(dateStr: string) {
-  return new Date(`${dateStr}T12:00:00`).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
 }
 
 export function LogCard({ log, onEdit, onDelete }: Props) {
