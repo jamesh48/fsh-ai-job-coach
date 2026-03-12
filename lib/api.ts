@@ -55,6 +55,9 @@ export const api = createApi({
     >({
       query: (body) => ({ url: '/ai/impression', method: 'POST', body }),
     }),
+    summarizeNotes: builder.mutation<{ summary: string }, { notes: string }>({
+      query: (body) => ({ url: '/ai/summarize-notes', method: 'POST', body }),
+    }),
     getSettings: builder.query<AppSettings, void>({
       query: () => '/settings',
       providesTags: ['Settings'],
@@ -75,6 +78,7 @@ export const {
   useGetAiRecommendationMutation,
   useSummarizeJobMutation,
   useDraftImpressionMutation,
+  useSummarizeNotesMutation,
   useGetSettingsQuery,
   useUpdateSettingsMutation,
 } = api

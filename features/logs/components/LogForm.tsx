@@ -33,7 +33,11 @@ import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import * as yup from 'yup'
-import { useDraftImpressionMutation, useSummarizeJobMutation } from '@/lib/api'
+import {
+  useDraftImpressionMutation,
+  useSummarizeJobMutation,
+  useSummarizeNotesMutation,
+} from '@/lib/api'
 import type { JobApplicationEntry } from '../applicationFormUtils'
 import {
   EMPTY_APPLICATION,
@@ -163,8 +167,10 @@ export function LogForm({
   const [appsExpanded, setAppsExpanded] = useState(true)
   const [summarizingIndex, setSummarizingIndex] = useState<number | null>(null)
   const [impressionIndex, setImpressionIndex] = useState<number | null>(null)
+  const [summarizingNotes, setSummarizingNotes] = useState(false)
   const [summarizeJob] = useSummarizeJobMutation()
   const [draftImpression] = useDraftImpressionMutation()
+  const [summarizeNotes] = useSummarizeNotesMutation()
 
   const handleSummarize = async (index: number) => {
     const description = getValues(`applications.${index}.roleDescription`)
@@ -195,6 +201,20 @@ export function LogForm({
       }
     } finally {
       setImpressionIndex(null)
+    }
+  }
+
+  const handleSummarizeNotes = async () => {
+    const notes = getValues('notes')
+    if (!notes?.trim()) return
+    setSummarizingNotes(true)
+    try {
+      const result = await summarizeNotes({ notes })
+      if (!('error' in result) && result.data) {
+        setValue('notes', result.data.summary)
+      }
+    } finally {
+      setSummarizingNotes(false)
     }
   }
 
@@ -248,15 +268,27 @@ export function LogForm({
                 helperText={errors.date?.message}
                 {...register('date')}
               />
-              <TextField
-                label='Notes'
-                multiline
-                rows={5}
-                placeholder='What did you work on today? Networking, research, interviews…'
-                error={!!errors.notes}
-                helperText={errors.notes?.message}
-                {...register('notes')}
-              />
+              <Box>
+                <TextField
+                  label='Notes'
+                  multiline
+                  rows={5}
+                  fullWidth
+                  placeholder='What did you work on today? Networking, research, interviews…'
+                  error={!!errors.notes}
+                  helperText={errors.notes?.message}
+                  {...register('notes')}
+                />
+                <Button
+                  size='small'
+                  startIcon={<AutoFixHighIcon fontSize='small' />}
+                  onClick={handleSummarizeNotes}
+                  disabled={summarizingNotes}
+                  sx={{ mt: 0.5 }}
+                >
+                  {summarizingNotes ? 'Summarizing…' : 'Clean up with AI'}
+                </Button>
+              </Box>
             </Stack>
           </Box>
           <Box sx={{ flex: 1, overflowY: 'auto', px: 3, pb: 2 }}>
