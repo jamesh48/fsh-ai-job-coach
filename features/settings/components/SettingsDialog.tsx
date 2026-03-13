@@ -446,7 +446,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} color='inherit'>
+        <Button onClick={onClose} color='inherit' variant='outlined'>
           {tab === 1 ? 'Cancel' : 'Close'}
         </Button>
         {tab === 1 && (

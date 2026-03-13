@@ -336,7 +336,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={onClose} color='inherit'>
+          <Button onClick={onClose} color='inherit' variant='outlined'>
             Cancel
           </Button>
           <Button type='submit' variant='contained' disableElevation>
