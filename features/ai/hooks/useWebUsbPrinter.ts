@@ -1,7 +1,8 @@
 'use client'
 
 import dayjs from 'dayjs'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { getDeviceId, loadSavedPrinterId } from '@/lib/printerPreference'
 
 const ESC = 0x1b
 const GS = 0x1d
@@ -126,39 +127,67 @@ export function useWebUsbPrinter() {
 
   const isSupported = typeof navigator !== 'undefined' && 'usb' in navigator
 
+  // Extract the open+claim logic so it can be shared by auto-connect and manual connect
+  const openDevice = useCallback(async (device: USBDevice) => {
+    await device.open()
+    if (device.configuration === null) await device.selectConfiguration(1)
+
+    let endpointNumber = -1
+    let interfaceNumber = -1
+    for (const iface of device.configuration?.interfaces ?? []) {
+      const bulkOut = iface.alternates[0]?.endpoints.find(
+        (e) => e.direction === 'out' && e.type === 'bulk',
+      )
+      if (bulkOut) {
+        interfaceNumber = iface.interfaceNumber
+        endpointNumber = bulkOut.endpointNumber
+        break
+      }
+    }
+
+    if (endpointNumber === -1)
+      throw new Error('No bulk OUT endpoint found on this device.')
+
+    try {
+      await device.claimInterface(interfaceNumber)
+    } catch {
+      throw new Error(
+        'Could not claim the printer interface. If this printer is installed as a system printer, ' +
+          'remove it from your OS print settings and try again — WebUSB requires exclusive access to the USB interface.',
+      )
+    }
+
+    return endpointNumber
+  }, [])
+
+  // Auto-connect to the saved printer on mount
+  useEffect(() => {
+    if (!isSupported) return
+    const savedId = loadSavedPrinterId()
+    if (!savedId) return
+    let cancelled = false
+    navigator.usb.getDevices().then(async (devices) => {
+      if (cancelled) return
+      const device = devices.find((d) => getDeviceId(d) === savedId)
+      if (!device) return
+      try {
+        const endpointNumber = await openDevice(device)
+        if (!cancelled) setPrinter({ device, endpointNumber })
+      } catch {
+        // Silent — user can connect manually if auto-connect fails
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isSupported, openDevice])
+
   const connect = useCallback(async () => {
     setConnecting(true)
     setError(null)
     try {
       const device = await navigator.usb.requestDevice({ filters: [] })
-      await device.open()
-      if (device.configuration === null) await device.selectConfiguration(1)
-
-      // Find the first interface with a bulk OUT endpoint
-      let endpointNumber = -1
-      let interfaceNumber = -1
-      for (const iface of device.configuration?.interfaces ?? []) {
-        const bulkOut = iface.alternates[0]?.endpoints.find(
-          (e) => e.direction === 'out' && e.type === 'bulk',
-        )
-        if (bulkOut) {
-          interfaceNumber = iface.interfaceNumber
-          endpointNumber = bulkOut.endpointNumber
-          break
-        }
-      }
-
-      if (endpointNumber === -1)
-        throw new Error('No bulk OUT endpoint found on this device.')
-
-      try {
-        await device.claimInterface(interfaceNumber)
-      } catch {
-        throw new Error(
-          'Could not claim the printer interface. If this printer is installed as a system printer, ' +
-            'remove it from your OS print settings and try again — WebUSB requires exclusive access to the USB interface.',
-        )
-      }
+      const endpointNumber = await openDevice(device)
       setPrinter({ device, endpointNumber })
     } catch (e) {
       if (e instanceof Error && e.name !== 'NotFoundError') {
@@ -167,7 +196,7 @@ export function useWebUsbPrinter() {
     } finally {
       setConnecting(false)
     }
-  }, [])
+  }, [openDevice])
 
   const disconnect = useCallback(async () => {
     if (printer) {

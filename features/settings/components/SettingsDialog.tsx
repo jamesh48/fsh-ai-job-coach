@@ -17,9 +17,13 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   FormControlLabel,
   IconButton,
   InputAdornment,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   Switch,
   Tab,
@@ -34,6 +38,12 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as yup from 'yup'
 import { useGetSettingsQuery, useUpdateSettingsMutation } from '@/lib/api'
+import {
+  getDeviceId,
+  getDeviceLabel,
+  loadSavedPrinterId,
+  savePrinterId,
+} from '@/lib/printerPreference'
 import { type ThemeModePreference, useThemeMode } from '@/lib/themeModeContext'
 import { useAutoPrint } from '@/lib/useAutoPrint'
 import type { PasswordFormValues, SettingsFormValues } from '../types'
@@ -70,6 +80,9 @@ export function SettingsDialog({ open, onClose }: Props) {
   const { preference: themePreference, setPreference: setThemePreference } =
     useThemeMode()
   const [autoPrint, setAutoPrint] = useAutoPrint()
+  const [printerDevices, setPrinterDevices] = useState<USBDevice[]>([])
+  const [selectedPrinterId, setSelectedPrinterId] = useState('')
+  const usbSupported = typeof navigator !== 'undefined' && 'usb' in navigator
 
   const { data: settings } = useGetSettingsQuery(undefined, { skip: !open })
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
@@ -107,6 +120,30 @@ export function SettingsDialog({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) setTab(0)
   }, [open])
+
+  // Load authorized USB devices when dialog opens
+  useEffect(() => {
+    if (!open || !usbSupported) return
+    navigator.usb.getDevices().then((devices) => {
+      setPrinterDevices(devices)
+      setSelectedPrinterId(loadSavedPrinterId())
+    })
+  }, [open, usbSupported])
+
+  async function handleAuthorizePrinter() {
+    try {
+      await navigator.usb.requestDevice({ filters: [] })
+      const devices = await navigator.usb.getDevices()
+      setPrinterDevices(devices)
+    } catch {
+      // User cancelled the picker — no-op
+    }
+  }
+
+  function handleSelectPrinter(id: string) {
+    setSelectedPrinterId(id)
+    savePrinterId(id)
+  }
 
   async function onPasswordSubmit(values: PasswordFormValues) {
     setSavingPassword(true)
@@ -216,35 +253,72 @@ export function SettingsDialog({ open, onClose }: Props) {
                   Printing
                 </Typography>
               </Box>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={autoPrint}
-                    onChange={(e) => setAutoPrint(e.target.checked)}
-                    color='primary'
-                    sx={{
-                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
-                        { opacity: 1 },
-                      '& .MuiSwitch-track': { borderRadius: 11 },
-                      '& .MuiSwitch-thumb': { borderRadius: 3 },
-                      '& .MuiSwitch-switchBase.Mui-checked .MuiSwitch-thumb': {
-                        backgroundColor: 'secondary.main',
-                        boxShadow: '0 0 0 2px rgba(0,0,0,0.15)',
-                      },
-                    }}
-                  />
-                }
-                label={
-                  <Box>
-                    <Typography variant='body2'>
-                      Auto-print when advice is generated
-                    </Typography>
-                    <Typography variant='caption' color='text.secondary'>
-                      Prints immediately if a USB printer is connected.
-                    </Typography>
+              <Stack spacing={2}>
+                {usbSupported && (
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+                    <FormControl size='small' sx={{ flex: 1 }}>
+                      <InputLabel>Printer</InputLabel>
+                      <Select
+                        label='Printer'
+                        value={selectedPrinterId}
+                        onChange={(e) => handleSelectPrinter(e.target.value)}
+                        displayEmpty
+                      >
+                        {printerDevices.length === 0 && (
+                          <MenuItem value=''>
+                            <Typography variant='body2' color='text.secondary'>
+                              No authorized printers
+                            </Typography>
+                          </MenuItem>
+                        )}
+                        {printerDevices.map((d) => (
+                          <MenuItem key={getDeviceId(d)} value={getDeviceId(d)}>
+                            {getDeviceLabel(d)}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <Button
+                      size='small'
+                      variant='outlined'
+                      onClick={handleAuthorizePrinter}
+                      sx={{ flexShrink: 0, height: 40 }}
+                    >
+                      Authorize Printer
+                    </Button>
                   </Box>
-                }
-              />
+                )}
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={autoPrint}
+                      onChange={(e) => setAutoPrint(e.target.checked)}
+                      color='primary'
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track':
+                          { opacity: 1 },
+                        '& .MuiSwitch-track': { borderRadius: 11 },
+                        '& .MuiSwitch-thumb': { borderRadius: 3 },
+                        '& .MuiSwitch-switchBase.Mui-checked .MuiSwitch-thumb':
+                          {
+                            backgroundColor: 'secondary.main',
+                            boxShadow: '0 0 0 2px rgba(0,0,0,0.15)',
+                          },
+                      }}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant='body2'>
+                        Auto-print when advice is generated
+                      </Typography>
+                      <Typography variant='caption' color='text.secondary'>
+                        Prints immediately if a USB printer is connected.
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Stack>
             </Box>
           </Stack>
         )}
