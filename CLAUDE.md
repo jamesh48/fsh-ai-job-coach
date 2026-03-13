@@ -151,6 +151,7 @@ model Settings {
 - RTK Query mutations return results — always check `'error' in result` before showing success
 - Snackbars via `useSnackbar()` from notistack for all user-facing feedback
 - Form validation via Yup schemas passed through `yupResolver`
+- Always add `noValidate` to `<form>` elements that use RHF — MUI TextField's `required` prop silently adds the HTML `required` attribute, which causes the browser to intercept submit before RHF/Yup can run
 - Biome enforces single quotes and semicolons only as needed
 - Do NOT add `* { box-sizing: border-box }` to globals.css — MUI CssBaseline owns box-sizing via the `inherit` pattern and a duplicate rule breaks width calculations
 

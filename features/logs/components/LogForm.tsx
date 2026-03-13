@@ -2,19 +2,20 @@
 
 import { yupResolver } from '@hookform/resolvers/yup'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import CloseIcon from '@mui/icons-material/Close'
 import DeleteIcon from '@mui/icons-material/Delete'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import WorkIcon from '@mui/icons-material/Work'
 import {
   Box,
   Button,
+  Chip,
   Collapse,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   FormControl,
   FormHelperText,
   IconButton,
@@ -23,6 +24,8 @@ import {
   Paper,
   Select,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -153,6 +156,7 @@ export function LogForm({
     reset,
     getValues,
     setValue,
+    setFocus,
     formState: { errors },
   } = useForm<InternalFormValues>({
     resolver: yupResolver(schema),
@@ -164,7 +168,33 @@ export function LogForm({
     name: 'applications',
   })
 
-  const [appsExpanded, setAppsExpanded] = useState(true)
+  const [tab, setTab] = useState(0)
+  const [expandedApps, setExpandedApps] = useState<Set<number>>(new Set())
+
+  const toggleApp = (index: number) =>
+    setExpandedApps((prev) => {
+      const next = new Set(prev)
+      next.has(index) ? next.delete(index) : next.add(index)
+      return next
+    })
+
+  const appendApp = () => {
+    const index = fields.length
+    append({ ...EMPTY_APPLICATION })
+    setExpandedApps((prev) => new Set(prev).add(index))
+  }
+
+  const removeApp = (index: number) => {
+    remove(index)
+    setExpandedApps((prev) => {
+      const next = new Set<number>()
+      for (const i of prev) {
+        if (i < index) next.add(i)
+        else if (i > index) next.add(i - 1)
+      }
+      return next
+    })
+  }
   const [summarizingIndex, setSummarizingIndex] = useState<number | null>(null)
   const [impressionIndex, setImpressionIndex] = useState<number | null>(null)
   const [summarizingNotes, setSummarizingNotes] = useState(false)
@@ -223,13 +253,50 @@ export function LogForm({
     if (editing) {
       const { notes, applications } = parseContent(editing.content)
       reset({ date: editing.date, notes, applications })
+      setExpandedApps(new Set(applications.map((_, i) => i)))
     } else {
       reset({ date: dayjs().format('YYYY-MM-DD'), notes: '', applications: [] })
+      setExpandedApps(new Set())
     }
+    setTab(0)
   }, [editing, open, reset])
 
   const handleFormSubmit = (values: InternalFormValues) => {
     onSubmit({ date: values.date, content: serializeToContent(values) })
+  }
+
+  const handleFormError = (formErrors: typeof errors) => {
+    const appErrors = formErrors.applications
+
+    if (!appErrors) return
+    const firstErrorIndex = (appErrors as Record<number, unknown>[]).findIndex(
+      (e) => e,
+    )
+    if (firstErrorIndex === -1) return
+
+    // Switch to Applications tab and expand the errored card
+    setTab(1)
+    setExpandedApps((prev) => new Set(prev).add(firstErrorIndex))
+
+    // Focus the first invalid field in that application
+    const appFieldErrors = appErrors[firstErrorIndex] as
+      | Record<string, unknown>
+      | undefined
+    const focusableFields = [
+      'company',
+      'jobTitle',
+      'applicationUrl',
+      'recruiterLinkedin',
+      'recruiterEmail',
+    ] as const
+    const firstField = focusableFields.find((f) => appFieldErrors?.[f])
+    if (firstField) {
+      // Delay to let Collapse animation begin before focusing
+      setTimeout(
+        () => setFocus(`applications.${firstErrorIndex}.${firstField}`),
+        150,
+      )
+    }
   }
 
   return (
@@ -240,9 +307,41 @@ export function LogForm({
       maxWidth='md'
       PaperProps={{ sx: { minHeight: '80vh' } }}
     >
-      <DialogTitle>{editing ? 'Edit Entry' : 'New Entry'}</DialogTitle>
+      <DialogTitle sx={{ pb: 0, pr: 6 }}>
+        {editing ? 'Edit Entry' : 'New Entry'}
+        <IconButton
+          size='small'
+          onClick={onClose}
+          sx={{ position: 'absolute', top: 12, right: 12 }}
+        >
+          <CloseIcon fontSize='small' />
+        </IconButton>
+      </DialogTitle>
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+          <Tab
+            label='Notes'
+            icon={<EditNoteIcon fontSize='small' />}
+            iconPosition='start'
+            sx={{ minHeight: 48 }}
+          />
+          <Tab
+            label={
+              fields.length > 0
+                ? `Applications (${fields.length})`
+                : 'Applications'
+            }
+            icon={<WorkIcon fontSize='small' />}
+            iconPosition='start'
+            sx={{ minHeight: 48 }}
+          />
+        </Tabs>
+      </Box>
+
       <form
-        onSubmit={handleSubmit(handleFormSubmit)}
+        onSubmit={handleSubmit(handleFormSubmit, handleFormError)}
+        noValidate
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -258,357 +357,384 @@ export function LogForm({
             overflow: 'hidden',
           }}
         >
-          <Box sx={{ px: 3, pt: 1, pb: 2, flexShrink: 0 }}>
-            <Stack spacing={3}>
+          {/* Notes tab */}
+          <Box
+            sx={{
+              display: tab === 0 ? 'flex' : 'none',
+              flexDirection: 'column',
+              flex: 1,
+              px: 3,
+              pt: 2,
+              pb: 2,
+              gap: 2,
+              overflowY: 'auto',
+            }}
+          >
+            <TextField
+              label='Date'
+              type='date'
+              slotProps={{ inputLabel: { shrink: true } }}
+              error={!!errors.date}
+              helperText={errors.date?.message}
+              {...register('date')}
+            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
               <TextField
-                label='Date'
-                type='date'
-                slotProps={{ inputLabel: { shrink: true } }}
-                error={!!errors.date}
-                helperText={errors.date?.message}
-                {...register('date')}
+                label='Notes'
+                multiline
+                rows={20}
+                fullWidth
+                placeholder='What did you work on today? Networking, research, interviews…'
+                error={!!errors.notes}
+                helperText={errors.notes?.message}
+                {...register('notes')}
               />
-              <Box>
-                <TextField
-                  label='Notes'
-                  multiline
-                  rows={5}
-                  fullWidth
-                  placeholder='What did you work on today? Networking, research, interviews…'
-                  error={!!errors.notes}
-                  helperText={errors.notes?.message}
-                  {...register('notes')}
-                />
-                <Button
-                  size='small'
-                  startIcon={<AutoFixHighIcon fontSize='small' />}
-                  onClick={handleSummarizeNotes}
-                  disabled={summarizingNotes}
-                  sx={{ mt: 0.5 }}
-                >
-                  {summarizingNotes ? 'Summarizing…' : 'Clean up with AI'}
-                </Button>
-              </Box>
-            </Stack>
+              <Button
+                size='small'
+                startIcon={<AutoFixHighIcon fontSize='small' />}
+                onClick={handleSummarizeNotes}
+                disabled={summarizingNotes}
+                sx={{ mt: 0.5, alignSelf: 'flex-start' }}
+              >
+                {summarizingNotes ? 'Summarizing…' : 'Clean up with AI'}
+              </Button>
+            </Box>
           </Box>
-          <Box sx={{ flex: 1, overflowY: 'auto', px: 3, pb: 2 }}>
-            <Stack spacing={2}>
-              {fields.length > 0 && (
-                <>
+
+          {/* Applications tab */}
+          <Box
+            sx={{
+              display: tab === 1 ? 'flex' : 'none',
+              flexDirection: 'column',
+              flex: 1,
+              px: 3,
+              pt: 2,
+              pb: 2,
+              gap: 2,
+              overflowY: 'auto',
+            }}
+          >
+            {fields.map((field, index) => {
+              const isExpanded = expandedApps.has(index)
+              const company = field.company
+              const jobTitle = field.jobTitle
+              const priorityEmoji =
+                field.priority === 'hot_lead'
+                  ? '🔥'
+                  : field.priority === 'strong_interest'
+                    ? '⭐'
+                    : field.priority === 'standard'
+                      ? '📋'
+                      : '⚡'
+              return (
+                <Paper key={field.id} variant='outlined' sx={{ p: 2 }}>
+                  {/* biome-ignore lint/a11y/useSemanticElements: contains nested IconButtons */}
                   <Box
+                    role='button'
+                    tabIndex={0}
+                    onClick={() => toggleApp(index)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') toggleApp(index)
+                    }}
                     display='flex'
                     alignItems='center'
-                    sx={{ cursor: 'pointer', userSelect: 'none' }}
-                    onClick={() => setAppsExpanded((v) => !v)}
+                    gap={1}
+                    sx={{
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      mb: isExpanded ? 2 : 0,
+                    }}
                   >
-                    <Divider sx={{ flex: 1 }} />
-                    <Box display='flex' alignItems='center' gap={0.5} px={1}>
+                    <ExpandMoreIcon
+                      sx={{
+                        fontSize: 18,
+                        color: 'text.secondary',
+                        flexShrink: 0,
+                        transform: isExpanded
+                          ? 'rotate(180deg)'
+                          : 'rotate(0deg)',
+                        transition: 'transform 0.2s',
+                      }}
+                    />
+                    {company || jobTitle ? (
+                      <>
+                        <Typography variant='subtitle2' sx={{ flex: 1 }} noWrap>
+                          {priorityEmoji} {jobTitle || 'Untitled'}
+                          {company ? ` at ${company}` : ''}
+                        </Typography>
+                        {!isExpanded && (
+                          <Chip
+                            label={
+                              STATUS_LABELS[
+                                field.status as keyof typeof STATUS_LABELS
+                              ] ?? field.status
+                            }
+                            size='small'
+                            variant='outlined'
+                            sx={{ flexShrink: 0 }}
+                          />
+                        )}
+                      </>
+                    ) : (
                       <Typography
-                        variant='caption'
+                        variant='subtitle2'
                         color='text.secondary'
-                        fontWeight={600}
+                        sx={{ flex: 1 }}
                       >
-                        JOB APPLICATIONS ({fields.length})
+                        Application #{index + 1}
                       </Typography>
-                      {appsExpanded ? (
-                        <ExpandLessIcon
-                          sx={{ fontSize: 16, color: 'text.secondary' }}
-                        />
-                      ) : (
-                        <ExpandMoreIcon
-                          sx={{ fontSize: 16, color: 'text.secondary' }}
-                        />
-                      )}
-                    </Box>
-                    <Divider sx={{ flex: 1 }} />
+                    )}
+                    <Tooltip title='Remove application'>
+                      <IconButton
+                        size='small'
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeApp(index)
+                        }}
+                        color='error'
+                      >
+                        <DeleteIcon fontSize='small' />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
-                  <Collapse in={appsExpanded}>
+                  <Collapse in={isExpanded}>
                     <Stack spacing={2}>
-                      {fields.map((field, index) => (
-                        <Paper key={field.id} variant='outlined' sx={{ p: 2 }}>
-                          <Box
-                            display='flex'
-                            justifyContent='space-between'
-                            alignItems='center'
-                            mb={2}
-                          >
-                            <Typography
-                              variant='subtitle2'
-                              color='text.secondary'
-                            >
-                              Application #{index + 1}
-                            </Typography>
-                            <Tooltip title='Remove application'>
-                              <IconButton
-                                size='small'
-                                onClick={() => remove(index)}
-                                color='error'
-                              >
-                                <DeleteIcon fontSize='small' />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                          <Stack spacing={2}>
-                            {/* Company + job title */}
-                            <Stack direction='row' spacing={2}>
-                              <TextField
-                                label='Company'
-                                fullWidth
-                                required
-                                error={!!errors.applications?.[index]?.company}
-                                helperText={
-                                  errors.applications?.[index]?.company?.message
-                                }
-                                {...register(`applications.${index}.company`)}
-                              />
-                              <TextField
-                                label='Job Title'
-                                fullWidth
-                                required
-                                error={!!errors.applications?.[index]?.jobTitle}
-                                helperText={
-                                  errors.applications?.[index]?.jobTitle
-                                    ?.message
-                                }
-                                {...register(`applications.${index}.jobTitle`)}
-                              />
-                            </Stack>
+                      {/* Company + job title */}
+                      <Stack direction='row' spacing={2}>
+                        <TextField
+                          label='Company'
+                          fullWidth
+                          required
+                          error={!!errors.applications?.[index]?.company}
+                          helperText={
+                            errors.applications?.[index]?.company?.message
+                          }
+                          {...register(`applications.${index}.company`)}
+                        />
+                        <TextField
+                          label='Job Title'
+                          fullWidth
+                          required
+                          error={!!errors.applications?.[index]?.jobTitle}
+                          helperText={
+                            errors.applications?.[index]?.jobTitle?.message
+                          }
+                          {...register(`applications.${index}.jobTitle`)}
+                        />
+                      </Stack>
 
-                            {/* Application URL */}
-                            <TextField
-                              label='Application URL'
-                              fullWidth
-                              placeholder='https://company.com/jobs/…'
-                              type='url'
-                              error={
-                                !!errors.applications?.[index]?.applicationUrl
-                              }
-                              helperText={
-                                errors.applications?.[index]?.applicationUrl
+                      {/* Application URL */}
+                      <TextField
+                        label='Application URL'
+                        fullWidth
+                        placeholder='https://company.com/jobs/…'
+                        type='url'
+                        error={!!errors.applications?.[index]?.applicationUrl}
+                        helperText={
+                          errors.applications?.[index]?.applicationUrl?.message
+                        }
+                        {...register(`applications.${index}.applicationUrl`)}
+                      />
+
+                      {/* Priority toggle */}
+                      <Controller
+                        name={`applications.${index}.priority`}
+                        control={control}
+                        render={({ field }) => (
+                          <ToggleButtonGroup
+                            exclusive
+                            fullWidth
+                            size='small'
+                            value={field.value}
+                            onChange={(_, val) => val && field.onChange(val)}
+                          >
+                            <ToggleButton value='quick_apply'>
+                              ⚡ Quick Apply
+                            </ToggleButton>
+                            <ToggleButton value='standard'>
+                              📋 Standard
+                            </ToggleButton>
+                            <ToggleButton value='strong_interest'>
+                              ⭐ Strong Interest
+                            </ToggleButton>
+                            <ToggleButton value='hot_lead'>
+                              🔥 Hot Lead
+                            </ToggleButton>
+                          </ToggleButtonGroup>
+                        )}
+                      />
+
+                      {/* Status */}
+                      <FormControl fullWidth>
+                        <InputLabel>Status</InputLabel>
+                        <Controller
+                          name={`applications.${index}.status`}
+                          control={control}
+                          render={({ field }) => (
+                            <Select label='Status' {...field}>
+                              {(
+                                Object.entries(STATUS_LABELS) as [
+                                  JobApplicationEntry['status'],
+                                  string,
+                                ][]
+                              ).map(([value, label]) => (
+                                <MenuItem key={value} value={value}>
+                                  {label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          )}
+                        />
+                      </FormControl>
+
+                      {/* Source */}
+                      <TextField
+                        label='How did you find this?'
+                        fullWidth
+                        placeholder='LinkedIn Easy Apply, company website, referred by [name]…'
+                        {...register(`applications.${index}.source`)}
+                      />
+
+                      {/* Recruiter */}
+                      <Stack direction='row' spacing={2}>
+                        <TextField
+                          label='Recruiter Name'
+                          fullWidth
+                          placeholder='Jane Smith'
+                          {...register(`applications.${index}.recruiter`)}
+                        />
+                        <TextField
+                          label='Recruiter LinkedIn'
+                          fullWidth
+                          type='url'
+                          placeholder='https://linkedin.com/in/…'
+                          error={
+                            !!errors.applications?.[index]?.recruiterLinkedin
+                          }
+                          helperText={
+                            errors.applications?.[index]?.recruiterLinkedin
+                              ?.message
+                          }
+                          {...register(
+                            `applications.${index}.recruiterLinkedin`,
+                          )}
+                        />
+                      </Stack>
+                      <Stack direction='row' spacing={2}>
+                        <TextField
+                          label='Recruiter Phone'
+                          fullWidth
+                          type='tel'
+                          placeholder='+1 (555) 000-0000'
+                          {...register(`applications.${index}.recruiterPhone`)}
+                        />
+                        <TextField
+                          label='Recruiter Email'
+                          fullWidth
+                          type='email'
+                          placeholder='recruiter@company.com'
+                          error={!!errors.applications?.[index]?.recruiterEmail}
+                          helperText={
+                            errors.applications?.[index]?.recruiterEmail
+                              ?.message
+                          }
+                          {...register(`applications.${index}.recruiterEmail`)}
+                        />
+                      </Stack>
+                      <Stack direction='row' spacing={2}>
+                        <FormControl fullWidth>
+                          <InputLabel>Work Arrangement</InputLabel>
+                          <Controller
+                            name={`applications.${index}.workArrangement`}
+                            control={control}
+                            render={({ field }) => (
+                              <Select label='Work Arrangement' {...field}>
+                                <MenuItem value=''>Not specified</MenuItem>
+                                {WORK_ARRANGEMENTS.map((w) => (
+                                  <MenuItem key={w} value={w}>
+                                    {w}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            )}
+                          />
+                          {errors.applications?.[index]?.workArrangement && (
+                            <FormHelperText error>
+                              {
+                                errors.applications[index].workArrangement
                                   ?.message
                               }
-                              {...register(
-                                `applications.${index}.applicationUrl`,
-                              )}
-                            />
+                            </FormHelperText>
+                          )}
+                        </FormControl>
+                      </Stack>
 
-                            {/* Priority toggle */}
-                            <Controller
-                              name={`applications.${index}.priority`}
-                              control={control}
-                              render={({ field }) => (
-                                <ToggleButtonGroup
-                                  exclusive
-                                  fullWidth
-                                  size='small'
-                                  value={field.value}
-                                  onChange={(_, val) =>
-                                    val && field.onChange(val)
-                                  }
-                                >
-                                  <ToggleButton value='quick_apply'>
-                                    ⚡ Quick Apply
-                                  </ToggleButton>
-                                  <ToggleButton value='standard'>
-                                    📋 Standard
-                                  </ToggleButton>
-                                  <ToggleButton value='strong_interest'>
-                                    ⭐ Strong Interest
-                                  </ToggleButton>
-                                  <ToggleButton value='hot_lead'>
-                                    🔥 Hot Lead
-                                  </ToggleButton>
-                                </ToggleButtonGroup>
-                              )}
-                            />
+                      {/* Role description */}
+                      <Box>
+                        <TextField
+                          label='About the Role'
+                          multiline
+                          rows={6}
+                          fullWidth
+                          placeholder='Paste the full job description or write a brief summary…'
+                          {...register(`applications.${index}.roleDescription`)}
+                        />
+                        <Button
+                          size='small'
+                          startIcon={<AutoFixHighIcon fontSize='small' />}
+                          onClick={() => handleSummarize(index)}
+                          disabled={summarizingIndex === index}
+                          sx={{ mt: 0.5 }}
+                        >
+                          {summarizingIndex === index
+                            ? 'Summarizing…'
+                            : 'Summarize with AI'}
+                        </Button>
+                      </Box>
 
-                            {/* Status */}
-                            <FormControl fullWidth>
-                              <InputLabel>Status</InputLabel>
-                              <Controller
-                                name={`applications.${index}.status`}
-                                control={control}
-                                render={({ field }) => (
-                                  <Select label='Status' {...field}>
-                                    {(
-                                      Object.entries(STATUS_LABELS) as [
-                                        JobApplicationEntry['status'],
-                                        string,
-                                      ][]
-                                    ).map(([value, label]) => (
-                                      <MenuItem key={value} value={value}>
-                                        {label}
-                                      </MenuItem>
-                                    ))}
-                                  </Select>
-                                )}
-                              />
-                            </FormControl>
-
-                            {/* Source */}
-                            <TextField
-                              label='How did you find this?'
-                              fullWidth
-                              placeholder='LinkedIn Easy Apply, company website, referred by [name]…'
-                              {...register(`applications.${index}.source`)}
-                            />
-
-                            {/* Recruiter */}
-                            <Stack direction='row' spacing={2}>
-                              <TextField
-                                label='Recruiter Name'
-                                fullWidth
-                                placeholder='Jane Smith'
-                                {...register(`applications.${index}.recruiter`)}
-                              />
-                              <TextField
-                                label='Recruiter LinkedIn'
-                                fullWidth
-                                type='url'
-                                placeholder='https://linkedin.com/in/…'
-                                error={
-                                  !!errors.applications?.[index]
-                                    ?.recruiterLinkedin
-                                }
-                                helperText={
-                                  errors.applications?.[index]
-                                    ?.recruiterLinkedin?.message
-                                }
-                                {...register(
-                                  `applications.${index}.recruiterLinkedin`,
-                                )}
-                              />
-                            </Stack>
-                            <Stack direction='row' spacing={2}>
-                              <TextField
-                                label='Recruiter Phone'
-                                fullWidth
-                                type='tel'
-                                placeholder='+1 (555) 000-0000'
-                                {...register(
-                                  `applications.${index}.recruiterPhone`,
-                                )}
-                              />
-                              <TextField
-                                label='Recruiter Email'
-                                fullWidth
-                                type='email'
-                                placeholder='recruiter@company.com'
-                                error={
-                                  !!errors.applications?.[index]?.recruiterEmail
-                                }
-                                helperText={
-                                  errors.applications?.[index]?.recruiterEmail
-                                    ?.message
-                                }
-                                {...register(
-                                  `applications.${index}.recruiterEmail`,
-                                )}
-                              />
-                            </Stack>
-                            <Stack direction='row' spacing={2}>
-                              <FormControl fullWidth>
-                                <InputLabel>Work Arrangement</InputLabel>
-                                <Controller
-                                  name={`applications.${index}.workArrangement`}
-                                  control={control}
-                                  render={({ field }) => (
-                                    <Select label='Work Arrangement' {...field}>
-                                      <MenuItem value=''>
-                                        Not specified
-                                      </MenuItem>
-                                      {WORK_ARRANGEMENTS.map((w) => (
-                                        <MenuItem key={w} value={w}>
-                                          {w}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  )}
-                                />
-                                {errors.applications?.[index]
-                                  ?.workArrangement && (
-                                  <FormHelperText error>
-                                    {
-                                      errors.applications[index].workArrangement
-                                        ?.message
-                                    }
-                                  </FormHelperText>
-                                )}
-                              </FormControl>
-                            </Stack>
-
-                            {/* Role description */}
-                            <Box>
-                              <TextField
-                                label='About the Role'
-                                multiline
-                                rows={6}
-                                fullWidth
-                                placeholder='Paste the full job description or write a brief summary…'
-                                {...register(
-                                  `applications.${index}.roleDescription`,
-                                )}
-                              />
-                              <Button
-                                size='small'
-                                startIcon={<AutoFixHighIcon fontSize='small' />}
-                                onClick={() => handleSummarize(index)}
-                                disabled={summarizingIndex === index}
-                                sx={{ mt: 0.5 }}
-                              >
-                                {summarizingIndex === index
-                                  ? 'Summarizing…'
-                                  : 'Summarize with AI'}
-                              </Button>
-                            </Box>
-
-                            {/* Impression */}
-                            <Box>
-                              <TextField
-                                label='My Impression'
-                                multiline
-                                rows={4}
-                                fullWidth
-                                placeholder='Excitement level, concerns, how well it fits your goals…'
-                                {...register(
-                                  `applications.${index}.impression`,
-                                )}
-                              />
-                              <Button
-                                size='small'
-                                startIcon={<AutoFixHighIcon fontSize='small' />}
-                                onClick={() => handleDraftImpression(index)}
-                                disabled={impressionIndex === index}
-                                sx={{ mt: 0.5 }}
-                              >
-                                {impressionIndex === index
-                                  ? 'Drafting…'
-                                  : 'Draft with AI'}
-                              </Button>
-                            </Box>
-                          </Stack>
-                        </Paper>
-                      ))}
+                      {/* Impression */}
+                      <Box>
+                        <TextField
+                          label='My Impression'
+                          multiline
+                          rows={4}
+                          fullWidth
+                          placeholder='Excitement level, concerns, how well it fits your goals…'
+                          {...register(`applications.${index}.impression`)}
+                        />
+                        <Button
+                          size='small'
+                          startIcon={<AutoFixHighIcon fontSize='small' />}
+                          onClick={() => handleDraftImpression(index)}
+                          disabled={impressionIndex === index}
+                          sx={{ mt: 0.5 }}
+                        >
+                          {impressionIndex === index
+                            ? 'Drafting…'
+                            : 'Draft with AI'}
+                        </Button>
+                      </Box>
                     </Stack>
                   </Collapse>
-                </>
-              )}
+                </Paper>
+              )
+            })}
 
-              <Button
-                variant='outlined'
-                startIcon={<WorkIcon />}
-                onClick={() => append({ ...EMPTY_APPLICATION })}
-                sx={{ alignSelf: 'flex-start' }}
-              >
-                {fields.length === 0
-                  ? 'Log a Job Application'
-                  : 'Add Another Application'}
-              </Button>
-            </Stack>
+            <Button
+              variant='outlined'
+              startIcon={<WorkIcon />}
+              onClick={appendApp}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              {fields.length === 0
+                ? 'Log a Job Application'
+                : 'Add Another Application'}
+            </Button>
           </Box>
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={onClose} color='inherit'>
+          <Button onClick={onClose} variant='outlined' color='inherit'>
             Cancel
           </Button>
           <Button type='submit' variant='contained' disableElevation>
