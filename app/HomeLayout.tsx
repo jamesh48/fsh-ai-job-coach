@@ -11,7 +11,7 @@ export function HomeLayout() {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <div
         style={{
           flex: 1,
