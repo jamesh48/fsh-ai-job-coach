@@ -14,7 +14,9 @@ export async function GET(): Promise<
   const settings = await prisma.settings.findUnique({ where: { id: ID } })
   return NextResponse.json({
     recommendation: settings?.lastRecommendation ?? null,
-    date: settings?.lastRecommendationAt?.toISOString() ?? null,
+    date: settings?.lastRecommendationAt
+      ? new Date(settings.lastRecommendationAt).toISOString()
+      : null,
   })
 }
 
@@ -79,7 +81,7 @@ export async function POST(
       model: 'claude-sonnet-4-6',
       max_tokens: 512,
       system: `You are an expert job search coach. The user shares their daily job search activity log, one entry per day.
-Today's date is ${today}.
+Today's date is ${today}. When referring to dates, always write them in human-readable form (e.g. "March 15" or "March 15, 2026") — never use YYYY-MM-DD format.
 ${careerProfile ? `\nCandidate profile:\n${careerProfile}\n` : ''}
 Job application entries may include a Priority field — use it to calibrate your advice:
 - Quick Apply: low-effort submission (e.g. LinkedIn Easy Apply). Low expectations. Do NOT recommend following up on these unless there is a compelling reason.
