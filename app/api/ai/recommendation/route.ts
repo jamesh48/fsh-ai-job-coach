@@ -4,6 +4,7 @@ import type {
   AiRecommendationResponse,
   StoredRecommendationResponse,
 } from '@/features/ai/types'
+import type { JobSearchPlan } from '@/features/settings/types'
 import { prisma } from '@/lib/prisma'
 
 const ID = 'singleton'
@@ -20,6 +21,71 @@ export async function GET(): Promise<
   })
 }
 
+function buildPlanContext(planJson: string | null, today: string): string {
+  if (!planJson) return ''
+  let plan: JobSearchPlan
+  try {
+    plan = JSON.parse(planJson) as JobSearchPlan
+  } catch {
+    return ''
+  }
+
+  const { startDate, endDate, phases, notes } = plan
+  if (!startDate && !endDate && phases.length === 0 && !notes) return ''
+
+  const lines: string[] = ['\nJob search plan:']
+
+  if (startDate || endDate) {
+    const todayMs = new Date(today).getTime()
+    const startMs = startDate ? new Date(startDate).getTime() : null
+    const endMs = endDate ? new Date(endDate).getTime() : null
+
+    let dateHeader = ''
+    if (startDate && endDate && startMs !== null && endMs !== null) {
+      const totalWeeks = Math.round(
+        (endMs - startMs) / (7 * 24 * 60 * 60 * 1000),
+      )
+      dateHeader = `${startDate} → ${endDate} (${totalWeeks} weeks)`
+    } else if (startDate) {
+      dateHeader = `Started ${startDate}`
+    } else {
+      dateHeader = `Ends ${endDate}`
+    }
+    lines.push(dateHeader)
+
+    if (startMs) {
+      const dayOfPlan =
+        Math.floor((todayMs - startMs) / (24 * 60 * 60 * 1000)) + 1
+      const weekOfPlan = Math.ceil(dayOfPlan / 7)
+      if (dayOfPlan < 1) {
+        const daysUntilStart = Math.abs(dayOfPlan - 1)
+        lines.push(
+          `Plan begins in ${daysUntilStart} day${daysUntilStart !== 1 ? 's' : ''}.`,
+        )
+      } else if (endMs && todayMs > endMs) {
+        lines.push('Plan period has ended.')
+      } else {
+        lines.push(`Currently in week ${weekOfPlan} of the plan.`)
+      }
+    }
+  }
+
+  if (phases.length > 0) {
+    lines.push('Phases:')
+    for (const phase of phases) {
+      if (phase.label || phase.focus) {
+        lines.push(`  ${phase.label ? `${phase.label}: ` : ''}${phase.focus}`)
+      }
+    }
+  }
+
+  if (notes) {
+    lines.push(`\nAdditional plan details:\n${notes}`)
+  }
+
+  return lines.join('\n')
+}
+
 export async function POST(
   request: Request,
 ): Promise<NextResponse<AiRecommendationResponse | { error: string }>> {
@@ -29,6 +95,7 @@ export async function POST(
   })
   const apiKey = settings?.anthropicApiKey
   const careerProfile = settings?.careerProfile
+  const jobSearchPlan = settings?.jobSearchPlan ?? null
 
   if (!apiKey) {
     return NextResponse.json(
@@ -74,26 +141,32 @@ export async function POST(
 
   const logText = logs.map((log) => `${log.date}:\n${log.content}`).join('\n\n')
   const today = date ?? new Date().toISOString().slice(0, 10)
+  const planContext = buildPlanContext(jobSearchPlan, today)
 
   try {
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 512,
-      system: `You are an expert job search coach. The user shares their daily job search activity log, one entry per day.
+      max_tokens: 800,
+      system: `You are an expert job search coach. The user shares their daily job search activity log.
 Today's date is ${today}. When referring to dates, always write them in human-readable form (e.g. "March 15" or "March 15, 2026") — never use YYYY-MM-DD format.
-${careerProfile ? `\nCandidate profile:\n${careerProfile}\n` : ''}
-Job application entries may include a Priority field — use it to calibrate your advice:
-- Quick Apply: low-effort submission (e.g. LinkedIn Easy Apply). Low expectations. Do NOT recommend following up on these unless there is a compelling reason.
+${careerProfile ? `\nCandidate profile:\n${careerProfile}\n` : ''}${planContext}
+
+Job application priority levels — use these to calibrate follow-up advice:
+- Quick Apply: low-effort submission (e.g. LinkedIn Easy Apply). Do NOT recommend following up unless there is a compelling reason.
 - Standard: a genuine application worth following up after one week of silence.
 - Strong Interest: the user is excited about this role — prioritize follow-up, interview prep, and tailoring outreach.
-- Hot Lead: highest priority — often a referral, networking connection, or dream company. Always recommend proactive outreach, preparation, or next steps for these.
+- Hot Lead: highest priority — often a referral, networking connection, or dream company. Always recommend proactive outreach, preparation, or next steps.
 
-The Source field may name a specific person (e.g. "Referred by John Smith") — treat this as a warm networking lead and factor it into follow-up advice when relevant.
+The Source field may name a specific person (e.g. "Referred by John Smith") — treat this as a warm networking lead.
 
-Review the full log and provide one specific, actionable task the user should complete TODAY to maximize their job search success.
-Be direct and concrete — name specific companies, roles, or contacts from the log where possible.
-Keep it to 2-4 sentences. No preamble, just the advice.`,
+Review the activity log${planContext ? ' and the job search plan above' : ''}, then give today's coaching advice. Structure your response as 2–3 short paragraphs:
+
+1. **Today's focus** — one or two specific actions for today, tied to the current plan phase if a plan is provided. Name specific companies, roles, or contacts from the log.
+2. **Follow-up priorities** — any high-priority applications (Standard, Strong Interest, or Hot Lead) that warrant action now.
+3. **Momentum check** — a brief observation about the overall search: what's going well, what gap to address, or what to keep in mind this week given where the user is in their plan.
+
+Be direct and concrete. No preamble. Use markdown formatting (bold headers, short paragraphs).`,
       messages: [
         {
           role: 'user',

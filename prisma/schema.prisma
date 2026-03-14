@@ -22,5 +22,6 @@ model Settings {
   lastRecommendation     String?
   lastRecommendationAt   DateTime?
   careerProfile          String?
+  jobSearchPlan          String?
   updatedAt              DateTime @updatedAt
 }

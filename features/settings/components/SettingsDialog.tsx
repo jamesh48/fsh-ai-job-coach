@@ -1,8 +1,10 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
+import AddIcon from '@mui/icons-material/Add'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
+import DeleteIcon from '@mui/icons-material/Delete'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import PrintIcon from '@mui/icons-material/Print'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -31,11 +33,12 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useFieldArray, useForm } from 'react-hook-form'
 import * as yup from 'yup'
 import { useGetSettingsQuery, useUpdateSettingsMutation } from '@/lib/api'
 import {
@@ -46,16 +49,37 @@ import {
 } from '@/lib/printerPreference'
 import { type ThemeModePreference, useThemeMode } from '@/lib/themeModeContext'
 import { useAutoPrint } from '@/lib/useAutoPrint'
-import type { PasswordFormValues, SettingsFormValues } from '../types'
+import type {
+  JobSearchPlan,
+  PasswordFormValues,
+  SettingsFormValues,
+} from '../types'
 
 interface Props {
   open: boolean
   onClose: () => void
 }
 
+const TABS = [
+  { label: 'General', icon: <TuneIcon fontSize='small' /> },
+  { label: 'AI', icon: <AutoAwesomeIcon fontSize='small' /> },
+  { label: 'Security', icon: <SecurityIcon fontSize='small' /> },
+]
+
 const schema = yup.object({
   anthropicApiKey: yup.string().default(''),
   careerProfile: yup.string().default(''),
+  planStartDate: yup.string().default(''),
+  planEndDate: yup.string().default(''),
+  planPhases: yup
+    .array(
+      yup.object({
+        label: yup.string().default(''),
+        focus: yup.string().default(''),
+      }),
+    )
+    .default([]),
+  planNotes: yup.string().default(''),
 })
 
 const passwordSchema = yup.object({
@@ -67,11 +91,12 @@ const passwordSchema = yup.object({
     .required('Required'),
 })
 
-const TABS = [
-  { label: 'General', icon: <TuneIcon fontSize='small' /> },
-  { label: 'AI', icon: <AutoAwesomeIcon fontSize='small' /> },
-  { label: 'Security', icon: <SecurityIcon fontSize='small' /> },
-]
+function weeksBetween(start: string, end: string): number | null {
+  if (!start || !end) return null
+  const ms = new Date(end).getTime() - new Date(start).getTime()
+  if (ms <= 0) return null
+  return Math.round(ms / (7 * 24 * 60 * 60 * 1000))
+}
 
 export function SettingsDialog({ open, onClose }: Props) {
   const { enqueueSnackbar } = useSnackbar()
@@ -87,10 +112,28 @@ export function SettingsDialog({ open, onClose }: Props) {
   const { data: settings } = useGetSettingsQuery(undefined, { skip: !open })
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
 
-  const { register, handleSubmit, reset } = useForm<SettingsFormValues>({
-    resolver: yupResolver(schema),
-    defaultValues: { anthropicApiKey: '', careerProfile: '' },
-  })
+  const { register, handleSubmit, reset, watch, control } =
+    useForm<SettingsFormValues>({
+      resolver: yupResolver(schema),
+      defaultValues: {
+        anthropicApiKey: '',
+        careerProfile: '',
+        planStartDate: '',
+        planEndDate: '',
+        planPhases: [],
+        planNotes: '',
+      },
+    })
+
+  const {
+    fields: phaseFields,
+    append: appendPhase,
+    remove: removePhase,
+  } = useFieldArray({ control, name: 'planPhases' })
+
+  const planStartDate = watch('planStartDate')
+  const planEndDate = watch('planEndDate')
+  const planWeeks = weeksBetween(planStartDate, planEndDate)
 
   const [savingPassword, setSavingPassword] = useState(false)
   const {
@@ -109,19 +152,29 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   useEffect(() => {
     if (settings) {
+      let plan: JobSearchPlan | null = null
+      if (settings.jobSearchPlan) {
+        try {
+          plan = JSON.parse(settings.jobSearchPlan) as JobSearchPlan
+        } catch {
+          // malformed JSON — ignore
+        }
+      }
       reset({
         anthropicApiKey: settings.anthropicApiKey ?? '',
         careerProfile: settings.careerProfile ?? '',
+        planStartDate: plan?.startDate ?? '',
+        planEndDate: plan?.endDate ?? '',
+        planPhases: plan?.phases ?? [],
+        planNotes: plan?.notes ?? '',
       })
     }
   }, [settings, reset])
 
-  // Reset tab when dialog closes
   useEffect(() => {
     if (!open) setTab(0)
   }, [open])
 
-  // Load authorized USB devices when dialog opens
   useEffect(() => {
     if (!open || !usbSupported) return
     navigator.usb.getDevices().then((devices) => {
@@ -392,6 +445,111 @@ export function SettingsDialog({ open, onClose }: Props) {
                 slotProps={{ inputLabel: { shrink: true } }}
                 {...register('careerProfile')}
               />
+            </Box>
+
+            <Box>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
+                Job Search Plan
+              </Typography>
+              <Typography
+                variant='body2'
+                color='text.secondary'
+                mt={0.5}
+                mb={2}
+              >
+                Define a structured plan for your search. Claude will use this
+                to align daily advice with your current phase — e.g. if you're
+                in a pipeline-building week, it'll push outreach; if you're in a
+                prep week, it'll prioritize interview practice.
+              </Typography>
+              <Stack spacing={2}>
+                {/* Date range */}
+                <Stack direction='row' spacing={2} alignItems='center'>
+                  <TextField
+                    label='Start Date'
+                    type='date'
+                    slotProps={{ inputLabel: { shrink: true } }}
+                    {...register('planStartDate')}
+                  />
+                  <TextField
+                    label='End Date'
+                    type='date'
+                    slotProps={{ inputLabel: { shrink: true } }}
+                    {...register('planEndDate')}
+                  />
+                  {planWeeks !== null && (
+                    <Typography variant='body2' color='text.secondary' noWrap>
+                      {planWeeks} week{planWeeks !== 1 ? 's' : ''}
+                    </Typography>
+                  )}
+                </Stack>
+
+                {/* Phases */}
+                <Box>
+                  <Typography variant='body2' fontWeight={500} mb={1}>
+                    Phases
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    {phaseFields.map((field, index) => (
+                      <Stack
+                        key={field.id}
+                        direction='row'
+                        spacing={1}
+                        alignItems='flex-start'
+                      >
+                        <TextField
+                          label='Label'
+                          size='small'
+                          placeholder='Week 1–2'
+                          sx={{ width: 140, flexShrink: 0 }}
+                          {...register(`planPhases.${index}.label`)}
+                        />
+                        <TextField
+                          label='Focus'
+                          size='small'
+                          fullWidth
+                          placeholder='Build pipeline — target 20 outreach messages, identify 10 companies'
+                          {...register(`planPhases.${index}.focus`)}
+                        />
+                        <Tooltip title='Remove phase'>
+                          <IconButton
+                            size='small'
+                            onClick={() => removePhase(index)}
+                            color='error'
+                            sx={{ mt: 0.5 }}
+                          >
+                            <DeleteIcon fontSize='small' />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    ))}
+                    <Box>
+                      <Button
+                        size='small'
+                        startIcon={<AddIcon />}
+                        onClick={() => appendPhase({ label: '', focus: '' })}
+                      >
+                        Add Phase
+                      </Button>
+                    </Box>
+                  </Stack>
+                </Box>
+
+                {/* Free-form plan */}
+                <TextField
+                  label='Free-form Plan (optional)'
+                  multiline
+                  rows={5}
+                  fullWidth
+                  placeholder={`Describe your plan in your own words, or use this alongside phases above.\n\nExample: 6-week search starting March 15. Week 1: DSA practice and resume polish. Weeks 2–3: Build leads — 3 applications/day, 10 networking messages/week. Week 4: First-round prep. Weeks 5–6: Final-round prep and offer evaluation.`}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  {...register('planNotes')}
+                />
+              </Stack>
             </Box>
           </Stack>
         )}

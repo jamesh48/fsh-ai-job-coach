@@ -378,11 +378,11 @@ export function LogForm({
               helperText={errors.date?.message}
               {...register('date')}
             />
-            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <Box>
               <TextField
                 label='Notes'
                 multiline
-                rows={20}
+                rows={12}
                 fullWidth
                 placeholder='What did you work on today? Networking, research, interviews…'
                 error={!!errors.notes}
@@ -394,7 +394,7 @@ export function LogForm({
                 startIcon={<AutoFixHighIcon fontSize='small' />}
                 onClick={handleSummarizeNotes}
                 disabled={summarizingNotes}
-                sx={{ mt: 0.5, alignSelf: 'flex-start' }}
+                sx={{ mt: 0.5 }}
               >
                 {summarizingNotes ? 'Summarizing…' : 'Clean up with AI'}
               </Button>
