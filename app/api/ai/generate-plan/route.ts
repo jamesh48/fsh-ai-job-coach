@@ -40,17 +40,17 @@ export async function POST(
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      system: `You are an expert job search coach. Generate a detailed, week-by-week job search plan based on the user's inputs.
+      max_tokens: 2048,
+      system: `You are a job search coach generating a structured plan that will be used as context by an AI recommendation engine — not read directly by the user.
 
-The plan should:
-- Use SMART goals (Specific, Measurable, Achievable, Relevant, Time-bound)
-- Be structured week by week or by phase, with clear focus for each period
-- Include concrete daily/weekly targets (e.g., applications per week, networking messages, hours of prep)
-- Cover the full arc: pipeline building, applications, networking, interview prep, and follow-up cadence
-- Reference the candidate's profile and stated priorities when provided
+Output a compact, information-dense brief:
+- Phase or week headings with 1-2 sentence focus summaries
+- Key numeric targets per phase (applications, outreach, prep hours)
+- Stated priorities and profile details woven in explicitly so the AI can reference them
+- Flag any time-sensitive milestones (e.g., "week 3: target 2 phone screens")
+- No motivational filler, no generic advice — only signal the recommendation AI can act on
 
-Format as plain prose organized by week or phase. Be direct and motivating. No bullet-point-only lists — write it as a real plan the person will actually follow.`,
+Keep the total response under 900 words. Prioritize structure and specificity over completeness.`,
       messages: [{ role: 'user', content: context }],
     })
 

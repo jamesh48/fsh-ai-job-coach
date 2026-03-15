@@ -33,6 +33,7 @@ import {
   ListItemText,
   MenuItem,
   Select,
+  Skeleton,
   Stack,
   Switch,
   Tab,
@@ -621,7 +622,30 @@ export function SettingsDialog({ open, onClose }: Props) {
                 </Box>
 
                 {/* Plan display / edit */}
-                {jobSearchPlan && !editingPlan ? (
+                {generatingPlan ? (
+                  <Box
+                    sx={{
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      px: 2,
+                      pt: 1,
+                      pb: 2,
+                    }}
+                  >
+                    <Skeleton width='40%' height={20} sx={{ mb: 1 }} />
+                    <Skeleton height={16} />
+                    <Skeleton height={16} />
+                    <Skeleton width='85%' height={16} sx={{ mb: 1.5 }} />
+                    <Skeleton width='30%' height={20} sx={{ mb: 1 }} />
+                    <Skeleton height={16} />
+                    <Skeleton width='90%' height={16} />
+                    <Skeleton width='75%' height={16} sx={{ mb: 1.5 }} />
+                    <Skeleton width='35%' height={20} sx={{ mb: 1 }} />
+                    <Skeleton height={16} />
+                    <Skeleton width='80%' height={16} />
+                  </Box>
+                ) : jobSearchPlan && !editingPlan ? (
                   <Box
                     sx={{
                       border: 1,
