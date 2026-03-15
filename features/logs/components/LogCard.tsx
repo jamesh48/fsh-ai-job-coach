@@ -15,6 +15,7 @@ import {
   Collapse,
   Divider,
   IconButton,
+  ListSubheader,
   MenuItem,
   MenuList,
   Popover,
@@ -92,6 +93,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
   )
   const [chipPopover, setChipPopover] = useState<{
     el: HTMLElement
+    label: string
     apps: JobApplicationEntry[]
   } | null>(null)
 
@@ -196,7 +198,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                   {PRIORITY_ORDER.filter((p) =>
                     applications.some((a) => a.priority === p),
                   ).map((p) => {
-                    const { emoji, color } = PRIORITY_DISPLAY[p]
+                    const { emoji, color, label } = PRIORITY_DISPLAY[p]
                     const appsForPriority = applications.filter(
                       (a) => a.priority === p,
                     )
@@ -210,6 +212,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                           e.stopPropagation()
                           setChipPopover({
                             el: e.currentTarget,
+                            label,
                             apps: appsForPriority,
                           })
                         }}
@@ -506,6 +509,9 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
         <MenuList dense sx={{ minWidth: 200 }}>
+          <ListSubheader sx={{ lineHeight: '32px' }}>
+            {chipPopover?.label}
+          </ListSubheader>
           {chipPopover?.apps.map((a) => (
             <MenuItem
               key={`${a.company}-${a.jobTitle}`}
