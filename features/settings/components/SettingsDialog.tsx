@@ -772,13 +772,18 @@ export function SettingsDialog({ open, onClose }: Props) {
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} color='inherit' variant='outlined'>
+        <Button
+          onClick={onClose}
+          color='inherit'
+          variant='outlined'
+          disabled={generatingPlan}
+        >
           {tab === 1 ? 'Cancel' : 'Close'}
         </Button>
         {tab === 1 && (
           <Button
             variant='contained'
-            disabled={saving}
+            disabled={saving || generatingPlan}
             onClick={handleSubmit(onSubmit)}
           >
             Save
