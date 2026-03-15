@@ -142,6 +142,7 @@ export function LogForm({
                   'rejected',
                 ])
                 .default('applied'),
+              activities: yup.array().default([]),
             }),
           )
           .default([]),

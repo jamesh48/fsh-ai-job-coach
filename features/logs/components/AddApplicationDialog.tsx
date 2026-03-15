@@ -66,6 +66,7 @@ const schema = yup.object({
     .string()
     .oneOf(['applied', 'recruiter_screen', 'interviewing', 'offer', 'rejected'])
     .default('applied'),
+  activities: yup.array().default([]),
 })
 
 export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
@@ -128,10 +129,15 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
 
   const onSubmit = async (app: JobApplicationEntry) => {
     const { notes, applications } = parseContent(log.content)
+    // Preserve activities — they're managed by the activities drawer, not this form
+    const withActivities: JobApplicationEntry = {
+      ...app,
+      activities: editing ? (editing.app.activities ?? []) : [],
+    }
     const updatedApps =
       editing !== undefined
-        ? applications.map((a, i) => (i === editing.index ? app : a))
-        : [...applications, app]
+        ? applications.map((a, i) => (i === editing.index ? withActivities : a))
+        : [...applications, withActivities]
     const updated = serializeToContent({ notes, applications: updatedApps })
     const result = await updateLog({ ...log, content: updated })
     if ('error' in result) {

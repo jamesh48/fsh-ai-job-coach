@@ -1,3 +1,29 @@
+export type ActivityType =
+  | 'recruiter_outreach'
+  | 'phone_screen'
+  | 'interview'
+  | 'follow_up'
+  | 'offer_call'
+  | 'rejection'
+  | 'note'
+
+export interface Activity {
+  id: string
+  type: ActivityType
+  date: string // YYYY-MM-DD
+  notes: string
+}
+
+export const ACTIVITY_LABELS: Record<ActivityType, string> = {
+  recruiter_outreach: 'Recruiter Outreach',
+  phone_screen: 'Phone Screen',
+  interview: 'Interview',
+  follow_up: 'Follow-up',
+  offer_call: 'Offer Call',
+  rejection: 'Rejection',
+  note: 'Note',
+}
+
 export interface JobApplicationEntry {
   jobTitle: string
   company: string
@@ -12,6 +38,7 @@ export interface JobApplicationEntry {
   impression: string
   priority: 'quick_apply' | 'standard' | 'strong_interest' | 'hot_lead'
   status: 'applied' | 'recruiter_screen' | 'interviewing' | 'offer' | 'rejected'
+  activities: Activity[]
 }
 
 export interface ParsedContent {
@@ -51,6 +78,7 @@ export const EMPTY_APPLICATION: JobApplicationEntry = {
   impression: '',
   priority: 'quick_apply',
   status: 'applied',
+  activities: [],
 }
 
 export function serializeToContent(values: ParsedContent): string {
@@ -80,6 +108,11 @@ export function serializeToContent(values: ParsedContent): string {
       if (app.roleDescription)
         lines.push(`   About the role: ${app.roleDescription}`)
       if (app.impression) lines.push(`   My impression: ${app.impression}`)
+      app.activities.forEach((act, ai) => {
+        lines.push(
+          `   Activity ${ai + 1}: ${act.type} | ${act.date} | ${act.notes.replace(/\n/g, ' ')}`,
+        )
+      })
       return lines.join('\n')
     })
     parts.push(`Job Applications Submitted Today:\n${appLines.join('\n\n')}`)
@@ -117,8 +150,13 @@ export function parseContent(content: string): ParsedContent {
       company = atIdx !== -1 ? header.slice(atIdx + 4) : ''
     }
 
-    const app: JobApplicationEntry = { ...EMPTY_APPLICATION, jobTitle, company }
-    const KEY_RE = /^ {3}([A-Z][A-Za-z ]+): (.+)/
+    const app: JobApplicationEntry = {
+      ...EMPTY_APPLICATION,
+      jobTitle,
+      company,
+      activities: [],
+    }
+    const KEY_RE = /^ {3}([A-Z][A-Za-z0-9 ]+): (.+)/
     let curKey = ''
     let curVal = ''
 
@@ -172,6 +210,17 @@ export function parseContent(content: string): ParsedContent {
         case 'My impression':
           app.impression = curVal
           break
+        default: {
+          if (/^Activity \d+$/.test(curKey)) {
+            const [type, date, ...notesParts] = curVal.split(' | ')
+            app.activities.push({
+              id: crypto.randomUUID(),
+              type: (type as ActivityType) ?? 'note',
+              date: date ?? '',
+              notes: notesParts.join(' | '),
+            })
+          }
+        }
       }
     }
 

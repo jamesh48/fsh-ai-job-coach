@@ -5,6 +5,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ModeEditOutlineIcon from '@mui/icons-material/ModeEditOutline'
+import TimelineIcon from '@mui/icons-material/Timeline'
 import WorkIcon from '@mui/icons-material/Work'
 import {
   Box,
@@ -12,6 +13,7 @@ import {
   CardContent,
   Chip,
   Collapse,
+  Divider,
   IconButton,
   Stack,
   Tooltip,
@@ -19,10 +21,15 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import { formatDate } from '@/lib/utils'
-import type { JobApplicationEntry } from '../applicationFormUtils'
-import { parseContent, STATUS_LABELS } from '../applicationFormUtils'
+import type { ActivityType, JobApplicationEntry } from '../applicationFormUtils'
+import {
+  ACTIVITY_LABELS,
+  parseContent,
+  STATUS_LABELS,
+} from '../applicationFormUtils'
 import type { DailyLog } from '../types'
 import { AddApplicationDialog } from './AddApplicationDialog'
+import { ApplicationActivitiesDrawer } from './ApplicationActivitiesDrawer'
 
 type Priority = JobApplicationEntry['priority']
 
@@ -42,6 +49,19 @@ const PRIORITY_DISPLAY: Record<
     color: 'warning',
   },
   hot_lead: { label: '🔥 Hot Lead', emoji: '🔥', color: 'error' },
+}
+
+const ACTIVITY_COLORS: Record<
+  ActivityType,
+  'default' | 'primary' | 'secondary' | 'warning' | 'error' | 'success' | 'info'
+> = {
+  recruiter_outreach: 'primary',
+  phone_screen: 'info',
+  interview: 'secondary',
+  follow_up: 'default',
+  offer_call: 'success',
+  rejection: 'error',
+  note: 'default',
 }
 
 const PRIORITY_ORDER: Priority[] = [
@@ -64,6 +84,9 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
   const [editingApp, setEditingApp] = useState<
     { app: JobApplicationEntry; index: number } | undefined
   >(undefined)
+  const [activitiesAppIndex, setActivitiesAppIndex] = useState<number | null>(
+    null,
+  )
 
   return (
     <>
@@ -261,6 +284,17 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                           >
                             {app.jobTitle} at {app.company}
                           </Typography>
+                          <Tooltip title='Activities'>
+                            <IconButton
+                              size='small'
+                              onClick={() =>
+                                setActivitiesAppIndex(applications.indexOf(app))
+                              }
+                              sx={{ color: 'text.secondary' }}
+                            >
+                              <TimelineIcon sx={{ fontSize: 15 }} />
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title='Edit application'>
                             <IconButton
                               size='small'
@@ -383,6 +417,61 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                             {app.impression}
                           </Typography>
                         )}
+                        {app.activities.length > 0 && (
+                          <>
+                            <Divider sx={{ mt: 1.5 }}>
+                              <Typography
+                                variant='overline'
+                                color='text.secondary'
+                                fontWeight={600}
+                              >
+                                History
+                              </Typography>
+                            </Divider>
+                            <Stack spacing={0.75} mt={1}>
+                              {[...app.activities]
+                                .sort((a, b) => b.date.localeCompare(a.date))
+                                .map((act) => (
+                                  <Box
+                                    key={act.id}
+                                    display='flex'
+                                    alignItems='baseline'
+                                    gap={1}
+                                    flexWrap='wrap'
+                                  >
+                                    <Chip
+                                      label={
+                                        ACTIVITY_LABELS[act.type] ?? act.type
+                                      }
+                                      color={
+                                        ACTIVITY_COLORS[act.type] ?? 'default'
+                                      }
+                                      size='small'
+                                      sx={{ height: 18, fontSize: '0.68rem' }}
+                                    />
+                                    <Typography
+                                      variant='caption'
+                                      color='text.secondary'
+                                      sx={{ flexShrink: 0 }}
+                                    >
+                                      {act.date.replace(
+                                        /^(\d{4})-(\d{2})-(\d{2})$/,
+                                        '$2-$3-$1',
+                                      )}
+                                    </Typography>
+                                    {act.notes && (
+                                      <Typography
+                                        variant='caption'
+                                        color='text.secondary'
+                                      >
+                                        {act.notes}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                ))}
+                            </Stack>
+                          </>
+                        )}
                       </Box>
                     )
                   })}
@@ -404,6 +493,14 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
         editing={editingApp}
         onClose={() => setEditingApp(undefined)}
       />
+      {activitiesAppIndex !== null && (
+        <ApplicationActivitiesDrawer
+          open
+          log={log}
+          appIndex={activitiesAppIndex}
+          onClose={() => setActivitiesAppIndex(null)}
+        />
+      )}
     </>
   )
 }
