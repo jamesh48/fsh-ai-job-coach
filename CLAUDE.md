@@ -63,7 +63,7 @@ features/                     # Feature modules (co-located components, hooks, t
     index.ts                  # Barrel export
   ai/
     components/
-      AiRecommendation.tsx    # Collapsible panel (50vh / 49px); "Get Advice"; auto-print; ReactMarkdown
+      AiRecommendation.tsx    # Collapsible panel (75vh / 49px); "Get Advice"; auto-print; ReactMarkdown
     hooks/
       useWebUsbPrinter.ts     # WebUSB hook — connect, markdown-aware ESC/POS print, disconnect
     types.ts                  # AiRecommendationResponse, StoredRecommendationResponse
@@ -178,7 +178,7 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 - `app/api/ai/recommendation/route.ts` — smart windowing: last 30 days + older hot/strong-interest entries; injects career profile as system context; stores result + timestamp in Settings
 - `app/api/ai/summarize/route.ts` — summarizes pasted job description to 4-6 sentences
 - `app/api/ai/impression/route.ts` — drafts a 2-3 sentence first-person impression
-- `AiRecommendation.tsx` — collapsible panel (50vh expanded / 49px collapsed); auto-prints if USB printer connected and auto-print setting enabled
+- `AiRecommendation.tsx` — collapsible panel (75vh expanded / 49px collapsed); auto-prints if USB printer connected and auto-print setting enabled
 - Recommendation timestamp stored as `DateTime` (`lastRecommendationAt`), displayed as `MM-DD-YYYY hh:mm:ss`
 
 ## Printing (WebUSB)

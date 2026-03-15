@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { AiRecommendation } from '@/features/ai'
 import { LogList } from '@/features/logs'
 
-const PANEL_EXPANDED_HEIGHT = '50vh'
+const PANEL_EXPANDED_HEIGHT = '75vh'
 const PANEL_COLLAPSED_HEIGHT = '49px'
 
 export function HomeLayout() {
