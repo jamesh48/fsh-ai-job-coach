@@ -1,6 +1,7 @@
 'use client'
 
 import AddIcon from '@mui/icons-material/Add'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SearchIcon from '@mui/icons-material/Search'
 import SettingsIcon from '@mui/icons-material/Settings'
@@ -20,6 +21,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { useSnackbar } from 'notistack'
 import { useState } from 'react'
+import { AiAssistDialog } from '@/features/ai/components/AiAssistDialog'
 import { SettingsDialog } from '@/features/settings'
 import { useLogs } from '../hooks/useLogs'
 import type { DailyLog, LogFormValues } from '../types'
@@ -33,6 +35,7 @@ export function LogList() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<DailyLog | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [assistOpen, setAssistOpen] = useState(false)
   const [search, setSearch] = useState('')
 
   async function handleLogout() {
@@ -113,6 +116,11 @@ export function LogList() {
           >
             Add Entry
           </Button>
+          <Tooltip title='AI Writing Assistant'>
+            <IconButton size='small' onClick={() => setAssistOpen(true)}>
+              <AutoFixHighIcon fontSize='small' />
+            </IconButton>
+          </Tooltip>
           <Tooltip title='Settings'>
             <IconButton size='small' onClick={() => setSettingsOpen(true)}>
               <SettingsIcon fontSize='small' />
@@ -192,6 +200,8 @@ export function LogList() {
         onSubmit={handleSubmit}
         onClose={() => setOpen(false)}
       />
+
+      <AiAssistDialog open={assistOpen} onClose={() => setAssistOpen(false)} />
 
       <SettingsDialog
         open={settingsOpen}

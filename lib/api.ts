@@ -58,6 +58,19 @@ export const api = createApi({
     summarizeNotes: builder.mutation<{ summary: string }, { notes: string }>({
       query: (body) => ({ url: '/ai/summarize-notes', method: 'POST', body }),
     }),
+    aiAssist: builder.mutation<
+      { response: string },
+      {
+        prompt: string
+        jobContext?: {
+          jobTitle?: string
+          company?: string
+          roleDescription?: string
+        }
+      }
+    >({
+      query: (body) => ({ url: '/ai/assist', method: 'POST', body }),
+    }),
     generatePlan: builder.mutation<
       { plan: string },
       {
@@ -90,6 +103,7 @@ export const {
   useSummarizeJobMutation,
   useDraftImpressionMutation,
   useSummarizeNotesMutation,
+  useAiAssistMutation,
   useGeneratePlanMutation,
   useGetSettingsQuery,
   useUpdateSettingsMutation,

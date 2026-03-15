@@ -1,6 +1,7 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import {
   Box,
@@ -22,6 +23,7 @@ import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import * as yup from 'yup'
+import { AiAssistDialog } from '@/features/ai/components/AiAssistDialog'
 import {
   useDraftImpressionMutation,
   useSummarizeJobMutation,
@@ -73,6 +75,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   const [draftImpression] = useDraftImpressionMutation()
   const [summarizing, setSummarizing] = useState(false)
   const [draftingImpression, setDraftingImpression] = useState(false)
+  const [assistOpen, setAssistOpen] = useState(false)
 
   const {
     register,
@@ -339,11 +342,29 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
           <Button onClick={onClose} color='inherit' variant='outlined'>
             Cancel
           </Button>
+          <Button
+            color='secondary'
+            startIcon={<AutoAwesomeIcon fontSize='small' />}
+            onClick={() => setAssistOpen(true)}
+            sx={{ mr: 'auto' }}
+          >
+            AI Assist
+          </Button>
           <Button type='submit' variant='contained' disableElevation>
             {editing ? 'Update Application' : 'Add Application'}
           </Button>
         </DialogActions>
       </form>
+
+      <AiAssistDialog
+        open={assistOpen}
+        onClose={() => setAssistOpen(false)}
+        jobContext={{
+          jobTitle: getValues('jobTitle'),
+          company: getValues('company'),
+          roleDescription: getValues('roleDescription'),
+        }}
+      />
     </Dialog>
   )
 }
