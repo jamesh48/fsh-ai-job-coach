@@ -1,10 +1,13 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
-import AddIcon from '@mui/icons-material/Add'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import CloseIcon from '@mui/icons-material/Close'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
-import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import PrintIcon from '@mui/icons-material/Print'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -13,6 +16,7 @@ import TuneIcon from '@mui/icons-material/Tune'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import {
+  Autocomplete,
   Box,
   Button,
   Dialog,
@@ -24,6 +28,9 @@ import {
   IconButton,
   InputAdornment,
   InputLabel,
+  List,
+  ListItem,
+  ListItemText,
   MenuItem,
   Select,
   Stack,
@@ -33,14 +40,18 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
   Typography,
 } from '@mui/material'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
+import ReactMarkdown from 'react-markdown'
 import * as yup from 'yup'
-import { useGetSettingsQuery, useUpdateSettingsMutation } from '@/lib/api'
+import {
+  useGeneratePlanMutation,
+  useGetSettingsQuery,
+  useUpdateSettingsMutation,
+} from '@/lib/api'
 import {
   getDeviceId,
   getDeviceLabel,
@@ -49,11 +60,7 @@ import {
 } from '@/lib/printerPreference'
 import { type ThemeModePreference, useThemeMode } from '@/lib/themeModeContext'
 import { useAutoPrint } from '@/lib/useAutoPrint'
-import type {
-  JobSearchPlan,
-  PasswordFormValues,
-  SettingsFormValues,
-} from '../types'
+import type { PasswordFormValues, SettingsFormValues } from '../types'
 
 interface Props {
   open: boolean
@@ -69,18 +76,31 @@ const TABS = [
 const schema = yup.object({
   anthropicApiKey: yup.string().default(''),
   careerProfile: yup.string().default(''),
-  planStartDate: yup.string().default(''),
-  planEndDate: yup.string().default(''),
-  planPhases: yup
-    .array(
-      yup.object({
-        label: yup.string().default(''),
-        focus: yup.string().default(''),
-      }),
-    )
-    .default([]),
-  planNotes: yup.string().default(''),
+  jobSearchPlan: yup.string().default(''),
 })
+
+const PRIORITY_OPTIONS = [
+  'Build application pipeline',
+  'Networking & outreach',
+  'Interview preparation',
+  'DSA / technical practice',
+  'Resume & portfolio polish',
+  'Recruiter outreach',
+  'LinkedIn optimization',
+  'Referral sourcing',
+  'Company research',
+  'Salary & offer research',
+  'Follow-up cadence',
+  'Offer negotiation',
+]
+
+const DURATION_OPTIONS = [
+  { value: '4', label: '4 weeks' },
+  { value: '6', label: '6 weeks' },
+  { value: '8', label: '8 weeks' },
+  { value: '10', label: '10 weeks' },
+  { value: '12', label: '12 weeks' },
+]
 
 const passwordSchema = yup.object({
   currentPassword: yup.string().default(''),
@@ -90,13 +110,6 @@ const passwordSchema = yup.object({
     .oneOf([yup.ref('newPassword')], 'Passwords do not match')
     .required('Required'),
 })
-
-function weeksBetween(start: string, end: string): number | null {
-  if (!start || !end) return null
-  const ms = new Date(end).getTime() - new Date(start).getTime()
-  if (ms <= 0) return null
-  return Math.round(ms / (7 * 24 * 60 * 60 * 1000))
-}
 
 export function SettingsDialog({ open, onClose }: Props) {
   const { enqueueSnackbar } = useSnackbar()
@@ -112,28 +125,25 @@ export function SettingsDialog({ open, onClose }: Props) {
   const { data: settings } = useGetSettingsQuery(undefined, { skip: !open })
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
 
-  const { register, handleSubmit, reset, watch, control } =
+  const { register, handleSubmit, reset, setValue, control } =
     useForm<SettingsFormValues>({
       resolver: yupResolver(schema),
       defaultValues: {
         anthropicApiKey: '',
         careerProfile: '',
-        planStartDate: '',
-        planEndDate: '',
-        planPhases: [],
-        planNotes: '',
+        jobSearchPlan: '',
       },
     })
 
-  const {
-    fields: phaseFields,
-    append: appendPhase,
-    remove: removePhase,
-  } = useFieldArray({ control, name: 'planPhases' })
+  const jobSearchPlan = useWatch({ control, name: 'jobSearchPlan' })
 
-  const planStartDate = watch('planStartDate')
-  const planEndDate = watch('planEndDate')
-  const planWeeks = weeksBetween(planStartDate, planEndDate)
+  // Plan builder local state (not persisted — just used to generate the plan)
+  const [planStartDate, setPlanStartDate] = useState('')
+  const [planDuration, setPlanDuration] = useState('6')
+  const [planPriorities, setPlanPriorities] = useState<string[]>([])
+  const [editingPlan, setEditingPlan] = useState(false)
+  const [generatePlan, { isLoading: generatingPlan }] =
+    useGeneratePlanMutation()
 
   const [savingPassword, setSavingPassword] = useState(false)
   const {
@@ -152,27 +162,19 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   useEffect(() => {
     if (settings) {
-      let plan: JobSearchPlan | null = null
-      if (settings.jobSearchPlan) {
-        try {
-          plan = JSON.parse(settings.jobSearchPlan) as JobSearchPlan
-        } catch {
-          // malformed JSON — ignore
-        }
-      }
       reset({
         anthropicApiKey: settings.anthropicApiKey ?? '',
         careerProfile: settings.careerProfile ?? '',
-        planStartDate: plan?.startDate ?? '',
-        planEndDate: plan?.endDate ?? '',
-        planPhases: plan?.phases ?? [],
-        planNotes: plan?.notes ?? '',
+        jobSearchPlan: settings.jobSearchPlan ?? '',
       })
     }
   }, [settings, reset])
 
   useEffect(() => {
-    if (!open) setTab(0)
+    if (!open) {
+      setTab(0)
+      setEditingPlan(false)
+    }
   }, [open])
 
   useEffect(() => {
@@ -196,6 +198,31 @@ export function SettingsDialog({ open, onClose }: Props) {
   function handleSelectPrinter(id: string) {
     setSelectedPrinterId(id)
     savePrinterId(id)
+  }
+
+  async function handleGeneratePlan() {
+    const result = await generatePlan({
+      startDate: planStartDate || undefined,
+      durationWeeks: planDuration ? Number(planDuration) : undefined,
+      priorities:
+        planPriorities.length > 0
+          ? planPriorities.map((p, i) => `${i + 1}. ${p}`).join('\n')
+          : undefined,
+    })
+    if (!('error' in result) && result.data) {
+      setValue('jobSearchPlan', result.data.plan)
+      setEditingPlan(false)
+    } else {
+      enqueueSnackbar(
+        'error' in result
+          ? String(
+              (result.error as { data?: { error?: string } }).data?.error ??
+                'Failed to generate plan.',
+            )
+          : 'Failed to generate plan.',
+        { variant: 'error' },
+      )
+    }
   }
 
   async function onPasswordSubmit(values: PasswordFormValues) {
@@ -231,7 +258,7 @@ export function SettingsDialog({ open, onClose }: Props) {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth='md'>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth='xl'>
       <DialogTitle sx={{ pb: 0 }}>Settings</DialogTitle>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
@@ -253,7 +280,7 @@ export function SettingsDialog({ open, onClose }: Props) {
         </Tabs>
       </Box>
 
-      <DialogContent sx={{ pt: 3, height: 500, overflowY: 'auto' }}>
+      <DialogContent sx={{ pt: 3, height: 1000, overflowY: 'auto' }}>
         {/* General */}
         {tab === 0 && (
           <Stack spacing={3}>
@@ -439,7 +466,7 @@ export function SettingsDialog({ open, onClose }: Props) {
               <TextField
                 label='Your Profile'
                 multiline
-                rows={8}
+                rows={16}
                 fullWidth
                 placeholder={`Example:\nI'm a senior full-stack engineer with 8 years of experience, primarily in React and Node.js. I'm targeting staff-level IC roles at Series B–D startups. I want remote or hybrid in the US, $180–220k base. I'm excited about developer tools, fintech, and climate tech. I'm not interested in defense, crypto, or pure front-end roles. I have a strong background in system design and have led teams of 3–5 engineers.`}
                 slotProps={{ inputLabel: { shrink: true } }}
@@ -461,94 +488,211 @@ export function SettingsDialog({ open, onClose }: Props) {
                 mt={0.5}
                 mb={2}
               >
-                Define a structured plan for your search. Claude will use this
-                to align daily advice with your current phase — e.g. if you're
-                in a pipeline-building week, it'll push outreach; if you're in a
-                prep week, it'll prioritize interview practice.
+                Build a structured plan and Claude will align daily coaching
+                advice with your current phase. Fill in the fields below to
+                generate one, or write your own directly in the text area.
               </Typography>
               <Stack spacing={2}>
-                {/* Date range */}
-                <Stack direction='row' spacing={2} alignItems='center'>
+                {/* Plan builder inputs */}
+                <Stack direction='row' spacing={2}>
                   <TextField
                     label='Start Date'
                     type='date'
+                    size='small'
                     slotProps={{ inputLabel: { shrink: true } }}
-                    {...register('planStartDate')}
+                    value={planStartDate}
+                    onChange={(e) => setPlanStartDate(e.target.value)}
                   />
-                  <TextField
-                    label='End Date'
-                    type='date'
-                    slotProps={{ inputLabel: { shrink: true } }}
-                    {...register('planEndDate')}
-                  />
-                  {planWeeks !== null && (
-                    <Typography variant='body2' color='text.secondary' noWrap>
-                      {planWeeks} week{planWeeks !== 1 ? 's' : ''}
-                    </Typography>
-                  )}
+                  <FormControl size='small' sx={{ minWidth: 130 }}>
+                    <InputLabel>Duration</InputLabel>
+                    <Select
+                      label='Duration'
+                      value={planDuration}
+                      onChange={(e) => setPlanDuration(e.target.value)}
+                    >
+                      {DURATION_OPTIONS.map((o) => (
+                        <MenuItem key={o.value} value={o.value}>
+                          {o.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Stack>
-
-                {/* Phases */}
                 <Box>
-                  <Typography variant='body2' fontWeight={500} mb={1}>
-                    Phases
-                  </Typography>
-                  <Stack spacing={1.5}>
-                    {phaseFields.map((field, index) => (
-                      <Stack
-                        key={field.id}
-                        direction='row'
-                        spacing={1}
-                        alignItems='flex-start'
-                      >
-                        <TextField
-                          label='Label'
-                          size='small'
-                          placeholder='Week 1–2'
-                          sx={{ width: 140, flexShrink: 0 }}
-                          {...register(`planPhases.${index}.label`)}
-                        />
-                        <TextField
-                          label='Focus'
-                          size='small'
-                          fullWidth
-                          placeholder='Build pipeline — target 20 outreach messages, identify 10 companies'
-                          {...register(`planPhases.${index}.focus`)}
-                        />
-                        <Tooltip title='Remove phase'>
-                          <IconButton
-                            size='small'
-                            onClick={() => removePhase(index)}
-                            color='error'
-                            sx={{ mt: 0.5 }}
+                  <Autocomplete
+                    multiple
+                    freeSolo
+                    size='small'
+                    options={PRIORITY_OPTIONS}
+                    value={planPriorities}
+                    onChange={(_, value) => setPlanPriorities(value)}
+                    slotProps={{ chip: { sx: { display: 'none' } } }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label='Top priorities / focus areas'
+                        placeholder={
+                          planPriorities.length === 0
+                            ? 'Search or type a custom goal, press Enter to add'
+                            : 'Add another…'
+                        }
+                      />
+                    )}
+                  />
+                  {planPriorities.length > 0 && (
+                    <List dense disablePadding sx={{ mt: 1 }}>
+                      {planPriorities.map((p, i) => (
+                        <ListItem
+                          key={p}
+                          disableGutters
+                          secondaryAction={
+                            <Stack direction='row' spacing={0}>
+                              <IconButton
+                                size='small'
+                                disabled={i === 0}
+                                onClick={() => {
+                                  const next = [...planPriorities]
+                                  ;[next[i - 1], next[i]] = [
+                                    next[i],
+                                    next[i - 1],
+                                  ]
+                                  setPlanPriorities(next)
+                                }}
+                              >
+                                <KeyboardArrowUpIcon fontSize='small' />
+                              </IconButton>
+                              <IconButton
+                                size='small'
+                                disabled={i === planPriorities.length - 1}
+                                onClick={() => {
+                                  const next = [...planPriorities]
+                                  ;[next[i + 1], next[i]] = [
+                                    next[i],
+                                    next[i + 1],
+                                  ]
+                                  setPlanPriorities(next)
+                                }}
+                              >
+                                <KeyboardArrowDownIcon fontSize='small' />
+                              </IconButton>
+                              <IconButton
+                                size='small'
+                                onClick={() =>
+                                  setPlanPriorities(
+                                    planPriorities.filter((_, j) => j !== i),
+                                  )
+                                }
+                              >
+                                <CloseIcon fontSize='small' />
+                              </IconButton>
+                            </Stack>
+                          }
+                          sx={{
+                            pr: 14,
+                            borderRadius: 1,
+                            '&:hover': { bgcolor: 'action.hover' },
+                          }}
+                        >
+                          <Typography
+                            variant='body2'
+                            color='text.secondary'
+                            sx={{ minWidth: 20, mr: 1 }}
                           >
-                            <DeleteIcon fontSize='small' />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    ))}
-                    <Box>
-                      <Button
-                        size='small'
-                        startIcon={<AddIcon />}
-                        onClick={() => appendPhase({ label: '', focus: '' })}
-                      >
-                        Add Phase
-                      </Button>
-                    </Box>
-                  </Stack>
+                            {i + 1}.
+                          </Typography>
+                          <ListItemText
+                            primary={p}
+                            slotProps={{ primary: { variant: 'body2' } }}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                </Box>
+                <Box>
+                  <Button
+                    size='small'
+                    startIcon={<AutoFixHighIcon fontSize='small' />}
+                    onClick={handleGeneratePlan}
+                    disabled={generatingPlan}
+                  >
+                    {generatingPlan ? 'Generating…' : 'Generate Plan with AI'}
+                  </Button>
                 </Box>
 
-                {/* Free-form plan */}
-                <TextField
-                  label='Free-form Plan (optional)'
-                  multiline
-                  rows={5}
-                  fullWidth
-                  placeholder={`Describe your plan in your own words, or use this alongside phases above.\n\nExample: 6-week search starting March 15. Week 1: DSA practice and resume polish. Weeks 2–3: Build leads — 3 applications/day, 10 networking messages/week. Week 4: First-round prep. Weeks 5–6: Final-round prep and offer evaluation.`}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  {...register('planNotes')}
-                />
+                {/* Plan display / edit */}
+                {jobSearchPlan && !editingPlan ? (
+                  <Box
+                    sx={{
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      px: 2,
+                      pt: 1,
+                      pb: 2,
+                      position: 'relative',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      <Typography variant='caption' color='text.secondary'>
+                        Your Plan
+                      </Typography>
+                      <IconButton
+                        size='small'
+                        onClick={() => setEditingPlan(true)}
+                      >
+                        <EditIcon fontSize='small' />
+                      </IconButton>
+                    </Box>
+                    <Box
+                      sx={{
+                        '& p': { margin: 0, mb: 1 },
+                        '& h1, & h2, & h3': { mt: 1.5, mb: 0.5 },
+                        '& ul, & ol': { pl: 2.5, mb: 1 },
+                        '& li': { mb: 0.25 },
+                        typography: 'body2',
+                      }}
+                    >
+                      <ReactMarkdown>{jobSearchPlan}</ReactMarkdown>
+                    </Box>
+                  </Box>
+                ) : (
+                  <Box>
+                    <TextField
+                      label='Your Plan'
+                      multiline
+                      rows={10}
+                      fullWidth
+                      placeholder='Your generated plan will appear here — or write your own. Claude reads this on every coaching request.'
+                      slotProps={{ inputLabel: { shrink: true } }}
+                      {...register('jobSearchPlan')}
+                    />
+                    {jobSearchPlan && (
+                      <Box
+                        sx={{
+                          mt: 0.5,
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                        }}
+                      >
+                        <Button
+                          size='small'
+                          color='inherit'
+                          onClick={() => setEditingPlan(false)}
+                        >
+                          Done editing
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                )}
               </Stack>
             </Box>
           </Stack>

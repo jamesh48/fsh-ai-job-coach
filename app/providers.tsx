@@ -110,6 +110,9 @@ function createAppTheme(mode: 'light' | 'dark') {
         },
       },
       MuiInputLabel: {
+        defaultProps: {
+          shrink: true,
+        },
         styleOverrides: {
           root: { fontWeight: 500 },
         },

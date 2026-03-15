@@ -26,7 +26,7 @@ An AI-powered job search coaching app. The core MVP is a daily activity log wher
 - **Auth**: bcryptjs (password hashing) + jose (JWT session cookie)
 - **Package manager**: Yarn
 - **Linter / Formatter**: Biome (single quotes, semicolons as needed)
-- **Node version**: 20 (pinned via `.nvmrc`)
+- **Node version**: 24
 
 ## Architecture
 
@@ -103,8 +103,7 @@ iac/                          # AWS CDK deployment stack
   lib/fsh-job-coach-stack.ts  # Fargate + ALB stack (lmkn.net, priority 40)
 .github/workflows/
   cdk-deploy.yaml             # CI/CD: deploy on push to main
-.nvmrc                        # Pins Node 20
-Dockerfile                    # Node 20 slim, yarn install, prisma generate, next build
+Dockerfile                    # Node 24 slim, yarn install, prisma generate, next build
 ```
 
 ### Path Alias
@@ -208,7 +207,7 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 ## Setup Commands
 ```bash
 # Use correct Node version
-nvm use 20
+nvm use 24
 
 # Install deps
 yarn

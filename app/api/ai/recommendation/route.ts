@@ -4,7 +4,6 @@ import type {
   AiRecommendationResponse,
   StoredRecommendationResponse,
 } from '@/features/ai/types'
-import type { JobSearchPlan } from '@/features/settings/types'
 import { prisma } from '@/lib/prisma'
 
 const ID = 'singleton'
@@ -21,69 +20,9 @@ export async function GET(): Promise<
   })
 }
 
-function buildPlanContext(planJson: string | null, today: string): string {
-  if (!planJson) return ''
-  let plan: JobSearchPlan
-  try {
-    plan = JSON.parse(planJson) as JobSearchPlan
-  } catch {
-    return ''
-  }
-
-  const { startDate, endDate, phases, notes } = plan
-  if (!startDate && !endDate && phases.length === 0 && !notes) return ''
-
-  const lines: string[] = ['\nJob search plan:']
-
-  if (startDate || endDate) {
-    const todayMs = new Date(today).getTime()
-    const startMs = startDate ? new Date(startDate).getTime() : null
-    const endMs = endDate ? new Date(endDate).getTime() : null
-
-    let dateHeader = ''
-    if (startDate && endDate && startMs !== null && endMs !== null) {
-      const totalWeeks = Math.round(
-        (endMs - startMs) / (7 * 24 * 60 * 60 * 1000),
-      )
-      dateHeader = `${startDate} → ${endDate} (${totalWeeks} weeks)`
-    } else if (startDate) {
-      dateHeader = `Started ${startDate}`
-    } else {
-      dateHeader = `Ends ${endDate}`
-    }
-    lines.push(dateHeader)
-
-    if (startMs) {
-      const dayOfPlan =
-        Math.floor((todayMs - startMs) / (24 * 60 * 60 * 1000)) + 1
-      const weekOfPlan = Math.ceil(dayOfPlan / 7)
-      if (dayOfPlan < 1) {
-        const daysUntilStart = Math.abs(dayOfPlan - 1)
-        lines.push(
-          `Plan begins in ${daysUntilStart} day${daysUntilStart !== 1 ? 's' : ''}.`,
-        )
-      } else if (endMs && todayMs > endMs) {
-        lines.push('Plan period has ended.')
-      } else {
-        lines.push(`Currently in week ${weekOfPlan} of the plan.`)
-      }
-    }
-  }
-
-  if (phases.length > 0) {
-    lines.push('Phases:')
-    for (const phase of phases) {
-      if (phase.label || phase.focus) {
-        lines.push(`  ${phase.label ? `${phase.label}: ` : ''}${phase.focus}`)
-      }
-    }
-  }
-
-  if (notes) {
-    lines.push(`\nAdditional plan details:\n${notes}`)
-  }
-
-  return lines.join('\n')
+function buildPlanContext(plan: string | null): string {
+  if (!plan?.trim()) return ''
+  return `\nJob search plan:\n${plan.trim()}\n`
 }
 
 export async function POST(
@@ -141,7 +80,7 @@ export async function POST(
 
   const logText = logs.map((log) => `${log.date}:\n${log.content}`).join('\n\n')
   const today = date ?? new Date().toISOString().slice(0, 10)
-  const planContext = buildPlanContext(jobSearchPlan, today)
+  const planContext = buildPlanContext(jobSearchPlan)
 
   try {
     const client = new Anthropic({ apiKey })

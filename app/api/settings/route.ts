@@ -18,34 +18,18 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   const body = await request.json()
-
-  const hasPlan =
-    body.planStartDate ||
-    body.planEndDate ||
-    body.planPhases?.length > 0 ||
-    body.planNotes
-
-  const jobSearchPlan = hasPlan
-    ? JSON.stringify({
-        startDate: body.planStartDate || '',
-        endDate: body.planEndDate || '',
-        phases: body.planPhases || [],
-        notes: body.planNotes || '',
-      })
-    : null
-
   const settings = await prisma.settings.upsert({
     where: { id: ID },
     update: {
       anthropicApiKey: body.anthropicApiKey || null,
       careerProfile: body.careerProfile || null,
-      jobSearchPlan,
+      jobSearchPlan: body.jobSearchPlan || null,
     },
     create: {
       id: ID,
       anthropicApiKey: body.anthropicApiKey || null,
       careerProfile: body.careerProfile || null,
-      jobSearchPlan,
+      jobSearchPlan: body.jobSearchPlan || null,
     },
   })
   return NextResponse.json(settings)
