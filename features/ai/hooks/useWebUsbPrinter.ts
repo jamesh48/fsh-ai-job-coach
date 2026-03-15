@@ -42,7 +42,10 @@ function buildEscPosData(recommendation: string, date?: string): Uint8Array {
     ALIGN_LEFT,
   ]
 
-  for (const raw of recommendation.split('\n')) {
+  for (const raw of recommendation
+    .replace(/\u2014/g, '--')
+    .replace(/\u2013/g, '-')
+    .split('\n')) {
     const line = raw.trimEnd()
 
     if (!line.trim()) {

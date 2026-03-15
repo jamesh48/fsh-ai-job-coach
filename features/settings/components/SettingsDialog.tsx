@@ -696,6 +696,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                       fullWidth
                       placeholder='Your generated plan will appear here — or write your own. Claude reads this on every coaching request.'
                       slotProps={{ inputLabel: { shrink: true } }}
+                      onFocus={() => setEditingPlan(true)}
                       {...register('jobSearchPlan')}
                     />
                     {jobSearchPlan && (

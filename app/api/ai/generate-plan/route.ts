@@ -59,6 +59,12 @@ Keep the total response under 900 words. Prioritize structure and specificity ov
       .map((b) => b.text)
       .join('')
 
+    await prisma.settings.upsert({
+      where: { id: 'singleton' },
+      update: { jobSearchPlan: plan },
+      create: { id: 'singleton', jobSearchPlan: plan },
+    })
+
     return NextResponse.json({ plan })
   } catch (e) {
     if (e instanceof Anthropic.AuthenticationError) {
