@@ -15,6 +15,9 @@ import {
   Collapse,
   Divider,
   IconButton,
+  MenuItem,
+  MenuList,
+  Popover,
   Stack,
   Tooltip,
   Typography,
@@ -87,6 +90,10 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
   const [activitiesAppIndex, setActivitiesAppIndex] = useState<number | null>(
     null,
   )
+  const [chipPopover, setChipPopover] = useState<{
+    el: HTMLElement
+    apps: JobApplicationEntry[]
+  } | null>(null)
 
   return (
     <>
@@ -189,40 +196,29 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                   {PRIORITY_ORDER.filter((p) =>
                     applications.some((a) => a.priority === p),
                   ).map((p) => {
-                    const { emoji, color, label } = PRIORITY_DISPLAY[p]
+                    const { emoji, color } = PRIORITY_DISPLAY[p]
                     const appsForPriority = applications.filter(
                       (a) => a.priority === p,
                     )
                     return (
-                      <Tooltip
+                      <Chip
                         key={p}
-                        title={
-                          <Box>
-                            <Box
-                              sx={{
-                                fontWeight: 600,
-                                mb: 0.5,
-                                borderBottom: '1px solid rgba(255,255,255,0.2)',
-                                pb: 0.5,
-                              }}
-                            >
-                              {label}
-                            </Box>
-                            {appsForPriority.map((a) => (
-                              <div key={`${a.company}-${a.jobTitle}`}>
-                                {a.jobTitle} at {a.company}
-                              </div>
-                            ))}
-                          </Box>
-                        }
-                      >
-                        <Chip
-                          label={`${emoji} ${appsForPriority.length}`}
-                          color={color}
-                          size='small'
-                          sx={{ height: 20, fontSize: '0.7rem' }}
-                        />
-                      </Tooltip>
+                        label={`${emoji} ${appsForPriority.length}`}
+                        color={color}
+                        size='small'
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setChipPopover({
+                            el: e.currentTarget,
+                            apps: appsForPriority,
+                          })
+                        }}
+                        sx={{
+                          height: 20,
+                          fontSize: '0.7rem',
+                          cursor: 'pointer',
+                        }}
+                      />
                     )
                   })}
                 </Box>
@@ -501,6 +497,37 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
           onClose={() => setActivitiesAppIndex(null)}
         />
       )}
+
+      <Popover
+        open={Boolean(chipPopover)}
+        anchorEl={chipPopover?.el}
+        onClose={() => setChipPopover(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        <MenuList dense sx={{ minWidth: 200 }}>
+          {chipPopover?.apps.map((a) => (
+            <MenuItem
+              key={`${a.company}-${a.jobTitle}`}
+              onClick={() => {
+                setEditingApp({ app: a, index: applications.indexOf(a) })
+                setChipPopover(null)
+              }}
+            >
+              <Typography variant='body2'>
+                {a.jobTitle}{' '}
+                <Typography
+                  component='span'
+                  variant='body2'
+                  color='text.secondary'
+                >
+                  at {a.company}
+                </Typography>
+              </Typography>
+            </MenuItem>
+          ))}
+        </MenuList>
+      </Popover>
     </>
   )
 }
