@@ -34,10 +34,11 @@ import {
 } from '@mui/material'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
-import { Controller, useFieldArray, useForm } from 'react-hook-form'
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form'
 import * as yup from 'yup'
 import {
   useDraftImpressionMutation,
+  useFillFromUrlMutation,
   useSummarizeJobMutation,
   useSummarizeNotesMutation,
 } from '@/lib/api'
@@ -198,10 +199,16 @@ export function LogForm({
   }
   const [summarizingIndex, setSummarizingIndex] = useState<number | null>(null)
   const [impressionIndex, setImpressionIndex] = useState<number | null>(null)
+  const [fillingFromUrlIndex, setFillingFromUrlIndex] = useState<number | null>(
+    null,
+  )
   const [summarizingNotes, setSummarizingNotes] = useState(false)
   const [summarizeJob] = useSummarizeJobMutation()
   const [draftImpression] = useDraftImpressionMutation()
   const [summarizeNotes] = useSummarizeNotesMutation()
+  const [fillFromUrl] = useFillFromUrlMutation()
+
+  const watchedApps = useWatch({ control, name: 'applications' })
 
   const handleSummarize = async (index: number) => {
     const description = getValues(`applications.${index}.roleDescription`)
@@ -232,6 +239,27 @@ export function LogForm({
       }
     } finally {
       setImpressionIndex(null)
+    }
+  }
+
+  const handleFillFromUrl = async (index: number) => {
+    const url = getValues(`applications.${index}.applicationUrl`)
+    if (!url?.trim()) return
+    setFillingFromUrlIndex(index)
+    try {
+      const result = await fillFromUrl({ url })
+      if (!('error' in result) && result.data) {
+        const { jobTitle, company, roleDescription, workArrangement } =
+          result.data
+        if (jobTitle) setValue(`applications.${index}.jobTitle`, jobTitle)
+        if (company) setValue(`applications.${index}.company`, company)
+        if (roleDescription)
+          setValue(`applications.${index}.roleDescription`, roleDescription)
+        if (workArrangement)
+          setValue(`applications.${index}.workArrangement`, workArrangement)
+      }
+    } finally {
+      setFillingFromUrlIndex(null)
     }
   }
 
@@ -500,6 +528,36 @@ export function LogForm({
                   </Box>
                   <Collapse in={isExpanded}>
                     <Stack spacing={2}>
+                      {/* Application URL */}
+                      <Box>
+                        <TextField
+                          label='Application URL'
+                          fullWidth
+                          placeholder='https://company.com/jobs/…'
+                          type='url'
+                          error={!!errors.applications?.[index]?.applicationUrl}
+                          helperText={
+                            errors.applications?.[index]?.applicationUrl
+                              ?.message
+                          }
+                          {...register(`applications.${index}.applicationUrl`)}
+                        />
+                        <Button
+                          size='small'
+                          startIcon={<AutoFixHighIcon fontSize='small' />}
+                          onClick={() => handleFillFromUrl(index)}
+                          disabled={
+                            fillingFromUrlIndex === index ||
+                            !watchedApps?.[index]?.applicationUrl?.trim()
+                          }
+                          sx={{ mt: 0.5 }}
+                        >
+                          {fillingFromUrlIndex === index
+                            ? 'Filling…'
+                            : 'Fill from URL'}
+                        </Button>
+                      </Box>
+
                       {/* Company + job title */}
                       <Stack direction='row' spacing={2}>
                         <TextField
@@ -523,19 +581,6 @@ export function LogForm({
                           {...register(`applications.${index}.jobTitle`)}
                         />
                       </Stack>
-
-                      {/* Application URL */}
-                      <TextField
-                        label='Application URL'
-                        fullWidth
-                        placeholder='https://company.com/jobs/…'
-                        type='url'
-                        error={!!errors.applications?.[index]?.applicationUrl}
-                        helperText={
-                          errors.applications?.[index]?.applicationUrl?.message
-                        }
-                        {...register(`applications.${index}.applicationUrl`)}
-                      />
 
                       {/* Priority toggle */}
                       <Controller
