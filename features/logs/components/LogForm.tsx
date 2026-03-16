@@ -122,6 +122,7 @@ export function LogForm({
                 .email('Must be a valid email')
                 .default(''),
               workArrangement: yup.string().default(''),
+              compensation: yup.string().default(''),
               roleDescription: yup.string().default(''),
               impression: yup.string().default(''),
               priority: yup
@@ -250,14 +251,21 @@ export function LogForm({
     try {
       const result = await fillFromUrl({ url })
       if (!('error' in result) && result.data) {
-        const { jobTitle, company, roleDescription, workArrangement } =
-          result.data
+        const {
+          jobTitle,
+          company,
+          roleDescription,
+          workArrangement,
+          compensation,
+        } = result.data
         if (jobTitle) setValue(`applications.${index}.jobTitle`, jobTitle)
         if (company) setValue(`applications.${index}.company`, company)
         if (roleDescription)
           setValue(`applications.${index}.roleDescription`, roleDescription)
         if (workArrangement)
           setValue(`applications.${index}.workArrangement`, workArrangement)
+        if (compensation)
+          setValue(`applications.${index}.compensation`, compensation)
       }
     } finally {
       setFillingFromUrlIndex(null)
@@ -714,6 +722,12 @@ export function LogForm({
                             </FormHelperText>
                           )}
                         </FormControl>
+                        <TextField
+                          label='Compensation'
+                          fullWidth
+                          placeholder='$120,000 - $150,000/yr'
+                          {...register(`applications.${index}.compensation`)}
+                        />
                       </Stack>
 
                       {/* Role description */}
