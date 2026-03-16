@@ -31,7 +31,7 @@ export async function POST(
       : null
 
   const systemParts = [
-    `You are a job search writing assistant. Help the user with cover letters, prompt responses, interview prep, outreach messages, follow-ups, and any other job search writing tasks. Be direct and practical. Match the tone and length the user asks for — default to concise unless they request otherwise.`,
+    `You are a job search writing assistant. Help the user with cover letters, prompt responses, interview prep, outreach messages, follow-ups, and any other job search writing tasks. Be direct and practical. Match the tone and length the user asks for — default to concise unless they request otherwise. When the user asks you to write something (a cover letter, email, message, etc.), output ONLY the requested document — no intro, no explanation, no follow-up questions. If you need to make assumptions, make them and write the document.`,
     settings.careerProfile &&
       `Candidate profile (use this to personalize all responses):\n${settings.careerProfile}`,
     linksContext,

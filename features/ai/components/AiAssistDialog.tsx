@@ -2,6 +2,7 @@
 
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import DownloadIcon from '@mui/icons-material/Download'
 import {
   Box,
   Button,
@@ -20,6 +21,71 @@ import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useAiAssistMutation } from '@/lib/api'
+
+function downloadResponseAsPdf(text: string) {
+  import('jspdf').then(({ jsPDF }) => {
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' })
+    const margin = 60
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const maxWidth = pageWidth - margin * 2
+    let y = margin
+
+    function checkPageBreak(lineHeight: number) {
+      if (y + lineHeight > pageHeight - margin) {
+        doc.addPage()
+        y = margin
+      }
+    }
+
+    for (const rawLine of text.split('\n')) {
+      if (rawLine.startsWith('# ')) {
+        doc.setFontSize(18)
+        doc.setFont('helvetica', 'bold')
+        const wrapped = doc.splitTextToSize(rawLine.slice(2), maxWidth)
+        checkPageBreak(wrapped.length * 24)
+        doc.text(wrapped, margin, y)
+        y += wrapped.length * 24 + 8
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'normal')
+      } else if (rawLine.startsWith('## ')) {
+        doc.setFontSize(14)
+        doc.setFont('helvetica', 'bold')
+        const wrapped = doc.splitTextToSize(rawLine.slice(3), maxWidth)
+        checkPageBreak(wrapped.length * 20)
+        doc.text(wrapped, margin, y)
+        y += wrapped.length * 20 + 6
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'normal')
+      } else if (rawLine.startsWith('### ')) {
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        const wrapped = doc.splitTextToSize(rawLine.slice(4), maxWidth)
+        checkPageBreak(wrapped.length * 18)
+        doc.text(wrapped, margin, y)
+        y += wrapped.length * 18 + 4
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'normal')
+      } else if (rawLine.startsWith('- ') || rawLine.startsWith('* ')) {
+        const plain = rawLine.slice(2).replace(/\*\*(.+?)\*\*/g, '$1')
+        const wrapped = doc.splitTextToSize(`\u2022  ${plain}`, maxWidth - 16)
+        checkPageBreak(wrapped.length * 16)
+        doc.text(wrapped, margin + 8, y)
+        y += wrapped.length * 16
+      } else if (rawLine.trim() === '') {
+        y += 10
+      } else {
+        const plain = rawLine.replace(/\*\*(.+?)\*\*/g, '$1')
+        const wrapped = doc.splitTextToSize(plain, maxWidth)
+        checkPageBreak(wrapped.length * 16)
+        doc.text(wrapped, margin, y)
+        y += wrapped.length * 16
+      }
+    }
+
+    doc.save('ai-response.pdf')
+  })
+}
 
 interface JobContext {
   jobTitle?: string
@@ -131,19 +197,29 @@ export function AiAssistDialog({ open, onClose, jobContext }: Props) {
               <Typography variant='caption' color='text.secondary'>
                 Response
               </Typography>
-              <Tooltip title='Copy to clipboard'>
-                <IconButton
-                  size='small'
-                  onClick={() => {
-                    navigator.clipboard.writeText(response)
-                    enqueueSnackbar('Copied to clipboard.', {
-                      variant: 'success',
-                    })
-                  }}
-                >
-                  <ContentCopyIcon fontSize='small' />
-                </IconButton>
-              </Tooltip>
+              <Box display='flex' gap={0.5}>
+                <Tooltip title='Download as PDF'>
+                  <IconButton
+                    size='small'
+                    onClick={() => downloadResponseAsPdf(response)}
+                  >
+                    <DownloadIcon fontSize='small' />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title='Copy to clipboard'>
+                  <IconButton
+                    size='small'
+                    onClick={() => {
+                      navigator.clipboard.writeText(response)
+                      enqueueSnackbar('Copied to clipboard.', {
+                        variant: 'success',
+                      })
+                    }}
+                  >
+                    <ContentCopyIcon fontSize='small' />
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
             <Box
               sx={{
