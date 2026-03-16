@@ -100,7 +100,7 @@ prisma/
 prisma.config.ts              # Prisma 7 config (datasource URL from env)
 iac/                          # AWS CDK deployment stack
   bin/app.ts                  # CDK entry point
-  lib/fsh-job-coach-stack.ts  # Fargate + ALB stack (lmkn.net, priority 40)
+  lib/fsh-job-coach-stack.ts  # Fargate + ALB stack (fshjobcoach.com, priority 40)
 .github/workflows/
   cdk-deploy.yaml             # CI/CD: deploy on push to main
 Dockerfile                    # Node 24 slim, yarn install, prisma generate, next build
@@ -183,7 +183,7 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 
 ## Printing (WebUSB)
 - `features/ai/hooks/useWebUsbPrinter.ts` — manages WebUSB device lifecycle and markdown-aware ESC/POS rendering
-- Chrome/Edge only; requires HTTPS (works on lmkn.net)
+- Chrome/Edge only; requires HTTPS (works on fshjobcoach.com)
 - ESC/POS renderer handles: `**bold**` inline, `# H1` (centered bold), `## H2` (left bold), `- bullets`, `1. numbered lists`
 - Auto-print setting: `lib/useAutoPrint.ts` (localStorage key `autoPrint`); toggle in Settings → Printing
 
@@ -197,7 +197,7 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 - Change password in Settings dialog (Security section)
 
 ## Deployment
-- **URL**: `lmkn.net` (ALB listener priority 40)
+- **URL**: `fshjobcoach.com` (ALB listener priority 40)
 - **Container startup**: `npx prisma migrate deploy && npx next start -p 3000`
 - Migrations run automatically on every deploy as part of container startup
 - `DATABASE_URL` constructed in CDK from `POSTGRES_PASSWORD` + CloudFormation-exported Postgres IP

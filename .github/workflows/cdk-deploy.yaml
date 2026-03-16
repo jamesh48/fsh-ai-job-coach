@@ -47,4 +47,4 @@ jobs:
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
 
       - name: Deployment complete
-        run: echo "✅ Deployed successfully to lmkn.net"
+        run: echo "✅ Deployed successfully to fshjobcoach.com"
