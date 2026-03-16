@@ -51,6 +51,7 @@ export interface JobApplicationEntry {
   recruiterPhone: string
   recruiterEmail: string
   workArrangement: string
+  compensation: string
   roleDescription: string
   impression: string
   priority: 'quick_apply' | 'standard' | 'strong_interest' | 'hot_lead'
@@ -92,6 +93,7 @@ export const EMPTY_APPLICATION: JobApplicationEntry = {
   recruiterPhone: '',
   recruiterEmail: '',
   workArrangement: '',
+  compensation: '',
   roleDescription: '',
   impression: '',
   priority: 'quick_apply',
@@ -117,6 +119,7 @@ export function serializeToContent(values: ParsedContent): string {
       if (app.source) lines.push(`   Source: ${app.source}`)
       if (app.workArrangement)
         lines.push(`   Work arrangement: ${app.workArrangement}`)
+      if (app.compensation) lines.push(`   Compensation: ${app.compensation}`)
       if (app.recruiter) lines.push(`   Recruiter: ${app.recruiter}`)
       if (app.recruiterLinkedin)
         lines.push(`   Recruiter LinkedIn: ${app.recruiterLinkedin}`)
@@ -216,6 +219,9 @@ export function parseContent(content: string): ParsedContent {
           break
         case 'Work arrangement':
           app.workArrangement = curVal
+          break
+        case 'Compensation':
+          app.compensation = curVal
           break
         case 'Recruiter':
           app.recruiter = curVal

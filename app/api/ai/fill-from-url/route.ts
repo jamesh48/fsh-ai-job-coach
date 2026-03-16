@@ -7,6 +7,7 @@ interface FillResult {
   company?: string
   roleDescription?: string
   workArrangement?: string
+  compensation?: string
 }
 
 function extractPageText(html: string): string {
@@ -121,6 +122,7 @@ export async function POST(
 - company: string (the hiring company name)
 - roleDescription: string (plain text summary of the role, 4-6 sentences, no bullet points)
 - workArrangement: "Remote" | "Hybrid" | "On-site" | "" (infer from context)
+- compensation: string (salary range or hourly rate exactly as stated, e.g. "$120,000 - $150,000/yr" or "$45-55/hr"; empty string if not mentioned)
 
 Hints from page metadata — use these if the content doesn't make it clearer:
 Title hint: ${metaTitle}

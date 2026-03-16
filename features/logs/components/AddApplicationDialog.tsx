@@ -57,6 +57,7 @@ const schema = yup.object({
   recruiterPhone: yup.string().default(''),
   recruiterEmail: yup.string().email('Must be a valid email').default(''),
   workArrangement: yup.string().default(''),
+  compensation: yup.string().default(''),
   roleDescription: yup.string().default(''),
   impression: yup.string().default(''),
   priority: yup
@@ -122,12 +123,18 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
     try {
       const result = await fillFromUrl({ url })
       if (!('error' in result) && result.data) {
-        const { jobTitle, company, roleDescription, workArrangement } =
-          result.data
+        const {
+          jobTitle,
+          company,
+          roleDescription,
+          workArrangement,
+          compensation,
+        } = result.data
         if (jobTitle) setValue('jobTitle', jobTitle)
         if (company) setValue('company', company)
         if (roleDescription) setValue('roleDescription', roleDescription)
         if (workArrangement) setValue('workArrangement', workArrangement)
+        if (compensation) setValue('compensation', compensation)
         enqueueSnackbar('Fields filled from URL.', { variant: 'success' })
       } else {
         enqueueSnackbar(
@@ -353,24 +360,32 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
               />
             </Stack>
 
-            {/* Work arrangement */}
-            <FormControl fullWidth>
-              <InputLabel>Work Arrangement</InputLabel>
-              <Controller
-                name='workArrangement'
-                control={control}
-                render={({ field }) => (
-                  <Select label='Work Arrangement' {...field}>
-                    <MenuItem value=''>Not specified</MenuItem>
-                    {WORK_ARRANGEMENTS.map((w) => (
-                      <MenuItem key={w} value={w}>
-                        {w}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                )}
+            {/* Work arrangement + Compensation */}
+            <Stack direction='row' spacing={2}>
+              <FormControl fullWidth>
+                <InputLabel>Work Arrangement</InputLabel>
+                <Controller
+                  name='workArrangement'
+                  control={control}
+                  render={({ field }) => (
+                    <Select label='Work Arrangement' {...field}>
+                      <MenuItem value=''>Not specified</MenuItem>
+                      {WORK_ARRANGEMENTS.map((w) => (
+                        <MenuItem key={w} value={w}>
+                          {w}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
+                />
+              </FormControl>
+              <TextField
+                label='Compensation'
+                fullWidth
+                placeholder='$120,000 - $150,000/yr'
+                {...register('compensation')}
               />
-            </FormControl>
+            </Stack>
 
             {/* Role description */}
             <Box>

@@ -64,6 +64,7 @@ export const api = createApi({
         company?: string
         roleDescription?: string
         workArrangement?: string
+        compensation?: string
       },
       { url: string }
     >({
