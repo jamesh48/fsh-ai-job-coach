@@ -89,6 +89,8 @@ const LINK_OPTIONS = [
   'Personal Website',
   'Blog',
   'Resume',
+  'Phone Number',
+  'Email',
 ]
 
 const PRIORITY_OPTIONS = [

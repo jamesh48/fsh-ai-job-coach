@@ -1,9 +1,11 @@
 'use client'
 
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DownloadIcon from '@mui/icons-material/Download'
 import {
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -13,6 +15,8 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Skeleton,
+  Stack,
   TextField,
   Tooltip,
   Typography,
@@ -20,71 +24,124 @@ import {
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import type { AppDocument } from '@/features/logs/applicationFormUtils'
+import { DOCUMENT_LABEL_OPTIONS } from '@/features/logs/applicationFormUtils'
 import { useAiAssistMutation } from '@/lib/api'
 
-function downloadResponseAsPdf(text: string) {
-  import('jspdf').then(({ jsPDF }) => {
-    const doc = new jsPDF({ unit: 'pt', format: 'letter' })
-    const margin = 60
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const maxWidth = pageWidth - margin * 2
-    let y = margin
+type Block =
+  | { type: 'h1' | 'h2' | 'h3'; text: string }
+  | { type: 'bullet'; text: string }
+  | { type: 'ordered'; text: string; n: number }
+  | { type: 'paragraph'; text: string }
+  | { type: 'blank' }
 
-    function checkPageBreak(lineHeight: number) {
-      if (y + lineHeight > pageHeight - margin) {
-        doc.addPage()
-        y = margin
-      }
+function parseBlocks(markdown: string): Block[] {
+  const blocks: Block[] = []
+  let paraLines: string[] = []
+
+  function flushPara() {
+    const text = paraLines.join(' ').trim()
+    if (text) blocks.push({ type: 'paragraph', text })
+    paraLines = []
+  }
+
+  for (const line of markdown.split('\n')) {
+    if (line.startsWith('# ')) {
+      flushPara()
+      blocks.push({ type: 'h1', text: line.slice(2).trim() })
+    } else if (line.startsWith('## ')) {
+      flushPara()
+      blocks.push({ type: 'h2', text: line.slice(3).trim() })
+    } else if (line.startsWith('### ')) {
+      flushPara()
+      blocks.push({ type: 'h3', text: line.slice(4).trim() })
+    } else if (/^[-*] /.test(line)) {
+      flushPara()
+      blocks.push({ type: 'bullet', text: line.slice(2).trim() })
+    } else if (/^\d+\. /.test(line)) {
+      flushPara()
+      const m = line.match(/^(\d+)\. (.+)/)
+      if (m)
+        blocks.push({ type: 'ordered', n: Number(m[1]), text: m[2].trim() })
+    } else if (line.trim() === '') {
+      flushPara()
+      blocks.push({ type: 'blank' })
+    } else {
+      paraLines.push(line)
     }
+  }
+  flushPara()
+  return blocks
+}
 
-    for (const rawLine of text.split('\n')) {
-      if (rawLine.startsWith('# ')) {
-        doc.setFontSize(18)
-        doc.setFont('helvetica', 'bold')
-        const wrapped = doc.splitTextToSize(rawLine.slice(2), maxWidth)
-        checkPageBreak(wrapped.length * 24)
-        doc.text(wrapped, margin, y)
-        y += wrapped.length * 24 + 8
-        doc.setFontSize(11)
-        doc.setFont('helvetica', 'normal')
-      } else if (rawLine.startsWith('## ')) {
-        doc.setFontSize(14)
-        doc.setFont('helvetica', 'bold')
-        const wrapped = doc.splitTextToSize(rawLine.slice(3), maxWidth)
-        checkPageBreak(wrapped.length * 20)
-        doc.text(wrapped, margin, y)
-        y += wrapped.length * 20 + 6
-        doc.setFontSize(11)
-        doc.setFont('helvetica', 'normal')
-      } else if (rawLine.startsWith('### ')) {
-        doc.setFontSize(12)
-        doc.setFont('helvetica', 'bold')
-        const wrapped = doc.splitTextToSize(rawLine.slice(4), maxWidth)
-        checkPageBreak(wrapped.length * 18)
-        doc.text(wrapped, margin, y)
-        y += wrapped.length * 18 + 4
-        doc.setFontSize(11)
-        doc.setFont('helvetica', 'normal')
-      } else if (rawLine.startsWith('- ') || rawLine.startsWith('* ')) {
-        const plain = rawLine.slice(2).replace(/\*\*(.+?)\*\*/g, '$1')
-        const wrapped = doc.splitTextToSize(`\u2022  ${plain}`, maxWidth - 16)
-        checkPageBreak(wrapped.length * 16)
-        doc.text(wrapped, margin + 8, y)
-        y += wrapped.length * 16
-      } else if (rawLine.trim() === '') {
-        y += 10
-      } else {
-        const plain = rawLine.replace(/\*\*(.+?)\*\*/g, '$1')
-        const wrapped = doc.splitTextToSize(plain, maxWidth)
-        checkPageBreak(wrapped.length * 16)
-        doc.text(wrapped, margin, y)
-        y += wrapped.length * 16
-      }
+function stripInline(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+}
+
+async function downloadAsPdf(markdown: string, filename: string) {
+  const { jsPDF } = await import('jspdf')
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+
+  const marginX = 22
+  const marginY = 22
+  const pageW = doc.internal.pageSize.getWidth()
+  const pageH = doc.internal.pageSize.getHeight()
+  const contentW = pageW - marginX * 2
+  let y = marginY
+
+  function need(mm: number) {
+    if (y + mm > pageH - marginY) {
+      doc.addPage()
+      y = marginY
     }
+  }
 
-    doc.save('ai-response.pdf')
-  })
+  function renderText(
+    text: string,
+    fontSize: number,
+    fontStyle: 'normal' | 'bold',
+    indent = 0,
+    afterMm = 2,
+  ) {
+    doc.setFontSize(fontSize)
+    doc.setFont('times', fontStyle)
+    const lines = doc.splitTextToSize(stripInline(text), contentW - indent)
+    const lineH = fontSize * 0.3528 * 1.4
+    need(lines.length * lineH + afterMm)
+    doc.text(lines, marginX + indent, y)
+    y += lines.length * lineH + afterMm
+  }
+
+  for (const block of parseBlocks(markdown)) {
+    switch (block.type) {
+      case 'h1':
+        renderText(block.text, 18, 'bold', 0, 4)
+        break
+      case 'h2':
+        renderText(block.text, 14, 'bold', 0, 3)
+        break
+      case 'h3':
+        renderText(block.text, 12, 'bold', 0, 2)
+        break
+      case 'bullet':
+        renderText(`\u2022  ${block.text}`, 11, 'normal', 4, 1.5)
+        break
+      case 'ordered':
+        renderText(`${block.n}.  ${block.text}`, 11, 'normal', 4, 1.5)
+        break
+      case 'paragraph':
+        renderText(block.text, 11, 'normal', 0, 1.5)
+        break
+      case 'blank':
+        y += 1.5
+        break
+    }
+  }
+
+  doc.save(`${filename}.pdf`)
 }
 
 interface JobContext {
@@ -97,26 +154,57 @@ interface Props {
   open: boolean
   onClose: () => void
   jobContext?: JobContext
+  onSaveDocument?: (doc: AppDocument) => Promise<void>
 }
 
-export function AiAssistDialog({ open, onClose, jobContext }: Props) {
+export function AiAssistDialog({
+  open,
+  onClose,
+  jobContext,
+  onSaveDocument,
+}: Props) {
   const { enqueueSnackbar } = useSnackbar()
   const [prompt, setPrompt] = useState('')
   const [response, setResponse] = useState('')
+  const [filename, setFilename] = useState('ai-response')
+  const [saveLabel, setSaveLabel] = useState('')
+  const [saving, setSaving] = useState(false)
   const [aiAssist, { isLoading }] = useAiAssistMutation()
 
   useEffect(() => {
     if (!open) {
       setPrompt('')
       setResponse('')
+      setFilename('ai-response')
+      setSaveLabel('')
     }
   }, [open])
+
+  async function handleSave() {
+    if (!onSaveDocument || !saveLabel.trim()) return
+    setSaving(true)
+    try {
+      await onSaveDocument({
+        id: crypto.randomUUID(),
+        label: saveLabel.trim(),
+        content: response,
+        createdAt: new Date().toISOString(),
+      })
+      enqueueSnackbar('Saved to application.', { variant: 'success' })
+      setSaveLabel('')
+    } catch {
+      enqueueSnackbar('Failed to save document.', { variant: 'error' })
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function handleSubmit() {
     if (!prompt.trim()) return
     const result = await aiAssist({ prompt, jobContext })
     if (!('error' in result) && result.data) {
       setResponse(result.data.response)
+      setFilename(result.data.filename)
     } else {
       enqueueSnackbar(
         'error' in result
@@ -138,7 +226,7 @@ export function AiAssistDialog({ open, onClose, jobContext }: Props) {
       onClose={onClose}
       fullWidth
       maxWidth='md'
-      PaperProps={{ sx: { minHeight: '75vh' } }}
+      slotProps={{ paper: { sx: { minHeight: '75vh' } } }}
     >
       <DialogTitle sx={{ pb: hasJobContext ? 1 : undefined }}>
         AI Writing Assistant
@@ -159,7 +247,7 @@ export function AiAssistDialog({ open, onClose, jobContext }: Props) {
         <TextField
           label='What do you need help with?'
           multiline
-          rows={24}
+          rows={8}
           fullWidth
           placeholder={
             hasJobContext
@@ -174,7 +262,30 @@ export function AiAssistDialog({ open, onClose, jobContext }: Props) {
           slotProps={{ inputLabel: { shrink: true } }}
         />
 
-        {response && (
+        {isLoading && (
+          <Box
+            sx={{
+              mt: 2,
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              px: 2,
+              pt: 1,
+              pb: 2,
+            }}
+          >
+            <Skeleton width='35%' height={16} sx={{ mb: 1.5 }} />
+            <Skeleton height={14} />
+            <Skeleton height={14} />
+            <Skeleton width='90%' height={14} sx={{ mb: 1.5 }} />
+            <Skeleton height={14} />
+            <Skeleton width='80%' height={14} sx={{ mb: 1.5 }} />
+            <Skeleton height={14} />
+            <Skeleton width='75%' height={14} />
+          </Box>
+        )}
+
+        {!isLoading && response && (
           <Box
             sx={{
               mt: 2,
@@ -198,10 +309,10 @@ export function AiAssistDialog({ open, onClose, jobContext }: Props) {
                 Response
               </Typography>
               <Box display='flex' gap={0.5}>
-                <Tooltip title='Download as PDF'>
+                <Tooltip title={`Download as PDF (${filename}.pdf)`}>
                   <IconButton
                     size='small'
-                    onClick={() => downloadResponseAsPdf(response)}
+                    onClick={() => downloadAsPdf(response, filename)}
                   >
                     <DownloadIcon fontSize='small' />
                   </IconButton>
@@ -223,15 +334,74 @@ export function AiAssistDialog({ open, onClose, jobContext }: Props) {
             </Box>
             <Box
               sx={{
-                '& p': { margin: 0, mb: 1 },
-                '& h1, & h2, & h3': { mt: 1.5, mb: 0.5 },
-                '& ul, & ol': { pl: 2.5, mb: 1 },
-                '& li': { mb: 0.25 },
-                typography: 'body2',
+                fontSize: '0.875rem',
+                lineHeight: 1.6,
+                '& p': { mt: 0, mb: 1.5 },
+                '& p:last-child': { mb: 0 },
+                '& h1': { fontSize: '1.25rem', fontWeight: 700, mt: 2, mb: 1 },
+                '& h2': {
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  mt: 2,
+                  mb: 0.75,
+                },
+                '& h3': {
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  mt: 1.5,
+                  mb: 0.5,
+                },
+                '& ul, & ol': { pl: 2.5, mt: 0, mb: 1.5 },
+                '& li': { mb: 0.5 },
+                '& strong': { fontWeight: 700 },
+                '& em': { fontStyle: 'italic' },
+                '& code': {
+                  fontFamily: 'monospace',
+                  fontSize: '0.8rem',
+                  bgcolor: 'action.hover',
+                  px: 0.5,
+                  borderRadius: 0.5,
+                },
+                '& blockquote': {
+                  borderLeft: '3px solid',
+                  borderColor: 'divider',
+                  pl: 1.5,
+                  ml: 0,
+                  color: 'text.secondary',
+                },
               }}
             >
               <ReactMarkdown>{response}</ReactMarkdown>
             </Box>
+
+            {!!onSaveDocument && (
+              <Stack direction='row' spacing={1} alignItems='center' mt={2}>
+                <Autocomplete
+                  freeSolo
+                  size='small'
+                  options={DOCUMENT_LABEL_OPTIONS}
+                  value={saveLabel}
+                  onInputChange={(_, val) => setSaveLabel(val)}
+                  sx={{ width: 220 }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label='Save as…'
+                      placeholder='Cover Letter'
+                    />
+                  )}
+                />
+                <Button
+                  size='small'
+                  variant='outlined'
+                  startIcon={<BookmarkAddIcon fontSize='small' />}
+                  disabled={!saveLabel.trim() || saving}
+                  onClick={handleSave}
+                >
+                  {saving ? 'Saving…' : 'Save to Application'}
+                </Button>
+              </Stack>
+            )}
           </Box>
         )}
       </DialogContent>

@@ -1,3 +1,20 @@
+export interface AppDocument {
+  id: string
+  label: string
+  content: string
+  createdAt: string // ISO timestamp
+}
+
+export const DOCUMENT_LABEL_OPTIONS = [
+  'Cover Letter',
+  'Follow-up Email',
+  'Thank You Note',
+  'Cold Outreach',
+  'LinkedIn Message',
+  'Interview Notes',
+  'Research Notes',
+]
+
 export type ActivityType =
   | 'recruiter_outreach'
   | 'phone_screen'
@@ -39,6 +56,7 @@ export interface JobApplicationEntry {
   priority: 'quick_apply' | 'standard' | 'strong_interest' | 'hot_lead'
   status: 'applied' | 'recruiter_screen' | 'interviewing' | 'offer' | 'rejected'
   activities: Activity[]
+  documents: AppDocument[]
 }
 
 export interface ParsedContent {
@@ -79,6 +97,7 @@ export const EMPTY_APPLICATION: JobApplicationEntry = {
   priority: 'quick_apply',
   status: 'applied',
   activities: [],
+  documents: [],
 }
 
 export function serializeToContent(values: ParsedContent): string {
@@ -111,6 +130,11 @@ export function serializeToContent(values: ParsedContent): string {
       app.activities.forEach((act, ai) => {
         lines.push(
           `   Activity ${ai + 1}: ${act.type} | ${act.date} | ${act.notes.replace(/\n/g, ' ')}`,
+        )
+      })
+      app.documents.forEach((doc, di) => {
+        lines.push(
+          `   Document ${di + 1}: ${doc.label} | ${doc.createdAt} | ${JSON.stringify(doc.content)}`,
         )
       })
       return lines.join('\n')
@@ -155,6 +179,7 @@ export function parseContent(content: string): ParsedContent {
       jobTitle,
       company,
       activities: [],
+      documents: [],
     }
     const KEY_RE = /^ {3}([A-Z][A-Za-z0-9 ]+): (.+)/
     let curKey = ''
@@ -219,6 +244,24 @@ export function parseContent(content: string): ParsedContent {
               date: date ?? '',
               notes: notesParts.join(' | '),
             })
+          } else if (/^Document \d+$/.test(curKey)) {
+            const firstSep = curVal.indexOf(' | ')
+            const secondSep = curVal.indexOf(' | ', firstSep + 3)
+            if (firstSep !== -1 && secondSep !== -1) {
+              const label = curVal.slice(0, firstSep)
+              const createdAt = curVal.slice(firstSep + 3, secondSep)
+              const contentJson = curVal.slice(secondSep + 3)
+              try {
+                app.documents.push({
+                  id: crypto.randomUUID(),
+                  label,
+                  createdAt,
+                  content: JSON.parse(contentJson),
+                })
+              } catch {
+                // malformed — skip
+              }
+            }
           }
         }
       }

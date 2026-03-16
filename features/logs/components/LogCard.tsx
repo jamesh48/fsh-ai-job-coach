@@ -1,6 +1,8 @@
 'use client'
 
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -13,6 +15,10 @@ import {
   CardContent,
   Chip,
   Collapse,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   IconButton,
   ListSubheader,
@@ -24,8 +30,13 @@ import {
   Typography,
 } from '@mui/material'
 import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { formatDate } from '@/lib/utils'
-import type { ActivityType, JobApplicationEntry } from '../applicationFormUtils'
+import type {
+  ActivityType,
+  AppDocument,
+  JobApplicationEntry,
+} from '../applicationFormUtils'
 import {
   ACTIVITY_LABELS,
   parseContent,
@@ -96,6 +107,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
     label: string
     apps: JobApplicationEntry[]
   } | null>(null)
+  const [viewingDoc, setViewingDoc] = useState<AppDocument | null>(null)
 
   return (
     <>
@@ -471,6 +483,65 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                             </Stack>
                           </>
                         )}
+                        {app.documents && app.documents.length > 0 && (
+                          <>
+                            <Divider sx={{ mt: 1.5 }}>
+                              <Typography
+                                variant='overline'
+                                color='text.secondary'
+                                fontWeight={600}
+                              >
+                                Documents
+                              </Typography>
+                            </Divider>
+                            <Stack spacing={0.75} mt={1}>
+                              {app.documents.map((doc) => (
+                                <Tooltip key={doc.id} title='View document'>
+                                  <Box
+                                    display='flex'
+                                    alignItems='center'
+                                    gap={1}
+                                    onClick={() => setViewingDoc(doc)}
+                                    sx={{
+                                      cursor: 'pointer',
+                                      borderRadius: 1,
+                                      px: 0.5,
+                                      '&:hover': { bgcolor: 'action.hover' },
+                                    }}
+                                  >
+                                    <ArticleOutlinedIcon
+                                      sx={{
+                                        fontSize: 14,
+                                        color: 'text.secondary',
+                                      }}
+                                    />
+                                    <Chip
+                                      label={doc.label}
+                                      size='small'
+                                      sx={{
+                                        height: 18,
+                                        fontSize: '0.68rem',
+                                        pointerEvents: 'none',
+                                      }}
+                                    />
+                                    <Typography
+                                      variant='caption'
+                                      color='text.secondary'
+                                    >
+                                      {new Date(
+                                        doc.createdAt,
+                                      ).toLocaleDateString('en-US', {
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        year: 'numeric',
+                                      })}
+                                    </Typography>
+                                  </Box>
+                                </Tooltip>
+                              ))}
+                            </Stack>
+                          </>
+                        )}
                       </Box>
                     )
                   })}
@@ -534,6 +605,65 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
           ))}
         </MenuList>
       </Popover>
+
+      <Dialog
+        open={!!viewingDoc}
+        onClose={() => setViewingDoc(null)}
+        fullWidth
+        maxWidth='md'
+        slotProps={{ paper: { sx: { minHeight: '60vh' } } }}
+      >
+        <DialogTitle>{viewingDoc?.label}</DialogTitle>
+        <DialogContent>
+          <Box
+            sx={{
+              fontSize: '0.875rem',
+              lineHeight: 1.6,
+              '& p': { mt: 0, mb: 1.5 },
+              '& p:last-child': { mb: 0 },
+              '& h1': { fontSize: '1.25rem', fontWeight: 700, mt: 2, mb: 1 },
+              '& h2': { fontSize: '1.1rem', fontWeight: 700, mt: 2, mb: 0.75 },
+              '& h3': {
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                mt: 1.5,
+                mb: 0.5,
+              },
+              '& ul, & ol': { pl: 2.5, mt: 0, mb: 1.5 },
+              '& li': { mb: 0.5 },
+              '& strong': { fontWeight: 700 },
+              '& em': { fontStyle: 'italic' },
+            }}
+          >
+            <ReactMarkdown>{viewingDoc?.content ?? ''}</ReactMarkdown>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Typography
+            variant='caption'
+            color='text.secondary'
+            sx={{ mr: 'auto' }}
+          >
+            {viewingDoc &&
+              new Date(viewingDoc.createdAt).toLocaleDateString('en-US', {
+                month: '2-digit',
+                day: '2-digit',
+                year: 'numeric',
+              })}
+          </Typography>
+          <Tooltip title='Copy to clipboard'>
+            <IconButton
+              size='small'
+              onClick={() => {
+                if (viewingDoc)
+                  navigator.clipboard.writeText(viewingDoc.content)
+              }}
+            >
+              <ContentCopyIcon fontSize='small' />
+            </IconButton>
+          </Tooltip>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }

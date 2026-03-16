@@ -30,7 +30,7 @@ import {
   useSummarizeJobMutation,
   useUpdateLogMutation,
 } from '@/lib/api'
-import type { JobApplicationEntry } from '../applicationFormUtils'
+import type { AppDocument, JobApplicationEntry } from '../applicationFormUtils'
 import {
   EMPTY_APPLICATION,
   parseContent,
@@ -68,6 +68,7 @@ const schema = yup.object({
     .oneOf(['applied', 'recruiter_screen', 'interviewing', 'offer', 'rejected'])
     .default('applied'),
   activities: yup.array().default([]),
+  documents: yup.array().default([]),
 })
 
 export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
@@ -162,12 +163,37 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
     }
   }
 
+  const handleSaveDocument = async (doc: AppDocument) => {
+    const { notes, applications } = parseContent(log.content)
+    if (editing !== undefined) {
+      // Existing app — append directly to it in the log
+      const updatedApps = applications.map((a, i) =>
+        i === editing.index
+          ? { ...a, documents: [...(a.documents ?? []), doc] }
+          : a,
+      )
+      const result = await updateLog({
+        ...log,
+        content: serializeToContent({ notes, applications: updatedApps }),
+      })
+      if ('error' in result) throw new Error('Failed to save')
+    } else {
+      // New app — append to the in-progress form's documents field
+      const current = getValues('documents') ?? []
+      setValue('documents', [...current, doc])
+    }
+  }
+
   const onSubmit = async (app: JobApplicationEntry) => {
     const { notes, applications } = parseContent(log.content)
     // Preserve activities — they're managed by the activities drawer, not this form
+    // For editing: merge original documents with any newly queued ones (app.documents)
     const withActivities: JobApplicationEntry = {
       ...app,
       activities: editing ? (editing.app.activities ?? []) : [],
+      documents: editing
+        ? [...(editing.app.documents ?? []), ...(app.documents ?? [])]
+        : (app.documents ?? []),
     }
     const updatedApps =
       editing !== undefined
@@ -416,6 +442,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
           company: getValues('company'),
           roleDescription: getValues('roleDescription'),
         }}
+        onSaveDocument={handleSaveDocument}
       />
     </Dialog>
   )

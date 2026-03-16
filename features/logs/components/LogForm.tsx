@@ -144,6 +144,7 @@ export function LogForm({
                 ])
                 .default('applied'),
               activities: yup.array().default([]),
+              documents: yup.array().default([]),
             }),
           )
           .default([]),

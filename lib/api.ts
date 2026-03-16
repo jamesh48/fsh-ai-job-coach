@@ -70,7 +70,7 @@ export const api = createApi({
       query: (body) => ({ url: '/ai/fill-from-url', method: 'POST', body }),
     }),
     aiAssist: builder.mutation<
-      { response: string },
+      { response: string; filename: string },
       {
         prompt: string
         jobContext?: {
