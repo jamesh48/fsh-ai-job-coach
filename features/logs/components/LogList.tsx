@@ -2,6 +2,7 @@
 
 import AddIcon from '@mui/icons-material/Add'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import ClearIcon from '@mui/icons-material/Clear'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SearchIcon from '@mui/icons-material/Search'
 import SettingsIcon from '@mui/icons-material/Settings'
@@ -87,8 +88,8 @@ export function LogList() {
   const filteredLogs = term
     ? logs.filter(
         (log) =>
-          log.content.toLowerCase().includes(term) ||
-          log.date.toLowerCase().includes(term),
+          log.date.toLowerCase().includes(term) ||
+          log.content.toLowerCase().includes(term),
       )
     : logs
 
@@ -140,14 +141,35 @@ export function LogList() {
         placeholder='Search entries…'
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 3 }}
+        sx={{
+          mb: 3,
+          '& .MuiOutlinedInput-root': term
+            ? {
+                '& fieldset': { borderColor: 'primary.main', borderWidth: 2 },
+              }
+            : {},
+        }}
         slotProps={{
           input: {
             startAdornment: (
               <InputAdornment position='start'>
-                <SearchIcon fontSize='small' />
+                <SearchIcon
+                  fontSize='small'
+                  color={term ? 'primary' : 'inherit'}
+                />
               </InputAdornment>
             ),
+            endAdornment: term ? (
+              <InputAdornment position='end'>
+                <IconButton
+                  size='small'
+                  onClick={() => setSearch('')}
+                  edge='end'
+                >
+                  <ClearIcon fontSize='small' />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
           },
         }}
       />
@@ -188,6 +210,7 @@ export function LogList() {
               log={log}
               onEdit={openEdit}
               onDelete={handleDelete}
+              searchTerm={term || undefined}
             />
           ))}
         </Stack>

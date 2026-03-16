@@ -90,10 +90,29 @@ interface Props {
   log: DailyLog
   onEdit: (log: DailyLog) => void
   onDelete: (id: string) => void
+  searchTerm?: string
 }
 
-export function LogCard({ log, onEdit, onDelete }: Props) {
-  const { notes, applications } = parseContent(log.content)
+function appMatchesTerm(app: JobApplicationEntry, term: string): boolean {
+  return [
+    app.jobTitle,
+    app.company,
+    app.source,
+    app.workArrangement,
+    app.compensation,
+    app.roleDescription,
+    app.impression,
+    app.recruiter,
+  ]
+    .filter(Boolean)
+    .some((v) => v.toLowerCase().includes(term))
+}
+
+export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
+  const { notes, applications: allApplications } = parseContent(log.content)
+  const applications = searchTerm
+    ? allApplications.filter((a) => appMatchesTerm(a, searchTerm))
+    : allApplications
   const [expanded, setExpanded] = useState(false)
   const [addingApp, setAddingApp] = useState(false)
   const [editingApp, setEditingApp] = useState<
@@ -274,6 +293,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                       .filter(Boolean)
                       .join(' · ')
                     const statusLabel = STATUS_LABELS[app.status] ?? app.status
+                    const originalIndex = allApplications.indexOf(app)
                     return (
                       <Box key={`${app.company}-${app.jobTitle}`}>
                         <Box
@@ -299,7 +319,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                             <IconButton
                               size='small'
                               onClick={() =>
-                                setActivitiesAppIndex(applications.indexOf(app))
+                                setActivitiesAppIndex(originalIndex)
                               }
                               sx={{ color: 'text.secondary' }}
                             >
@@ -312,7 +332,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
                               onClick={() =>
                                 setEditingApp({
                                   app,
-                                  index: applications.indexOf(app),
+                                  index: originalIndex,
                                 })
                               }
                               sx={{ color: 'text.secondary' }}
@@ -587,7 +607,7 @@ export function LogCard({ log, onEdit, onDelete }: Props) {
             <MenuItem
               key={`${a.company}-${a.jobTitle}`}
               onClick={() => {
-                setEditingApp({ app: a, index: applications.indexOf(a) })
+                setEditingApp({ app: a, index: allApplications.indexOf(a) })
                 setChipPopover(null)
               }}
             >
