@@ -22,10 +22,19 @@ export async function POST(
     )
   }
 
+  const profileLinks: { label: string; url: string }[] = settings.profileLinks
+    ? JSON.parse(settings.profileLinks)
+    : []
+  const linksContext =
+    profileLinks.length > 0
+      ? `Candidate links:\n${profileLinks.map((l) => `- ${l.label}: ${l.url}`).join('\n')}`
+      : null
+
   const systemParts = [
     `You are a job search writing assistant. Help the user with cover letters, prompt responses, interview prep, outreach messages, follow-ups, and any other job search writing tasks. Be direct and practical. Match the tone and length the user asks for — default to concise unless they request otherwise.`,
     settings.careerProfile &&
       `Candidate profile (use this to personalize all responses):\n${settings.careerProfile}`,
+    linksContext,
   ].filter(Boolean)
 
   const userParts = [

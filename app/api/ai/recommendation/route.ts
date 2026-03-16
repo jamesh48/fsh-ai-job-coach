@@ -35,6 +35,13 @@ export async function POST(
   const apiKey = settings?.anthropicApiKey
   const careerProfile = settings?.careerProfile
   const jobSearchPlan = settings?.jobSearchPlan ?? null
+  const profileLinks: { label: string; url: string }[] = settings?.profileLinks
+    ? JSON.parse(settings.profileLinks)
+    : []
+  const linksContext =
+    profileLinks.length > 0
+      ? `\nCandidate links:\n${profileLinks.map((l) => `- ${l.label}: ${l.url}`).join('\n')}\n`
+      : ''
 
   if (!apiKey) {
     return NextResponse.json(
@@ -89,7 +96,7 @@ export async function POST(
       max_tokens: 800,
       system: `You are an expert job search coach. The user shares their daily job search activity log.
 Today's date is ${today}. When referring to dates, always write them in human-readable form (e.g. "March 15" or "March 15, 2026") — never use YYYY-MM-DD format.
-${careerProfile ? `\nCandidate profile:\n${careerProfile}\n` : ''}${planContext}
+${careerProfile ? `\nCandidate profile:\n${careerProfile}\n` : ''}${linksContext}${planContext}
 
 Job application priority levels — use these to calibrate follow-up advice:
 - Quick Apply: low-effort submission (e.g. LinkedIn Easy Apply). Do NOT recommend following up unless there is a compelling reason.

@@ -126,7 +126,12 @@ export class FshJobCoachStack extends cdk.Stack {
     listener.addTargetGroups('fsh-listener-tg', {
       targetGroups: [targetGroup],
       priority: 40,
-      conditions: [elbv2.ListenerCondition.hostHeaders(['fshjobcoach.com'])],
+      conditions: [
+        elbv2.ListenerCondition.hostHeaders([
+          'fshjobcoach.com',
+          'www.fshjobcoach.com',
+        ]),
+      ],
     })
 
     const postgresSecurityGroup = ec2.SecurityGroup.fromSecurityGroupId(

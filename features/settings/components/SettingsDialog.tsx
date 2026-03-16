@@ -1,6 +1,7 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
+import AddIcon from '@mui/icons-material/Add'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import CloseIcon from '@mui/icons-material/Close'
@@ -78,7 +79,17 @@ const schema = yup.object({
   anthropicApiKey: yup.string().default(''),
   careerProfile: yup.string().default(''),
   jobSearchPlan: yup.string().default(''),
+  profileLinks: yup.array().default([]),
 })
+
+const LINK_OPTIONS = [
+  'GitHub',
+  'LinkedIn',
+  'Portfolio Website',
+  'Personal Website',
+  'Blog',
+  'Resume',
+]
 
 const PRIORITY_OPTIONS = [
   'Build application pipeline',
@@ -146,6 +157,12 @@ export function SettingsDialog({ open, onClose }: Props) {
   const [generatePlan, { isLoading: generatingPlan }] =
     useGeneratePlanMutation()
 
+  const [profileLinks, setProfileLinks] = useState<
+    { label: string; url: string }[]
+  >([])
+  const [newLinkLabel, setNewLinkLabel] = useState('')
+  const [newLinkUrl, setNewLinkUrl] = useState('')
+
   const [savingPassword, setSavingPassword] = useState(false)
   const {
     register: registerPw,
@@ -167,7 +184,9 @@ export function SettingsDialog({ open, onClose }: Props) {
         anthropicApiKey: settings.anthropicApiKey ?? '',
         careerProfile: settings.careerProfile ?? '',
         jobSearchPlan: settings.jobSearchPlan ?? '',
+        profileLinks: settings.profileLinks ?? [],
       })
+      setProfileLinks(settings.profileLinks ?? [])
     }
   }, [settings, reset])
 
@@ -249,7 +268,7 @@ export function SettingsDialog({ open, onClose }: Props) {
   }
 
   async function onSubmit(values: SettingsFormValues) {
-    const result = await updateSettings(values)
+    const result = await updateSettings({ ...values, profileLinks })
     if ('error' in result) {
       enqueueSnackbar('Failed to save settings.', { variant: 'error' })
     } else {
@@ -473,6 +492,106 @@ export function SettingsDialog({ open, onClose }: Props) {
                 slotProps={{ inputLabel: { shrink: true } }}
                 {...register('careerProfile')}
               />
+            </Box>
+
+            <Box>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
+                Links
+              </Typography>
+              <Typography
+                variant='body2'
+                color='text.secondary'
+                mt={0.5}
+                mb={1.5}
+              >
+                Add links to your profiles and portfolio. Claude will use these
+                when writing cover letters and outreach so it never needs to
+                guess your URLs.
+              </Typography>
+              <Stack spacing={1.5}>
+                <Stack direction='row' spacing={1} alignItems='flex-start'>
+                  <Autocomplete
+                    freeSolo
+                    size='small'
+                    options={LINK_OPTIONS}
+                    value={newLinkLabel}
+                    onInputChange={(_, val) => setNewLinkLabel(val)}
+                    sx={{ width: 200, flexShrink: 0 }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label='Label'
+                        placeholder='GitHub'
+                      />
+                    )}
+                  />
+                  <TextField
+                    size='small'
+                    label='URL'
+                    placeholder='https://github.com/yourname'
+                    value={newLinkUrl}
+                    onChange={(e) => setNewLinkUrl(e.target.value)}
+                    sx={{ flex: 1 }}
+                  />
+                  <Button
+                    size='small'
+                    variant='outlined'
+                    startIcon={<AddIcon fontSize='small' />}
+                    disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}
+                    onClick={() => {
+                      setProfileLinks((prev) => [
+                        ...prev,
+                        { label: newLinkLabel.trim(), url: newLinkUrl.trim() },
+                      ])
+                      setNewLinkLabel('')
+                      setNewLinkUrl('')
+                    }}
+                    sx={{ flexShrink: 0, height: 40 }}
+                  >
+                    Add
+                  </Button>
+                </Stack>
+                {profileLinks.length > 0 && (
+                  <List dense disablePadding>
+                    {profileLinks.map((link, i) => (
+                      <ListItem
+                        key={`${link.label}-${i}`}
+                        disableGutters
+                        secondaryAction={
+                          <IconButton
+                            size='small'
+                            onClick={() =>
+                              setProfileLinks((prev) =>
+                                prev.filter((_, j) => j !== i),
+                              )
+                            }
+                          >
+                            <CloseIcon fontSize='small' />
+                          </IconButton>
+                        }
+                        sx={{
+                          pr: 6,
+                          borderRadius: 1,
+                          '&:hover': { bgcolor: 'action.hover' },
+                        }}
+                      >
+                        <ListItemText
+                          primary={link.label}
+                          secondary={link.url}
+                          slotProps={{
+                            primary: { variant: 'body2' },
+                            secondary: { variant: 'caption' },
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </Stack>
             </Box>
 
             <Box>
