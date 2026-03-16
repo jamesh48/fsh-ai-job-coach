@@ -21,11 +21,12 @@ import {
 } from '@mui/material'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import * as yup from 'yup'
 import { AiAssistDialog } from '@/features/ai/components/AiAssistDialog'
 import {
   useDraftImpressionMutation,
+  useFillFromUrlMutation,
   useSummarizeJobMutation,
   useUpdateLogMutation,
 } from '@/lib/api'
@@ -74,8 +75,10 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   const [updateLog] = useUpdateLogMutation()
   const [summarizeJob] = useSummarizeJobMutation()
   const [draftImpression] = useDraftImpressionMutation()
+  const [fillFromUrl] = useFillFromUrlMutation()
   const [summarizing, setSummarizing] = useState(false)
   const [draftingImpression, setDraftingImpression] = useState(false)
+  const [fillingFromUrl, setFillingFromUrl] = useState(false)
   const [assistOpen, setAssistOpen] = useState(false)
 
   const {
@@ -90,6 +93,8 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
     resolver: yupResolver(schema),
     defaultValues: { ...EMPTY_APPLICATION },
   })
+
+  const applicationUrl = useWatch({ control, name: 'applicationUrl' })
 
   useEffect(() => {
     if (open) reset(editing ? { ...editing.app } : { ...EMPTY_APPLICATION })
@@ -106,6 +111,36 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
       }
     } finally {
       setSummarizing(false)
+    }
+  }
+
+  const handleFillFromUrl = async () => {
+    const url = getValues('applicationUrl')
+    if (!url?.trim()) return
+    setFillingFromUrl(true)
+    try {
+      const result = await fillFromUrl({ url })
+      if (!('error' in result) && result.data) {
+        const { jobTitle, company, roleDescription, workArrangement } =
+          result.data
+        if (jobTitle) setValue('jobTitle', jobTitle)
+        if (company) setValue('company', company)
+        if (roleDescription) setValue('roleDescription', roleDescription)
+        if (workArrangement) setValue('workArrangement', workArrangement)
+        enqueueSnackbar('Fields filled from URL.', { variant: 'success' })
+      } else {
+        enqueueSnackbar(
+          'error' in result
+            ? String(
+                (result.error as { data?: { error?: string } }).data?.error ??
+                  'Failed to fill from URL.',
+              )
+            : 'Failed to fill from URL.',
+          { variant: 'error' },
+        )
+      }
+    } finally {
+      setFillingFromUrl(false)
     }
   }
 
@@ -158,6 +193,28 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Stack spacing={2}>
+            {/* Application URL */}
+            <Box>
+              <TextField
+                label='Application URL'
+                fullWidth
+                placeholder='https://company.com/jobs/…'
+                type='url'
+                error={!!errors.applicationUrl}
+                helperText={errors.applicationUrl?.message}
+                {...register('applicationUrl')}
+              />
+              <Button
+                size='small'
+                startIcon={<AutoFixHighIcon fontSize='small' />}
+                onClick={handleFillFromUrl}
+                disabled={fillingFromUrl || !applicationUrl?.trim()}
+                sx={{ mt: 0.5 }}
+              >
+                {fillingFromUrl ? 'Filling…' : 'Fill from URL'}
+              </Button>
+            </Box>
+
             {/* Company + job title */}
             <Stack direction='row' spacing={2}>
               <TextField
@@ -177,17 +234,6 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                 {...register('jobTitle')}
               />
             </Stack>
-
-            {/* Application URL */}
-            <TextField
-              label='Application URL'
-              fullWidth
-              placeholder='https://company.com/jobs/…'
-              type='url'
-              error={!!errors.applicationUrl}
-              helperText={errors.applicationUrl?.message}
-              {...register('applicationUrl')}
-            />
 
             {/* Priority toggle */}
             <Controller

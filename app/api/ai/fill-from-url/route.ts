@@ -1,0 +1,164 @@
+import Anthropic from '@anthropic-ai/sdk'
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+interface FillResult {
+  jobTitle?: string
+  company?: string
+  roleDescription?: string
+  workArrangement?: string
+}
+
+function extractPageText(html: string): string {
+  // Pull out the LinkedIn job description block if present
+  const liMatch = html.match(
+    /show-more-less-html__markup[^>]*>([\s\S]*?)<\/div>/,
+  )
+  const focused = liMatch ? liMatch[1] : html
+
+  return focused
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 6000)
+}
+
+function extractMeta(html: string): { title: string; company: string } {
+  const titleMatch = html.match(/<title>([^<]*)<\/title>/)
+  const raw = titleMatch?.[1] ?? ''
+  // LinkedIn format: "Company hiring Job Title in City | LinkedIn"
+  const liMatch = raw.match(/^(.+?) hiring (.+?) (?:in|at) /)
+  if (liMatch) return { company: liMatch[1].trim(), title: liMatch[2].trim() }
+  // Canonical slug: "job-title-at-company-id"
+  const canonMatch = html.match(/rel="canonical" href="[^"]*\/([^"/?]+)-(\d+)"/)
+  if (canonMatch) {
+    const slug = canonMatch[1].replace(/-\d+$/, '')
+    const atIdx = slug.lastIndexOf('-at-')
+    if (atIdx !== -1) {
+      return {
+        title: slug
+          .slice(0, atIdx)
+          .split('-')
+          .map((w) => w[0].toUpperCase() + w.slice(1))
+          .join(' '),
+        company: slug
+          .slice(atIdx + 4)
+          .split('-')
+          .map((w) => w[0].toUpperCase() + w.slice(1))
+          .join(' '),
+      }
+    }
+  }
+  return { title: raw, company: '' }
+}
+
+export async function POST(
+  request: Request,
+): Promise<NextResponse<FillResult | { error: string }>> {
+  const { url } = await request.json().catch(() => ({}))
+  if (!url?.trim()) {
+    return NextResponse.json({ error: 'URL is required.' }, { status: 400 })
+  }
+
+  const settings = await prisma.settings.findUnique({
+    where: { id: 'singleton' },
+  })
+  const apiKey = settings?.anthropicApiKey
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: 'Anthropic API key not configured. Add it in Settings.' },
+      { status: 503 },
+    )
+  }
+
+  let html: string
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html',
+      },
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: `Could not fetch URL (${res.status}).` },
+        { status: 422 },
+      )
+    }
+    html = await res.text()
+  } catch {
+    return NextResponse.json(
+      { error: 'Could not reach that URL. Check it and try again.' },
+      { status: 422 },
+    )
+  }
+
+  const { title: metaTitle, company: metaCompany } = extractMeta(html)
+  const bodyText = extractPageText(html)
+
+  const client = new Anthropic({ apiKey })
+  try {
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 512,
+      system:
+        'You extract structured job posting data. Always respond with valid JSON only — no markdown, no explanation.',
+      messages: [
+        {
+          role: 'user',
+          content: `Extract the following fields from this job posting content. Return a JSON object with these keys:
+- jobTitle: string (the role title)
+- company: string (the hiring company name)
+- roleDescription: string (plain text summary of the role, 4-6 sentences, no bullet points)
+- workArrangement: "Remote" | "Hybrid" | "On-site" | "" (infer from context)
+
+Hints from page metadata — use these if the content doesn't make it clearer:
+Title hint: ${metaTitle}
+Company hint: ${metaCompany}
+
+Job posting content:
+${bodyText}`,
+        },
+      ],
+    })
+
+    const raw = message.content
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text)
+      .join('')
+      .trim()
+
+    const jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+    const parsed: FillResult = JSON.parse(jsonStr)
+
+    // Apply same AI-sniff sanitization as the assist route
+    if (parsed.roleDescription) {
+      parsed.roleDescription = parsed.roleDescription
+        .replace(/\u2014/g, ' - ')
+        .replace(/\u2013/g, ' - ')
+        .replace(/\u2018|\u2019/g, "'")
+        .replace(/\u201C|\u201D/g, '"')
+        .replace(/\u2026/g, '...')
+    }
+
+    return NextResponse.json(parsed)
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          'Failed to parse job posting. Try pasting the description manually.',
+      },
+      { status: 502 },
+    )
+  }
+}
