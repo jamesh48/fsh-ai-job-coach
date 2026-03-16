@@ -31,6 +31,7 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { useUpdateLogMutation } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import type {
   ActivityType,
@@ -41,6 +42,7 @@ import {
   ACTIVITY_LABELS,
   parseContent,
   STATUS_LABELS,
+  serializeToContent,
 } from '../applicationFormUtils'
 import type { DailyLog } from '../types'
 import { AddApplicationDialog } from './AddApplicationDialog'
@@ -127,6 +129,23 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
     apps: JobApplicationEntry[]
   } | null>(null)
   const [viewingDoc, setViewingDoc] = useState<AppDocument | null>(null)
+  const [updateLog] = useUpdateLogMutation()
+
+  const handleDeleteDocument = async (
+    appOriginalIndex: number,
+    docId: string,
+  ) => {
+    const { notes, applications: all } = parseContent(log.content)
+    const updatedApps = all.map((a, i) =>
+      i === appOriginalIndex
+        ? { ...a, documents: (a.documents ?? []).filter((d) => d.id !== docId) }
+        : a,
+    )
+    await updateLog({
+      ...log,
+      content: serializeToContent({ notes, applications: updatedApps }),
+    })
+  }
 
   return (
     <>
@@ -516,48 +535,84 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                             </Divider>
                             <Stack spacing={0.75} mt={1}>
                               {app.documents.map((doc) => (
-                                <Tooltip key={doc.id} title='View document'>
-                                  <Box
-                                    display='flex'
-                                    alignItems='center'
-                                    gap={1}
-                                    onClick={() => setViewingDoc(doc)}
-                                    sx={{
-                                      cursor: 'pointer',
-                                      borderRadius: 1,
-                                      px: 0.5,
-                                      '&:hover': { bgcolor: 'action.hover' },
-                                    }}
-                                  >
-                                    <ArticleOutlinedIcon
+                                <Box
+                                  key={doc.id}
+                                  display='flex'
+                                  alignItems='center'
+                                  gap={1}
+                                  sx={{
+                                    borderRadius: 1,
+                                    px: 0.5,
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                    '&:hover .doc-delete': { opacity: 1 },
+                                  }}
+                                >
+                                  <Tooltip title='View document'>
+                                    <Box
+                                      display='flex'
+                                      alignItems='center'
+                                      gap={1}
+                                      onClick={() => setViewingDoc(doc)}
                                       sx={{
-                                        fontSize: 14,
-                                        color: 'text.secondary',
+                                        cursor: 'pointer',
+                                        flex: 1,
+                                        minWidth: 0,
                                       }}
-                                    />
-                                    <Chip
-                                      label={doc.label}
-                                      size='small'
-                                      sx={{
-                                        height: 18,
-                                        fontSize: '0.68rem',
-                                        pointerEvents: 'none',
-                                      }}
-                                    />
-                                    <Typography
-                                      variant='caption'
-                                      color='text.secondary'
                                     >
-                                      {new Date(
-                                        doc.createdAt,
-                                      ).toLocaleDateString('en-US', {
-                                        month: '2-digit',
-                                        day: '2-digit',
-                                        year: 'numeric',
-                                      })}
-                                    </Typography>
-                                  </Box>
-                                </Tooltip>
+                                      <ArticleOutlinedIcon
+                                        sx={{
+                                          fontSize: 14,
+                                          color: 'text.secondary',
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                      <Chip
+                                        label={doc.label}
+                                        size='small'
+                                        sx={{
+                                          height: 18,
+                                          fontSize: '0.68rem',
+                                          pointerEvents: 'none',
+                                        }}
+                                      />
+                                      <Typography
+                                        variant='caption'
+                                        color='text.secondary'
+                                        noWrap
+                                      >
+                                        {new Date(
+                                          doc.createdAt,
+                                        ).toLocaleDateString('en-US', {
+                                          month: '2-digit',
+                                          day: '2-digit',
+                                          year: 'numeric',
+                                        })}
+                                      </Typography>
+                                    </Box>
+                                  </Tooltip>
+                                  <Tooltip title='Delete document'>
+                                    <IconButton
+                                      className='doc-delete'
+                                      size='small'
+                                      color='error'
+                                      onClick={() =>
+                                        handleDeleteDocument(
+                                          originalIndex,
+                                          doc.id,
+                                        )
+                                      }
+                                      sx={{
+                                        opacity: 0,
+                                        transition: 'opacity 0.15s',
+                                        p: 0.25,
+                                      }}
+                                    >
+                                      <DeleteOutlineIcon
+                                        sx={{ fontSize: 14 }}
+                                      />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
                               ))}
                             </Stack>
                           </>

@@ -10,7 +10,7 @@ yarn format && yarn lint
 This auto-formats and lints the affected files so code is always clean before the user commits.
 
 ## Project Overview
-An AI-powered job search coaching app. The core MVP is a daily activity log where users record what they did each day in their job search. An AI coach (Claude) analyzes the log and gives actionable daily recommendations. A gear icon in the header opens a Settings dialog for API key configuration, career profile, appearance, and printing. Printing is handled client-side via WebUSB (ESC/POS).
+An AI-powered job search coaching app. The core MVP is a daily activity log where users record what they did each day in their job search. An AI coach (Claude) analyzes the log and gives actionable daily recommendations. Job applications are tracked with full detail (status, compensation, activities, AI-generated documents). A gear icon in the header opens a Settings dialog for API key configuration, career profile, profile links, appearance, and printing. Printing is handled client-side via WebUSB (ESC/POS).
 
 ## Tech Stack
 - **Framework**: Next.js 16 (App Router)
@@ -38,6 +38,8 @@ app/                          # Next.js App Router — routes, layouts, API rout
   api/ai/recommendation/route.ts  # GET stored recommendation, POST — calls Claude
   api/ai/summarize/route.ts   # POST — summarize job description with Claude
   api/ai/impression/route.ts  # POST — draft impression with Claude
+  api/ai/assist/route.ts      # POST — AI writing assistant (cover letters, emails, etc.)
+  api/ai/fill-from-url/route.ts  # POST — scrape job URL and extract structured fields via Claude
   api/settings/route.ts       # GET/PUT settings singleton
   api/auth/login/route.ts     # POST — verify password, create session
   api/auth/logout/route.ts    # POST — destroy session
@@ -53,10 +55,10 @@ features/                     # Feature modules (co-located components, hooks, t
   logs/
     applicationFormUtils.ts   # Shared: JobApplicationEntry type, STATUS/PRIORITY labels, serialize/parse
     components/
-      LogCard.tsx             # Single day card; collapsible app list; add/edit app buttons; status chips
+      LogCard.tsx             # Single day card; collapsible app list; add/edit/delete app; document viewer + delete
       LogForm.tsx             # MUI Dialog + react-hook-form + yup for add/edit full log entry
       AddApplicationDialog.tsx  # Standalone dialog for adding/editing a single job application
-      LogList.tsx             # Main view: header, search, card stack, settings + logout triggers
+      LogList.tsx             # Main view: header, search (with active indicator + clear), card stack, settings + logout triggers
     hooks/
       useLogs.ts              # Wraps RTK Query hooks (add, update, remove, sorted list)
     types.ts                  # DailyLog, LogFormValues types
@@ -64,6 +66,7 @@ features/                     # Feature modules (co-located components, hooks, t
   ai/
     components/
       AiRecommendation.tsx    # Collapsible panel (75vh / 49px); "Get Advice"; auto-print; ReactMarkdown
+      AiAssistDialog.tsx      # AI writing assistant dialog; markdown preview; PDF download; save to application
     hooks/
       useWebUsbPrinter.ts     # WebUSB hook — connect, markdown-aware ESC/POS print, disconnect
     types.ts                  # AiRecommendationResponse, StoredRecommendationResponse
@@ -73,7 +76,7 @@ features/                     # Feature modules (co-located components, hooks, t
       LoginForm.tsx           # Detects first-time setup vs login; handles both flows
   settings/
     components/
-      SettingsDialog.tsx      # MUI Dialog: Appearance, Printing, AI key, Career Profile, Security
+      SettingsDialog.tsx      # MUI Dialog: Appearance, Printing, AI key, Career Profile (+ Links), Security
     types.ts                  # AppSettings, SettingsFormValues, PasswordFormValues
     index.ts
   resume/                     # Placeholder feature
@@ -136,6 +139,7 @@ model Settings {
   lastRecommendation   String?
   lastRecommendationAt DateTime?  // full timestamp, not just date
   careerProfile        String?
+  profileLinks         String?   // JSON array of { label, url } — parsed in API routes
   updatedAt            DateTime  @updatedAt
 }
 ```
@@ -167,18 +171,23 @@ model Settings {
 Defined in `features/logs/applicationFormUtils.ts`:
 - `jobTitle`, `company`, `applicationUrl`, `source`
 - `recruiter`, `recruiterLinkedin`, `recruiterPhone`, `recruiterEmail`
-- `workArrangement` (Remote / Hybrid / On-site)
+- `workArrangement` (Remote / Hybrid / On-site), `compensation` (free text, e.g. "$120k-$150k/yr")
 - `roleDescription`, `impression`
 - `priority`: `quick_apply` | `standard` | `strong_interest` | `hot_lead`
 - `status`: `applied` | `recruiter_screen` | `interviewing` | `offer` | `rejected`
+- `activities`: `Activity[]` — managed via the activities drawer in `LogCard`
+- `documents`: `AppDocument[]` — AI-generated docs saved to the app; each has `id`, `label`, `content` (markdown), `createdAt`
 
-Content is serialized as structured plain text in `DailyLog.content` via `serializeToContent` / `parseContent`.
+Content is serialized as structured plain text in `DailyLog.content` via `serializeToContent` / `parseContent`. Documents are JSON-encoded inline to safely handle multi-line content within the line-based format.
 
 ## AI Feature
-- `app/api/ai/recommendation/route.ts` — smart windowing: last 30 days + older hot/strong-interest entries; injects career profile as system context; stores result + timestamp in Settings
+- `app/api/ai/recommendation/route.ts` — smart windowing: last 30 days + older hot/strong-interest entries; injects career profile + profile links as system context; stores result + timestamp in Settings
 - `app/api/ai/summarize/route.ts` — summarizes pasted job description to 4-6 sentences
 - `app/api/ai/impression/route.ts` — drafts a 2-3 sentence first-person impression
+- `app/api/ai/assist/route.ts` — AI writing assistant; parallel calls: main response (sonnet-4-6) + filename suggestion (haiku); injects career profile + profile links; system prompt enforces no `---`, no standalone recipient line, correct closing format
+- `app/api/ai/fill-from-url/route.ts` — fetches job URL, extracts `jobTitle`, `company`, `roleDescription`, `workArrangement`, `compensation` via Claude; LinkedIn-aware HTML parser
 - `AiRecommendation.tsx` — collapsible panel (75vh expanded / 49px collapsed); auto-prints if USB printer connected and auto-print setting enabled
+- `AiAssistDialog.tsx` — prompt input + markdown response preview; PDF download (jsPDF manual renderer); save output as named document to job application via `onSaveDocument` callback
 - Recommendation timestamp stored as `DateTime` (`lastRecommendationAt`), displayed as `MM-DD-YYYY hh:mm:ss`
 
 ## Printing (WebUSB)
