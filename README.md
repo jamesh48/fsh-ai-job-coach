@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FSH AI Job Coach
 
-## Getting Started
+An AI-powered job search coaching app built for the modern job hunt. Log your daily activity, track applications, and get actionable advice from an AI coach — all in one place.
 
-First, run the development server:
+> Part of the [Full Stack Hrivnak](https://fshjobcoach.com) suite of tools.
+
+## Features
+
+- **Daily activity log** — record what you did each day in your job search
+- **Job application tracker** — track status, priority, recruiter info, and notes per application
+- **AI daily coach** — get personalized, actionable recommendations based on your recent activity
+- **AI writing assistant** — get help with cover letters, emails, and anything else you need to write
+- **Auto-fill from URL** — paste a job posting URL and let AI extract the details
+- **ESC/POS printing** — print your daily coaching report to a receipt printer (Chrome/Edge + HTTPS)
+- **Dark mode** — because you'll be using this a lot
+
+## Stack
+
+- [Next.js 16](https://nextjs.org) (App Router) + TypeScript
+- [Material UI v7](https://mui.com)
+- [Redux Toolkit](https://redux-toolkit.js.org) + RTK Query
+- [Prisma 7](https://prisma.io) + PostgreSQL
+- [Anthropic Claude](https://anthropic.com) (`claude-sonnet-4-6`)
+- Deployed on AWS Fargate via CDK
+
+## Self-Hosting
+
+### Prerequisites
+
+- Node 24
+- PostgreSQL database
+- Anthropic API key (configured in-app via Settings)
+
+### Setup
 
 ```bash
-npm run dev
-# or
+# Install dependencies
+yarn
+
+# Generate Prisma client
+npx prisma generate
+
+# Run migrations
+npx prisma migrate deploy
+
+# Start dev server
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/fsh_job_coach
+SESSION_SECRET=<random-string-at-least-32-chars>
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Docker
 
-## Learn More
+```bash
+docker build -t fsh-job-coach .
+docker run -p 3000:3000 \
+  -e DATABASE_URL=... \
+  -e SESSION_SECRET=... \
+  fsh-job-coach
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Status
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Currently self-hosted for personal use. Public availability planned for a future release.
