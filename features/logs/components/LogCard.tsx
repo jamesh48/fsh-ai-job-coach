@@ -319,30 +319,7 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                     const originalIndex = allApplications.indexOf(app)
                     return (
                       <Box key={`${app.company}-${app.jobTitle}`}>
-                        <Box
-                          display='flex'
-                          alignItems='center'
-                          gap={1}
-                          flexWrap='wrap'
-                        >
-                          <Chip label={label} color={color} size='small' />
-                          <Chip
-                            label={statusLabel}
-                            size='small'
-                            variant='outlined'
-                          />
-                          {app.fitScore && (
-                            <Tooltip
-                              title={app.fitRationale || ''}
-                              placement='top'
-                            >
-                              <Chip
-                                label={FIT_SCORE_DISPLAY[app.fitScore].label}
-                                color={FIT_SCORE_DISPLAY[app.fitScore].color}
-                                size='small'
-                              />
-                            </Tooltip>
-                          )}
+                        <Box display='flex' alignItems='center' gap={0.5}>
                           <Typography
                             variant='body2'
                             fontWeight={600}
@@ -375,6 +352,26 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                               <ModeEditOutlineIcon sx={{ fontSize: 15 }} />
                             </IconButton>
                           </Tooltip>
+                        </Box>
+                        <Box display='flex' gap={0.5} flexWrap='wrap' mt={0.5}>
+                          <Chip label={label} color={color} size='small' />
+                          <Chip
+                            label={statusLabel}
+                            size='small'
+                            variant='outlined'
+                          />
+                          {app.fitScore && (
+                            <Tooltip
+                              title={app.fitRationale || ''}
+                              placement='top'
+                            >
+                              <Chip
+                                label={FIT_SCORE_DISPLAY[app.fitScore].label}
+                                color={FIT_SCORE_DISPLAY[app.fitScore].color}
+                                size='small'
+                              />
+                            </Tooltip>
+                          )}
                         </Box>
                         {app.applicationUrl && (
                           <Typography

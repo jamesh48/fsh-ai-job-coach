@@ -15,6 +15,7 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Skeleton,
   Stack,
   TextField,
   ToggleButton,
@@ -287,22 +288,48 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
 
             {/* Company + job title */}
             <Stack direction='row' spacing={2}>
-              <TextField
-                label='Company'
-                fullWidth
-                required
-                error={!!errors.company}
-                helperText={errors.company?.message}
-                {...register('company')}
-              />
-              <TextField
-                label='Job Title'
-                fullWidth
-                required
-                error={!!errors.jobTitle}
-                helperText={errors.jobTitle?.message}
-                {...register('jobTitle')}
-              />
+              <Box sx={{ position: 'relative', flex: 1 }}>
+                <TextField
+                  label='Company'
+                  fullWidth
+                  required
+                  error={!!errors.company}
+                  helperText={errors.company?.message}
+                  {...register('company')}
+                />
+                {fillingFromUrl && (
+                  <Skeleton
+                    variant='rectangular'
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 1,
+                      zIndex: 1,
+                    }}
+                  />
+                )}
+              </Box>
+              <Box sx={{ position: 'relative', flex: 1 }}>
+                <TextField
+                  label='Job Title'
+                  fullWidth
+                  required
+                  error={!!errors.jobTitle}
+                  helperText={errors.jobTitle?.message}
+                  {...register('jobTitle')}
+                />
+                {fillingFromUrl && (
+                  <Skeleton
+                    variant='rectangular'
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 1,
+                      zIndex: 1,
+                    }}
+                  />
+                )}
+              </Box>
             </Stack>
 
             {/* Priority toggle */}
@@ -399,41 +426,80 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
 
             {/* Work arrangement + Compensation */}
             <Stack direction='row' spacing={2}>
-              <FormControl fullWidth>
-                <InputLabel>Work Arrangement</InputLabel>
-                <Controller
-                  name='workArrangement'
-                  control={control}
-                  render={({ field }) => (
-                    <Select label='Work Arrangement' {...field}>
-                      <MenuItem value=''>Not specified</MenuItem>
-                      {WORK_ARRANGEMENTS.map((w) => (
-                        <MenuItem key={w} value={w}>
-                          {w}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  )}
+              <Box sx={{ position: 'relative', flex: 1 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Work Arrangement</InputLabel>
+                  <Controller
+                    name='workArrangement'
+                    control={control}
+                    render={({ field }) => (
+                      <Select label='Work Arrangement' {...field}>
+                        <MenuItem value=''>Not specified</MenuItem>
+                        {WORK_ARRANGEMENTS.map((w) => (
+                          <MenuItem key={w} value={w}>
+                            {w}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
+                  />
+                </FormControl>
+                {fillingFromUrl && (
+                  <Skeleton
+                    variant='rectangular'
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 1,
+                      zIndex: 1,
+                    }}
+                  />
+                )}
+              </Box>
+              <Box sx={{ position: 'relative', flex: 1 }}>
+                <TextField
+                  label='Compensation'
+                  fullWidth
+                  placeholder='$120,000 - $150,000/yr'
+                  {...register('compensation')}
                 />
-              </FormControl>
-              <TextField
-                label='Compensation'
-                fullWidth
-                placeholder='$120,000 - $150,000/yr'
-                {...register('compensation')}
-              />
+                {fillingFromUrl && (
+                  <Skeleton
+                    variant='rectangular'
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 1,
+                      zIndex: 1,
+                    }}
+                  />
+                )}
+              </Box>
             </Stack>
 
             {/* Role description */}
             <Box>
-              <TextField
-                label='About the Role'
-                multiline
-                rows={6}
-                fullWidth
-                placeholder='Paste the full job description or write a brief summary…'
-                {...register('roleDescription')}
-              />
+              <Box sx={{ position: 'relative' }}>
+                <TextField
+                  label='About the Role'
+                  multiline
+                  rows={6}
+                  fullWidth
+                  placeholder='Paste the full job description or write a brief summary…'
+                  {...register('roleDescription')}
+                />
+                {fillingFromUrl && (
+                  <Skeleton
+                    variant='rectangular'
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 1,
+                      zIndex: 1,
+                    }}
+                  />
+                )}
+              </Box>
               <Button
                 size='small'
                 startIcon={<AutoFixHighIcon fontSize='small' />}
