@@ -133,12 +133,15 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
 
   const handleDeleteDocument = async (
     appOriginalIndex: number,
-    docId: string,
+    docIndex: number,
   ) => {
     const { notes, applications: all } = parseContent(log.content)
     const updatedApps = all.map((a, i) =>
       i === appOriginalIndex
-        ? { ...a, documents: (a.documents ?? []).filter((d) => d.id !== docId) }
+        ? {
+            ...a,
+            documents: (a.documents ?? []).filter((_, di) => di !== docIndex),
+          }
         : a,
     )
     await updateLog({
@@ -534,7 +537,7 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                               </Typography>
                             </Divider>
                             <Stack spacing={0.75} mt={1}>
-                              {app.documents.map((doc) => (
+                              {app.documents.map((doc, di) => (
                                 <Box
                                   key={doc.id}
                                   display='flex'
@@ -596,10 +599,7 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                                       size='small'
                                       color='error'
                                       onClick={() =>
-                                        handleDeleteDocument(
-                                          originalIndex,
-                                          doc.id,
-                                        )
+                                        handleDeleteDocument(originalIndex, di)
                                       }
                                       sx={{
                                         opacity: 0,
