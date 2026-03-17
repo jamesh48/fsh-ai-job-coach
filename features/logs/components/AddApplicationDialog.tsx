@@ -216,7 +216,9 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
       ...app,
       activities: editing ? (editing.app.activities ?? []) : [],
       documents: editing
-        ? [...(editing.app.documents ?? []), ...(app.documents ?? [])]
+        ? (parseContent(log.content).applications[editing.index]?.documents ??
+          editing.app.documents ??
+          [])
         : (app.documents ?? []),
     }
     const updatedApps =
