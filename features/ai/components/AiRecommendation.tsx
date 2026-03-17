@@ -12,6 +12,7 @@ import {
   Divider,
   IconButton,
   Paper,
+  Skeleton,
   Tooltip,
   Typography,
   useTheme,
@@ -34,7 +35,8 @@ interface Props {
 
 export function AiRecommendation({ collapsed, onToggle }: Props) {
   const theme = useTheme()
-  const { data: storedData } = useGetStoredRecommendationQuery()
+  const { data: storedData, isLoading: isLoadingStored } =
+    useGetStoredRecommendationQuery()
   const [getRecommendation, { data: freshData, isLoading, error }] =
     useGetAiRecommendationMutation()
   const {
@@ -193,7 +195,7 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                 onClick={() =>
                   getRecommendation({ date: dayjs().format('YYYY-MM-DD') })
                 }
-                disabled={isLoading}
+                disabled={isLoading || isLoadingStored}
                 color='secondary'
               >
                 {isLoading
@@ -238,16 +240,35 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
             </Alert>
           )}
 
-          {!recommendation && !isLoading && !errorMessage && (
-            <Typography
-              variant='body2'
-              color='text.secondary'
-              fontStyle='italic'
-            >
-              Click "Get Advice" to receive a personalized next-step
-              recommendation based on your job search activity.
-            </Typography>
+          {isLoadingStored && (
+            <Box>
+              <Skeleton width='55%' height={20} sx={{ mb: 1.5 }} />
+              <Skeleton height={16} />
+              <Skeleton height={16} />
+              <Skeleton width='80%' height={16} sx={{ mb: 1.5 }} />
+              <Skeleton width='40%' height={20} sx={{ mb: 1 }} />
+              <Skeleton height={16} />
+              <Skeleton width='90%' height={16} />
+              <Skeleton width='70%' height={16} sx={{ mb: 1.5 }} />
+              <Skeleton width='45%' height={20} sx={{ mb: 1 }} />
+              <Skeleton height={16} />
+              <Skeleton width='85%' height={16} />
+            </Box>
           )}
+
+          {!recommendation &&
+            !isLoading &&
+            !isLoadingStored &&
+            !errorMessage && (
+              <Typography
+                variant='body2'
+                color='text.secondary'
+                fontStyle='italic'
+              >
+                Click "Get Advice" to receive a personalized next-step
+                recommendation based on your job search activity.
+              </Typography>
+            )}
 
           {isLoading && (
             <Typography
