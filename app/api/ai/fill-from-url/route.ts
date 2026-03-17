@@ -8,6 +8,8 @@ interface FillResult {
   roleDescription?: string
   workArrangement?: string
   compensation?: string
+  fitScore?: 1 | 2 | 3 | 4
+  fitRationale?: string
 }
 
 function extractPageText(html: string): string {
@@ -73,6 +75,9 @@ export async function POST(
     where: { id: 'singleton' },
   })
   const apiKey = settings?.anthropicApiKey
+  const careerProfile = settings?.careerProfile ?? null
+  const resume = settings?.resume ?? null
+  const hasFitContext = !!(careerProfile?.trim() || resume?.trim())
   if (!apiKey) {
     return NextResponse.json(
       { error: 'Anthropic API key not configured. Add it in Settings.' },
@@ -107,11 +112,20 @@ export async function POST(
   const { title: metaTitle, company: metaCompany } = extractMeta(html)
   const bodyText = extractPageText(html)
 
+  const fitScoringFields = hasFitContext
+    ? `- fitScore: 1 | 2 | 3 | 4 (how well this role matches the candidate below: 4=Strong Fit, 3=Good Fit, 2=Partial Fit, 1=Weak Fit)
+- fitRationale: string (1-2 sentences explaining the score — name specific matches or gaps)`
+    : ''
+
+  const candidateContext = hasFitContext
+    ? `\nCandidate context for fit scoring:\n${careerProfile ? `Profile: ${careerProfile}\n` : ''}${resume ? `Resume:\n${resume}\n` : ''}`
+    : ''
+
   const client = new Anthropic({ apiKey })
   try {
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 512,
+      max_tokens: 600,
       system:
         'You extract structured job posting data. Always respond with valid JSON only — no markdown, no explanation.',
       messages: [
@@ -123,11 +137,12 @@ export async function POST(
 - roleDescription: string (plain text summary of the role, 4-6 sentences, no bullet points)
 - workArrangement: "Remote" | "Hybrid" | "On-site" | "" (infer from context)
 - compensation: string (salary range or hourly rate exactly as stated, e.g. "$120,000 - $150,000/yr" or "$45-55/hr"; empty string if not mentioned)
+${fitScoringFields}
 
 Hints from page metadata — use these if the content doesn't make it clearer:
 Title hint: ${metaTitle}
 Company hint: ${metaCompany}
-
+${candidateContext}
 Job posting content:
 ${bodyText}`,
         },

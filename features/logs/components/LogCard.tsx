@@ -40,6 +40,7 @@ import type {
 } from '../applicationFormUtils'
 import {
   ACTIVITY_LABELS,
+  FIT_SCORE_DISPLAY,
   parseContent,
   STATUS_LABELS,
   serializeToContent,
@@ -330,6 +331,18 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                             size='small'
                             variant='outlined'
                           />
+                          {app.fitScore && (
+                            <Tooltip
+                              title={app.fitRationale || ''}
+                              placement='top'
+                            >
+                              <Chip
+                                label={FIT_SCORE_DISPLAY[app.fitScore].label}
+                                color={FIT_SCORE_DISPLAY[app.fitScore].color}
+                                size='small'
+                              />
+                            </Tooltip>
+                          )}
                           <Typography
                             variant='body2'
                             fontWeight={600}

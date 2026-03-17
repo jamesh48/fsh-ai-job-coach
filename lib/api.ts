@@ -65,6 +65,8 @@ export const api = createApi({
         roleDescription?: string
         workArrangement?: string
         compensation?: string
+        fitScore?: 1 | 2 | 3 | 4
+        fitRationale?: string
       },
       { url: string }
     >({

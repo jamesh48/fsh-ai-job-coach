@@ -6,6 +6,7 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import {
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -18,6 +19,8 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
+  Typography,
 } from '@mui/material'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
@@ -30,9 +33,14 @@ import {
   useSummarizeJobMutation,
   useUpdateLogMutation,
 } from '@/lib/api'
-import type { AppDocument, JobApplicationEntry } from '../applicationFormUtils'
+import type {
+  AppDocument,
+  FitScore,
+  JobApplicationEntry,
+} from '../applicationFormUtils'
 import {
   EMPTY_APPLICATION,
+  FIT_SCORE_DISPLAY,
   parseContent,
   STATUS_LABELS,
   serializeToContent,
@@ -68,6 +76,8 @@ const schema = yup.object({
     .string()
     .oneOf(['applied', 'recruiter_screen', 'interviewing', 'offer', 'rejected'])
     .default('applied'),
+  fitScore: yup.number().nullable().default(null),
+  fitRationale: yup.string().default(''),
   activities: yup.array().default([]),
   documents: yup.array().default([]),
 })
@@ -97,6 +107,8 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   })
 
   const applicationUrl = useWatch({ control, name: 'applicationUrl' })
+  const fitScore = useWatch({ control, name: 'fitScore' }) as FitScore | null
+  const fitRationale = useWatch({ control, name: 'fitRationale' })
 
   useEffect(() => {
     if (open) reset(editing ? { ...editing.app } : { ...EMPTY_APPLICATION })
@@ -129,12 +141,16 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
           roleDescription,
           workArrangement,
           compensation,
+          fitScore: score,
+          fitRationale: rationale,
         } = result.data
         if (jobTitle) setValue('jobTitle', jobTitle)
         if (company) setValue('company', company)
         if (roleDescription) setValue('roleDescription', roleDescription)
         if (workArrangement) setValue('workArrangement', workArrangement)
         if (compensation) setValue('compensation', compensation)
+        if (score) setValue('fitScore', score)
+        if (rationale) setValue('fitRationale', rationale)
         enqueueSnackbar('Fields filled from URL.', { variant: 'success' })
       } else {
         enqueueSnackbar(
@@ -237,15 +253,36 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                 helperText={errors.applicationUrl?.message}
                 {...register('applicationUrl')}
               />
-              <Button
-                size='small'
-                startIcon={<AutoFixHighIcon fontSize='small' />}
-                onClick={handleFillFromUrl}
-                disabled={fillingFromUrl || !applicationUrl?.trim()}
-                sx={{ mt: 0.5 }}
+              <Box
+                display='flex'
+                alignItems='center'
+                gap={1}
+                flexWrap='wrap'
+                mt={0.5}
               >
-                {fillingFromUrl ? 'Filling…' : 'Fill from URL'}
-              </Button>
+                <Button
+                  size='small'
+                  startIcon={<AutoFixHighIcon fontSize='small' />}
+                  onClick={handleFillFromUrl}
+                  disabled={fillingFromUrl || !applicationUrl?.trim()}
+                >
+                  {fillingFromUrl ? 'Filling…' : 'Fill from URL'}
+                </Button>
+                {fitScore && (
+                  <Tooltip title={fitRationale || ''} placement='right'>
+                    <Chip
+                      label={FIT_SCORE_DISPLAY[fitScore].label}
+                      color={FIT_SCORE_DISPLAY[fitScore].color}
+                      size='small'
+                    />
+                  </Tooltip>
+                )}
+                {fitScore && fitRationale && (
+                  <Typography variant='caption' color='text.secondary'>
+                    {fitRationale}
+                  </Typography>
+                )}
+              </Box>
             </Box>
 
             {/* Company + job title */}

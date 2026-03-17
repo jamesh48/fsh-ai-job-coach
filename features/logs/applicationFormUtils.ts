@@ -41,6 +41,18 @@ export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   note: 'Note',
 }
 
+export type FitScore = 1 | 2 | 3 | 4
+
+export const FIT_SCORE_DISPLAY: Record<
+  FitScore,
+  { label: string; color: 'success' | 'primary' | 'warning' | 'default' }
+> = {
+  4: { label: 'Strong Fit', color: 'success' },
+  3: { label: 'Good Fit', color: 'primary' },
+  2: { label: 'Partial Fit', color: 'warning' },
+  1: { label: 'Weak Fit', color: 'default' },
+}
+
 export interface JobApplicationEntry {
   jobTitle: string
   company: string
@@ -56,6 +68,8 @@ export interface JobApplicationEntry {
   impression: string
   priority: 'quick_apply' | 'standard' | 'strong_interest' | 'hot_lead'
   status: 'applied' | 'recruiter_screen' | 'interviewing' | 'offer' | 'rejected'
+  fitScore: FitScore | null
+  fitRationale: string
   activities: Activity[]
   documents: AppDocument[]
 }
@@ -98,6 +112,8 @@ export const EMPTY_APPLICATION: JobApplicationEntry = {
   impression: '',
   priority: 'quick_apply',
   status: 'applied',
+  fitScore: null,
+  fitRationale: '',
   activities: [],
   documents: [],
 }
@@ -130,6 +146,8 @@ export function serializeToContent(values: ParsedContent): string {
       if (app.roleDescription)
         lines.push(`   About the role: ${app.roleDescription}`)
       if (app.impression) lines.push(`   My impression: ${app.impression}`)
+      if (app.fitScore) lines.push(`   Fit score: ${app.fitScore}`)
+      if (app.fitRationale) lines.push(`   Fit rationale: ${app.fitRationale}`)
       app.activities.forEach((act, ai) => {
         lines.push(
           `   Activity ${ai + 1}: ${act.type} | ${act.date} | ${act.notes.replace(/\n/g, ' ')}`,
@@ -240,6 +258,14 @@ export function parseContent(content: string): ParsedContent {
           break
         case 'My impression':
           app.impression = curVal
+          break
+        case 'Fit score': {
+          const n = Number(curVal)
+          if (n === 1 || n === 2 || n === 3 || n === 4) app.fitScore = n
+          break
+        }
+        case 'Fit rationale':
+          app.fitRationale = curVal
           break
         default: {
           if (/^Activity \d+$/.test(curKey)) {
