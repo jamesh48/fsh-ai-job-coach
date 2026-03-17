@@ -17,6 +17,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@mui/icons-material": "^7.3.9",
     "@mui/material": "^7.3.9",
+    "@phosphor-icons/react": "^2.1.10",
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.5.0",
     "@reduxjs/toolkit": "^2.11.2",

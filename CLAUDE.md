@@ -17,7 +17,7 @@ An AI-powered job search coaching app. The core MVP is a daily activity log wher
 ## Tech Stack
 - **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript (strict)
-- **UI**: Material UI v7 + MUI Icons
+- **UI**: Material UI v7 + MUI Icons + Phosphor Icons (`@phosphor-icons/react`) for AI-specific icons (`Sparkle` weight="fill" for branding, `MagicWand` weight="fill" for actions)
 - **State / Data fetching**: Redux Toolkit + RTK Query
 - **Forms**: React Hook Form + Yup + @hookform/resolvers
 - **Notifications**: notistack (SnackbarProvider)

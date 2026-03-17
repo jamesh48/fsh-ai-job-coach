@@ -1,6 +1,5 @@
 'use client'
 
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -21,6 +20,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import { MagicWandIcon } from '@phosphor-icons/react'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -416,7 +416,7 @@ export function AiAssistDialog({
             isLoading ? (
               <CircularProgress size={14} color='inherit' />
             ) : (
-              <AutoFixHighIcon fontSize='small' />
+              <MagicWandIcon size={16} weight='fill' />
             )
           }
           onClick={handleSubmit}

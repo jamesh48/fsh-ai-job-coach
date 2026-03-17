@@ -1,6 +1,5 @@
 'use client'
 
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import PrintIcon from '@mui/icons-material/Print'
@@ -15,7 +14,9 @@ import {
   Paper,
   Tooltip,
   Typography,
+  useTheme,
 } from '@mui/material'
+import { SparkleIcon } from '@phosphor-icons/react'
 import dayjs from 'dayjs'
 import { useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -32,6 +33,7 @@ interface Props {
 }
 
 export function AiRecommendation({ collapsed, onToggle }: Props) {
+  const theme = useTheme()
   const { data: storedData } = useGetStoredRecommendationQuery()
   const [getRecommendation, { data: freshData, isLoading, error }] =
     useGetAiRecommendationMutation()
@@ -113,7 +115,12 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
           py={1.5}
         >
           <Box display='flex' alignItems='center' gap={1}>
-            <AutoAwesomeIcon sx={{ fontSize: 16, color: 'secondary.main' }} />
+            <SparkleIcon
+              size={16}
+              weight='fill'
+              color={theme.palette.secondary.main}
+            />
+
             <Typography
               variant='overline'
               fontWeight={700}
@@ -180,7 +187,7 @@ export function AiRecommendation({ collapsed, onToggle }: Props) {
                       sx={{ color: 'secondary.main' }}
                     />
                   ) : (
-                    <AutoAwesomeIcon sx={{ fontSize: 14 }} />
+                    <SparkleIcon size={14} weight='fill' />
                   )
                 }
                 onClick={() =>

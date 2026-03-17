@@ -1,8 +1,6 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import {
   Box,
   Button,
@@ -23,6 +21,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import { MagicWandIcon, SparkleIcon } from '@phosphor-icons/react'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
@@ -265,7 +264,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
               >
                 <Button
                   size='small'
-                  startIcon={<AutoFixHighIcon fontSize='small' />}
+                  startIcon={<MagicWandIcon size={16} weight='fill' />}
                   onClick={handleFillFromUrl}
                   disabled={fillingFromUrl || !applicationUrl?.trim()}
                 >
@@ -504,7 +503,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
               </Box>
               <Button
                 size='small'
-                startIcon={<AutoFixHighIcon fontSize='small' />}
+                startIcon={<MagicWandIcon size={16} weight='fill' />}
                 onClick={handleSummarize}
                 disabled={summarizing}
                 sx={{ mt: 0.5 }}
@@ -525,7 +524,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
               />
               <Button
                 size='small'
-                startIcon={<AutoFixHighIcon fontSize='small' />}
+                startIcon={<MagicWandIcon size={16} weight='fill' />}
                 onClick={handleDraftImpression}
                 disabled={draftingImpression}
                 sx={{ mt: 0.5 }}
@@ -542,7 +541,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
           </Button>
           <Button
             color='secondary'
-            startIcon={<AutoAwesomeIcon fontSize='small' />}
+            startIcon={<SparkleIcon size={16} weight='fill' />}
             onClick={() => setAssistOpen(true)}
             sx={{ mr: 'auto' }}
           >

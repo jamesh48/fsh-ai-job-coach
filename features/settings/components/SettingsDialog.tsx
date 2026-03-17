@@ -2,8 +2,6 @@
 
 import { yupResolver } from '@hookform/resolvers/yup'
 import AddIcon from '@mui/icons-material/Add'
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import CloseIcon from '@mui/icons-material/Close'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import EditIcon from '@mui/icons-material/Edit'
@@ -44,6 +42,7 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material'
+import { MagicWandIcon, SparkleIcon } from '@phosphor-icons/react'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
@@ -71,7 +70,7 @@ interface Props {
 
 const TABS = [
   { label: 'General', icon: <TuneIcon fontSize='small' /> },
-  { label: 'AI', icon: <AutoAwesomeIcon fontSize='small' /> },
+  { label: 'AI', icon: <SparkleIcon size={16} weight='fill' /> },
   { label: 'Security', icon: <SecurityIcon fontSize='small' /> },
 ]
 
@@ -766,7 +765,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                 <Box>
                   <Button
                     size='small'
-                    startIcon={<AutoFixHighIcon fontSize='small' />}
+                    startIcon={<MagicWandIcon size={16} weight='fill' />}
                     onClick={handleGeneratePlan}
                     disabled={generatingPlan}
                   >

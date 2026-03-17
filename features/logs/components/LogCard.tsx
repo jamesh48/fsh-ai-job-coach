@@ -2,7 +2,6 @@
 
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined'
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -30,6 +29,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import { SparkleIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { AiAssistDialog } from '@/features/ai/components/AiAssistDialog'
@@ -310,7 +310,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                     e.stopPropagation()
                     setAddingApp(true)
                   }}
-                  sx={{ color: 'text.secondary' }}
+                  sx={{
+                    color: 'text.secondary',
+                    '&:hover': { color: 'success.main' },
+                  }}
                 >
                   <AddCircleOutlineIcon sx={{ fontSize: 16 }} />
                 </IconButton>
@@ -354,9 +357,12 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                               onClick={() =>
                                 setAssistApp({ app, index: originalIndex })
                               }
-                              sx={{ color: 'secondary.main' }}
+                              sx={{
+                                color: 'text.secondary',
+                                '&:hover': { color: 'secondary.main' },
+                              }}
                             >
-                              <AutoAwesomeIcon sx={{ fontSize: 15 }} />
+                              <SparkleIcon size={15} weight='fill' />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title='Activities'>
@@ -365,7 +371,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                               onClick={() =>
                                 setActivitiesAppIndex(originalIndex)
                               }
-                              sx={{ color: 'text.secondary' }}
+                              sx={{
+                                color: 'text.secondary',
+                                '&:hover': { color: 'primary.main' },
+                              }}
                             >
                               <TimelineIcon sx={{ fontSize: 15 }} />
                             </IconButton>
@@ -379,7 +388,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                                   index: originalIndex,
                                 })
                               }
-                              sx={{ color: 'text.secondary' }}
+                              sx={{
+                                color: 'text.secondary',
+                                '&:hover': { color: 'primary.main' },
+                              }}
                             >
                               <ModeEditOutlineIcon sx={{ fontSize: 15 }} />
                             </IconButton>

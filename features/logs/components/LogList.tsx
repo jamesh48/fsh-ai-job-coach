@@ -1,7 +1,6 @@
 'use client'
 
 import AddIcon from '@mui/icons-material/Add'
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import ClearIcon from '@mui/icons-material/Clear'
 import LogoutIcon from '@mui/icons-material/Logout'
 import SearchIcon from '@mui/icons-material/Search'
@@ -19,6 +18,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import { MagicWandIcon } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useSnackbar } from 'notistack'
 import { useState } from 'react'
@@ -118,8 +118,15 @@ export function LogList() {
             Add Entry
           </Button>
           <Tooltip title='AI Writing Assistant'>
-            <IconButton size='small' onClick={() => setAssistOpen(true)}>
-              <AutoFixHighIcon fontSize='small' />
+            <IconButton
+              size='small'
+              onClick={() => setAssistOpen(true)}
+              sx={{
+                color: 'text.secondary',
+                '&:hover': { color: 'secondary.main' },
+              }}
+            >
+              <MagicWandIcon size={16} weight='fill' />
             </IconButton>
           </Tooltip>
           <Tooltip title='Settings'>

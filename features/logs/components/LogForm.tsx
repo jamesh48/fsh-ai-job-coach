@@ -1,7 +1,6 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import CloseIcon from '@mui/icons-material/Close'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditNoteIcon from '@mui/icons-material/EditNote'
@@ -32,6 +31,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import { MagicWandIcon } from '@phosphor-icons/react'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form'
@@ -431,7 +431,7 @@ export function LogForm({
               />
               <Button
                 size='small'
-                startIcon={<AutoFixHighIcon fontSize='small' />}
+                startIcon={<MagicWandIcon size={16} weight='fill' />}
                 onClick={handleSummarizeNotes}
                 disabled={summarizingNotes}
                 sx={{ mt: 0.5 }}
@@ -555,7 +555,7 @@ export function LogForm({
                         />
                         <Button
                           size='small'
-                          startIcon={<AutoFixHighIcon fontSize='small' />}
+                          startIcon={<MagicWandIcon size={16} weight='fill' />}
                           onClick={() => handleFillFromUrl(index)}
                           disabled={
                             fillingFromUrlIndex === index ||
@@ -744,7 +744,7 @@ export function LogForm({
                         />
                         <Button
                           size='small'
-                          startIcon={<AutoFixHighIcon fontSize='small' />}
+                          startIcon={<MagicWandIcon size={16} weight='fill' />}
                           onClick={() => handleSummarize(index)}
                           disabled={summarizingIndex === index}
                           sx={{ mt: 0.5 }}
@@ -767,7 +767,7 @@ export function LogForm({
                         />
                         <Button
                           size='small'
-                          startIcon={<AutoFixHighIcon fontSize='small' />}
+                          startIcon={<MagicWandIcon size={16} weight='fill' />}
                           onClick={() => handleDraftImpression(index)}
                           disabled={impressionIndex === index}
                           sx={{ mt: 0.5 }}
