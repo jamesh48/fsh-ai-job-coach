@@ -5,9 +5,9 @@ Keep this file up to date. After any session where new libraries are added, arch
 
 After editing any `*.ts`, `*.tsx`, `*.js`, `*.jsx`, or `*.json` file, run:
 ```bash
-yarn format && yarn lint
+yarn format && yarn lint && yarn tsc --noEmit
 ```
-This auto-formats and lints the affected files so code is always clean before the user commits.
+This auto-formats, lints, and type-checks so errors are caught locally before the user commits.
 
 Always use `yarn` instead of `npx` for running scripts and tools (e.g. `yarn prisma migrate dev` not `npx prisma migrate dev`).
 
