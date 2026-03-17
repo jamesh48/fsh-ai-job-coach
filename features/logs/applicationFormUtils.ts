@@ -7,6 +7,7 @@ export interface AppDocument {
 
 export const DOCUMENT_LABEL_OPTIONS = [
   'Cover Letter',
+  'Job Application Questions',
   'Follow-up Email',
   'Thank You Note',
   'Cold Outreach',

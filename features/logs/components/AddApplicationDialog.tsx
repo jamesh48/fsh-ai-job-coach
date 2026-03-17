@@ -296,6 +296,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                   required
                   error={!!errors.company}
                   helperText={errors.company?.message}
+                  sx={{ visibility: fillingFromUrl ? 'hidden' : 'visible' }}
                   {...register('company')}
                 />
                 {fillingFromUrl && (
@@ -303,9 +304,11 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                     variant='rectangular'
                     sx={{
                       position: 'absolute',
-                      inset: 0,
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
                       borderRadius: 1,
-                      zIndex: 1,
                     }}
                   />
                 )}
@@ -317,6 +320,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                   required
                   error={!!errors.jobTitle}
                   helperText={errors.jobTitle?.message}
+                  sx={{ visibility: fillingFromUrl ? 'hidden' : 'visible' }}
                   {...register('jobTitle')}
                 />
                 {fillingFromUrl && (
@@ -324,9 +328,11 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                     variant='rectangular'
                     sx={{
                       position: 'absolute',
-                      inset: 0,
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
                       borderRadius: 1,
-                      zIndex: 1,
                     }}
                   />
                 )}
@@ -428,7 +434,10 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
             {/* Work arrangement + Compensation */}
             <Stack direction='row' spacing={2}>
               <Box sx={{ position: 'relative', flex: 1 }}>
-                <FormControl fullWidth>
+                <FormControl
+                  fullWidth
+                  sx={{ visibility: fillingFromUrl ? 'hidden' : 'visible' }}
+                >
                   <InputLabel>Work Arrangement</InputLabel>
                   <Controller
                     name='workArrangement'
@@ -450,9 +459,11 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                     variant='rectangular'
                     sx={{
                       position: 'absolute',
-                      inset: 0,
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
                       borderRadius: 1,
-                      zIndex: 1,
                     }}
                   />
                 )}
@@ -462,6 +473,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                   label='Compensation'
                   fullWidth
                   placeholder='$120,000 - $150,000/yr'
+                  sx={{ visibility: fillingFromUrl ? 'hidden' : 'visible' }}
                   {...register('compensation')}
                 />
                 {fillingFromUrl && (
@@ -469,9 +481,11 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                     variant='rectangular'
                     sx={{
                       position: 'absolute',
-                      inset: 0,
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
                       borderRadius: 1,
-                      zIndex: 1,
                     }}
                   />
                 )}
@@ -487,6 +501,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                   rows={6}
                   fullWidth
                   placeholder='Paste the full job description or write a brief summary…'
+                  sx={{ visibility: fillingFromUrl ? 'hidden' : 'visible' }}
                   {...register('roleDescription')}
                 />
                 {fillingFromUrl && (
@@ -494,9 +509,11 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                     variant='rectangular'
                     sx={{
                       position: 'absolute',
-                      inset: 0,
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
                       borderRadius: 1,
-                      zIndex: 1,
                     }}
                   />
                 )}
