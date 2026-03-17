@@ -4,6 +4,7 @@ export type AppSettings = {
   id: string
   anthropicApiKey: string | null
   careerProfile: string | null
+  resume: string | null
   jobSearchPlan: string | null
   profileLinks: ProfileLink[]
   updatedAt: string
@@ -12,6 +13,7 @@ export type AppSettings = {
 export type SettingsFormValues = {
   anthropicApiKey: string
   careerProfile: string
+  resume: string
   jobSearchPlan: string
   profileLinks: ProfileLink[]
 }

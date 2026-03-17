@@ -42,6 +42,8 @@ Warm regards,
 [link1] | [link2] When the user explicitly asks you to write or draft a document (cover letter, email, message, bio, etc.), output ONLY the document itself — no intro sentence, no closing remarks, no follow-up questions. For all other requests (feedback, advice, brainstorming, explanation), respond naturally.`,
     settings.careerProfile &&
       `Candidate profile (use this to personalize all responses):\n${settings.careerProfile}`,
+    settings.resume &&
+      `Candidate resume (use this as the source of truth for experience, skills, and accomplishments):\n${settings.resume}`,
     linksContext,
   ].filter(Boolean)
 

@@ -17,6 +17,7 @@ export async function GET() {
           id: ID,
           anthropicApiKey: null,
           careerProfile: null,
+          resume: null,
           jobSearchPlan: null,
           profileLinks: [],
           updatedAt: new Date().toISOString(),
@@ -34,6 +35,7 @@ export async function PUT(request: Request) {
     update: {
       anthropicApiKey: body.anthropicApiKey || null,
       careerProfile: body.careerProfile || null,
+      resume: body.resume || null,
       jobSearchPlan: body.jobSearchPlan || null,
       profileLinks: profileLinksJson,
     },
@@ -41,6 +43,7 @@ export async function PUT(request: Request) {
       id: ID,
       anthropicApiKey: body.anthropicApiKey || null,
       careerProfile: body.careerProfile || null,
+      resume: body.resume || null,
       jobSearchPlan: body.jobSearchPlan || null,
       profileLinks: profileLinksJson,
     },

@@ -9,6 +9,8 @@ yarn format && yarn lint
 ```
 This auto-formats and lints the affected files so code is always clean before the user commits.
 
+Always use `yarn` instead of `npx` for running scripts and tools (e.g. `yarn prisma migrate dev` not `npx prisma migrate dev`).
+
 ## Project Overview
 An AI-powered job search coaching app. The core MVP is a daily activity log where users record what they did each day in their job search. An AI coach (Claude) analyzes the log and gives actionable daily recommendations. Job applications are tracked with full detail (status, compensation, activities, AI-generated documents). A gear icon in the header opens a Settings dialog for API key configuration, career profile, profile links, appearance, and printing. Printing is handled client-side via WebUSB (ESC/POS).
 

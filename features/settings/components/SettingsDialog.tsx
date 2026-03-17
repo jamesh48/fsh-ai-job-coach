@@ -78,6 +78,7 @@ const TABS = [
 const schema = yup.object({
   anthropicApiKey: yup.string().default(''),
   careerProfile: yup.string().default(''),
+  resume: yup.string().default(''),
   jobSearchPlan: yup.string().default(''),
   profileLinks: yup.array().default([]),
 })
@@ -145,6 +146,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       defaultValues: {
         anthropicApiKey: '',
         careerProfile: '',
+        resume: '',
         jobSearchPlan: '',
       },
     })
@@ -185,6 +187,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       reset({
         anthropicApiKey: settings.anthropicApiKey ?? '',
         careerProfile: settings.careerProfile ?? '',
+        resume: settings.resume ?? '',
         jobSearchPlan: settings.jobSearchPlan ?? '',
         profileLinks: settings.profileLinks ?? [],
       })
@@ -493,6 +496,35 @@ export function SettingsDialog({ open, onClose }: Props) {
                 placeholder={`Example:\nI'm a senior full-stack engineer with 8 years of experience, primarily in React and Node.js. I'm targeting staff-level IC roles at Series B–D startups. I want remote or hybrid in the US, $180–220k base. I'm excited about developer tools, fintech, and climate tech. I'm not interested in defense, crypto, or pure front-end roles. I have a strong background in system design and have led teams of 3–5 engineers.`}
                 slotProps={{ inputLabel: { shrink: true } }}
                 {...register('careerProfile')}
+              />
+            </Box>
+
+            <Box>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
+                Resume
+              </Typography>
+              <Typography
+                variant='body2'
+                color='text.secondary'
+                mt={0.5}
+                mb={1.5}
+              >
+                Paste your resume as plain text. Claude uses it as the source of
+                truth for your experience and skills when writing cover letters
+                and other documents.
+              </Typography>
+              <TextField
+                label='Resume'
+                multiline
+                rows={16}
+                fullWidth
+                placeholder='Paste your resume here as plain text...'
+                slotProps={{ inputLabel: { shrink: true } }}
+                {...register('resume')}
               />
             </Box>
 
