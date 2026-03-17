@@ -2,6 +2,7 @@
 
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -31,6 +32,7 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { AiAssistDialog } from '@/features/ai/components/AiAssistDialog'
 import { useUpdateLogMutation } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 import type {
@@ -130,6 +132,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
     apps: JobApplicationEntry[]
   } | null>(null)
   const [viewingDoc, setViewingDoc] = useState<AppDocument | null>(null)
+  const [assistApp, setAssistApp] = useState<{
+    app: JobApplicationEntry
+    index: number
+  } | null>(null)
   const [updateLog] = useUpdateLogMutation()
 
   const handleDeleteDocument = async (
@@ -149,6 +155,21 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
       ...log,
       content: serializeToContent({ notes, applications: updatedApps }),
     })
+  }
+
+  const handleSaveDocumentFromAssist = async (doc: AppDocument) => {
+    if (!assistApp) return
+    const { notes, applications: all } = parseContent(log.content)
+    const updatedApps = all.map((a, i) =>
+      i === assistApp.index
+        ? { ...a, documents: [...(a.documents ?? []), doc] }
+        : a,
+    )
+    const result = await updateLog({
+      ...log,
+      content: serializeToContent({ notes, applications: updatedApps }),
+    })
+    if ('error' in result) throw new Error('Failed to save')
   }
 
   return (
@@ -327,6 +348,17 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                           >
                             {app.jobTitle} at {app.company}
                           </Typography>
+                          <Tooltip title='AI Assist'>
+                            <IconButton
+                              size='small'
+                              onClick={() =>
+                                setAssistApp({ app, index: originalIndex })
+                              }
+                              sx={{ color: 'secondary.main' }}
+                            >
+                              <AutoAwesomeIcon sx={{ fontSize: 15 }} />
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title='Activities'>
                             <IconButton
                               size='small'
@@ -690,6 +722,21 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
           ))}
         </MenuList>
       </Popover>
+
+      <AiAssistDialog
+        open={!!assistApp}
+        onClose={() => setAssistApp(null)}
+        jobContext={
+          assistApp
+            ? {
+                jobTitle: assistApp.app.jobTitle,
+                company: assistApp.app.company,
+                roleDescription: assistApp.app.roleDescription,
+              }
+            : undefined
+        }
+        onSaveDocument={handleSaveDocumentFromAssist}
+      />
 
       <Dialog
         open={!!viewingDoc}
