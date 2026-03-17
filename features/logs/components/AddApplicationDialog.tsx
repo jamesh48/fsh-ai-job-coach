@@ -76,7 +76,7 @@ const schema = yup.object({
     .string()
     .oneOf(['applied', 'recruiter_screen', 'interviewing', 'offer', 'rejected'])
     .default('applied'),
-  fitScore: yup.number().nullable().default(null),
+  fitScore: yup.mixed<FitScore>().nullable().default(null),
   fitRationale: yup.string().default(''),
   activities: yup.array().default([]),
   documents: yup.array().default([]),

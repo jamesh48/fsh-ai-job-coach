@@ -42,7 +42,7 @@ import {
   useSummarizeJobMutation,
   useSummarizeNotesMutation,
 } from '@/lib/api'
-import type { JobApplicationEntry } from '../applicationFormUtils'
+import type { FitScore, JobApplicationEntry } from '../applicationFormUtils'
 import {
   EMPTY_APPLICATION,
   parseContent,
@@ -144,6 +144,8 @@ export function LogForm({
                   'rejected',
                 ])
                 .default('applied'),
+              fitScore: yup.mixed<FitScore>().nullable().default(null),
+              fitRationale: yup.string().default(''),
               activities: yup.array().default([]),
               documents: yup.array().default([]),
             }),
