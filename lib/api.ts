@@ -75,6 +75,8 @@ export const api = createApi({
         compensation?: string
         fitScore?: 1 | 2 | 3 | 4
         fitRationale?: string
+        source?: string
+        isEasyApply?: boolean
       },
       { url: string }
     >({

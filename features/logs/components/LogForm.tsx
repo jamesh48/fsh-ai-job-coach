@@ -31,6 +31,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import Autocomplete from '@mui/material/Autocomplete'
 import { MagicWandIcon } from '@phosphor-icons/react'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
@@ -46,6 +47,7 @@ import type { FitScore, JobApplicationEntry } from '../applicationFormUtils'
 import {
   EMPTY_APPLICATION,
   parseContent,
+  SOURCE_SUGGESTIONS,
   STATUS_LABELS,
   serializeToContent,
   WORK_ARRANGEMENTS,
@@ -259,6 +261,8 @@ export function LogForm({
           roleDescription,
           workArrangement,
           compensation,
+          source,
+          isEasyApply,
         } = result.data
         if (jobTitle) setValue(`applications.${index}.jobTitle`, jobTitle)
         if (company) setValue(`applications.${index}.company`, company)
@@ -268,6 +272,15 @@ export function LogForm({
           setValue(`applications.${index}.workArrangement`, workArrangement)
         if (compensation)
           setValue(`applications.${index}.compensation`, compensation)
+        if (source) {
+          setValue(`applications.${index}.source`, source)
+          if (isEasyApply) {
+            setValue(`applications.${index}.priority`, 'quick_apply')
+            setValue(`applications.${index}.status`, 'applied')
+          } else {
+            setValue(`applications.${index}.priority`, 'standard')
+          }
+        }
       }
     } finally {
       setFillingFromUrlIndex(null)
@@ -645,11 +658,26 @@ export function LogForm({
                       </FormControl>
 
                       {/* Source */}
-                      <TextField
-                        label='How did you find this?'
-                        fullWidth
-                        placeholder='LinkedIn Easy Apply, company website, referred by [name]…'
-                        {...register(`applications.${index}.source`)}
+                      <Controller
+                        name={`applications.${index}.source`}
+                        control={control}
+                        render={({ field }) => (
+                          <Autocomplete
+                            freeSolo
+                            options={SOURCE_SUGGESTIONS}
+                            value={field.value}
+                            onChange={(_, val) => field.onChange(val ?? '')}
+                            onInputChange={(_, val) => field.onChange(val)}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label='How did you find this?'
+                                fullWidth
+                                placeholder='LinkedIn Easy Apply, company website, referred by [name]…'
+                              />
+                            )}
+                          />
+                        )}
                       />
 
                       {/* Recruiter */}

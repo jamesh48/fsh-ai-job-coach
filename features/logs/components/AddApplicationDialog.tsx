@@ -21,6 +21,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import Autocomplete from '@mui/material/Autocomplete'
 import { MagicWandIcon, SparkleIcon } from '@phosphor-icons/react'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
@@ -42,6 +43,7 @@ import {
   EMPTY_APPLICATION,
   FIT_SCORE_DISPLAY,
   parseContent,
+  SOURCE_SUGGESTIONS,
   STATUS_LABELS,
   serializeToContent,
   WORK_ARRANGEMENTS,
@@ -144,6 +146,8 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
           compensation,
           fitScore: score,
           fitRationale: rationale,
+          source,
+          isEasyApply,
         } = result.data
         if (jobTitle) setValue('jobTitle', jobTitle)
         if (company) setValue('company', company)
@@ -152,6 +156,15 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         if (compensation) setValue('compensation', compensation)
         if (score) setValue('fitScore', score)
         if (rationale) setValue('fitRationale', rationale)
+        if (source) {
+          setValue('source', source)
+          if (isEasyApply) {
+            setValue('priority', 'quick_apply')
+            setValue('status', 'applied')
+          } else {
+            setValue('priority', 'standard')
+          }
+        }
         enqueueSnackbar('Fields filled from URL.', { variant: 'success' })
       } else {
         enqueueSnackbar(
@@ -388,11 +401,26 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
             </FormControl>
 
             {/* Source */}
-            <TextField
-              label='How did you find this?'
-              fullWidth
-              placeholder='LinkedIn Easy Apply, company website, referred by [name]…'
-              {...register('source')}
+            <Controller
+              name='source'
+              control={control}
+              render={({ field }) => (
+                <Autocomplete
+                  freeSolo
+                  options={SOURCE_SUGGESTIONS}
+                  value={field.value}
+                  onChange={(_, val) => field.onChange(val ?? '')}
+                  onInputChange={(_, val) => field.onChange(val)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label='How did you find this?'
+                      fullWidth
+                      placeholder='LinkedIn Easy Apply, company website, referred by [name]…'
+                    />
+                  )}
+                />
+              )}
             />
 
             {/* Recruiter */}

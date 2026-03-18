@@ -6,7 +6,7 @@
     "dev": "tsx server.ts",
     "build": "next build",
     "start": "tsx server.ts",
-    "lint": "biome check",
+    "lint": "biome check --write",
     "format": "biome format --write",
     "prepare": "husky"
   },

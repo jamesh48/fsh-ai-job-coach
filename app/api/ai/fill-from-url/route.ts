@@ -11,6 +11,8 @@ interface FillResult {
   compensation?: string
   fitScore?: 1 | 2 | 3 | 4
   fitRationale?: string
+  source?: string
+  isEasyApply?: boolean
 }
 
 function extractPageText(html: string): string {
@@ -33,6 +35,21 @@ function extractPageText(html: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 6000)
+}
+
+function detectSource(
+  url: string,
+  html: string,
+): { source: string; isEasyApply: boolean } | null {
+  if (!/linkedin\.com\/jobs\//i.test(url)) return null
+  const isEasyApply =
+    /EASY_APPLY/i.test(html) ||
+    /easy-apply/i.test(html) ||
+    /"applyType"\s*:\s*"EASY/i.test(html)
+  return {
+    source: isEasyApply ? 'LinkedIn Easy Apply' : 'LinkedIn',
+    isEasyApply,
+  }
 }
 
 function extractMeta(html: string): { title: string; company: string } {
@@ -172,6 +189,12 @@ ${bodyText}`,
         .replace(/\u2018|\u2019/g, "'")
         .replace(/\u201C|\u201D/g, '"')
         .replace(/\u2026/g, '...')
+    }
+
+    const sourceInfo = detectSource(url, html)
+    if (sourceInfo) {
+      parsed.source = sourceInfo.source
+      parsed.isEasyApply = sourceInfo.isEasyApply
     }
 
     return NextResponse.json(parsed)

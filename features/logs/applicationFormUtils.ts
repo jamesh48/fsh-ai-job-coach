@@ -82,6 +82,21 @@ export interface ParsedContent {
 
 export const WORK_ARRANGEMENTS = ['Remote', 'Hybrid', 'On-site']
 
+export const SOURCE_SUGGESTIONS = [
+  'LinkedIn Easy Apply',
+  'LinkedIn',
+  'LinkedIn Job Alert',
+  'Indeed',
+  'Glassdoor',
+  'Company Website',
+  'Referral',
+  'Recruiter Outreach',
+  'Networking',
+  'Handshake',
+  'Wellfound / Angel.co',
+  'Job Fair',
+]
+
 export const STATUS_LABELS: Record<JobApplicationEntry['status'], string> = {
   applied: 'Applied',
   recruiter_screen: 'Recruiter Screen',
