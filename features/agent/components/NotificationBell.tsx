@@ -588,7 +588,7 @@ export function NotificationBell() {
   const [clearEmails] = useClearAgentEmailsMutation()
   const [deleteCalEvent] = useDeleteAgentCalendarEventMutation()
   const [clearCalEvents] = useClearAgentCalendarEventsMutation()
-  const { lastEvent } = useAgentSocket()
+  const { lastEvent, status } = useAgentSocket()
 
   useEffect(() => {
     setLastSeen(localStorage.getItem(LS_KEY))
@@ -598,6 +598,14 @@ export function NotificationBell() {
     if (lastEvent?.type === 'email_detected') refetchEmails()
     if (lastEvent?.type === 'calendar_event') refetchCalEvents()
   }, [lastEvent, refetchEmails, refetchCalEvents])
+
+  // Catch up on any events missed while the WebSocket was disconnected
+  useEffect(() => {
+    if (status === 'connected') {
+      refetchEmails()
+      refetchCalEvents()
+    }
+  }, [status, refetchEmails, refetchCalEvents])
 
   const unreadEmails = emails.filter(
     (e) => !lastSeen || new Date(e.receivedAt) > new Date(lastSeen),
