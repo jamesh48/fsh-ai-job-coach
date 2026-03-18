@@ -67,7 +67,7 @@ export class FshJobCoachStack extends cdk.Stack {
 
     taskDef.addContainer('fsh-job-coach-container', {
       image: ecs.ContainerImage.fromAsset('../'),
-      command: ['sh', '-c', `yarn prisma migrate deploy && node server.js`],
+      command: ['sh', '-c', `yarn prisma migrate deploy && yarn tsx server.ts`],
       environment: {
         DATABASE_URL: databaseUrl,
         SESSION_SECRET: props.sessionSecret,
