@@ -234,8 +234,11 @@ export function AgentSocketProvider({
       clearTimeout(timerRef.current)
       timerRef.current = null
     }
-    wsRef.current?.close()
-    wsRef.current = null
+    if (wsRef.current) {
+      wsRef.current.onclose = null
+      wsRef.current.close()
+      wsRef.current = null
+    }
     backoffRef.current = INITIAL_BACKOFF
     setStatus('disconnected')
     setAgentConnected(false)
