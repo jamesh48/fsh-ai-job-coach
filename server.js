@@ -3,10 +3,16 @@
 const { loadEnvConfig } = require('@next/env')
 loadEnvConfig(process.cwd())
 
+const { randomUUID } = require('node:crypto')
 const { createServer } = require('node:http')
 const { parse } = require('node:url')
 const next = require('next')
 const { WebSocketServer } = require('ws')
+
+// In-process secret for server.js → Next.js API route authentication.
+// Generated fresh on each startup; both sides share the same process so
+// Next.js API routes can read it from process.env.
+process.env.INTERNAL_SECRET = randomUUID()
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = '0.0.0.0'
@@ -48,7 +54,7 @@ async function classifyAndStoreEmail(payload) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-agent-secret': AGENT_SECRET ?? '',
+        'x-internal-secret': process.env.INTERNAL_SECRET,
       },
       body: JSON.stringify(payload),
     })
@@ -80,7 +86,7 @@ async function classifyCalendarEvent(payload) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-agent-secret': AGENT_SECRET ?? '',
+        'x-internal-secret': process.env.INTERNAL_SECRET,
       },
       body: JSON.stringify(payload),
     })

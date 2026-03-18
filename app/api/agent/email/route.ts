@@ -71,18 +71,18 @@ Snippet: ${snippet}`,
 }
 
 export async function POST(request: Request) {
-  const secret = request.headers.get('x-agent-secret')
+  const secret = request.headers.get('x-internal-secret')
+  if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json()
 
   const settings = await prisma.settings.findUnique({
     where: { id: 'singleton' },
   })
 
-  if (!settings?.agentSecret || secret !== settings.agentSecret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const apiKey = settings.anthropicApiKey
+  const apiKey = settings?.anthropicApiKey
 
   // No API key — fail open so emails aren't silently dropped
   if (!apiKey) {
