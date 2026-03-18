@@ -11,6 +11,8 @@ This auto-formats, lints, and type-checks so errors are caught locally before th
 
 Always use `yarn` instead of `npx` for running scripts and tools (e.g. `yarn prisma migrate dev` not `npx prisma migrate dev`).
 
+When making changes that affect how the app is built or run (e.g. renaming entry point files, changing the server command, adding env vars), update all related files in concert: `package.json`, `Dockerfile`, `iac/lib/fsh-job-coach-stack.ts`, `.github/workflows/cdk-deploy.yaml`, and this file.
+
 ## Project Overview
 An AI-powered job search coaching app. The core MVP is a daily activity log where users record what they did each day in their job search. An AI coach (Claude) analyzes the log and gives actionable daily recommendations. Job applications are tracked with full detail (status, compensation, activities, AI-generated documents). A gear icon in the header opens a Settings dialog for API key configuration, career profile, resume, profile links, appearance, and printing. Printing is handled client-side via WebUSB (ESC/POS). A desktop agent (Electron) connects via WebSocket and forwards real-time email and calendar events, which are AI-filtered and surfaced as in-app notifications.
 
@@ -26,7 +28,7 @@ An AI-powered job search coaching app. The core MVP is a daily activity log wher
 - **Markdown rendering**: react-markdown
 - **Printing**: WebUSB API (browser-side ESC/POS — Chrome/Edge only, requires HTTPS)
 - **Auth**: bcryptjs (password hashing) + jose (JWT session cookie)
-- **WebSocket server**: `ws` npm package — custom Node.js server (`server.js`) wrapping Next.js
+- **WebSocket server**: `ws` npm package — custom Node.js server (`server.ts`) wrapping Next.js
 - **Package manager**: Yarn
 - **Linter / Formatter**: Biome (single quotes, semicolons as needed)
 - **Node version**: 24
@@ -43,8 +45,8 @@ app/                          # Next.js App Router — routes, layouts, API rout
   api/ai/impression/route.ts  # POST — draft impression with Claude
   api/ai/assist/route.ts      # POST — AI writing assistant (cover letters, emails, etc.)
   api/ai/fill-from-url/route.ts  # POST — scrape job URL and extract structured fields via Claude
-  api/agent/email/route.ts    # POST — classify + store email (internal, called by server.js)
-  api/agent/calendar/route.ts # POST — classify calendar event (internal, called by server.js)
+  api/agent/email/route.ts    # POST — classify + store email (internal, called by server.ts)
+  api/agent/calendar/route.ts # POST — classify calendar event (internal, called by server.ts)
   api/agent/emails/route.ts         # GET — list stored emails (auto-expires >90 days); DELETE — clear all
   api/agent/emails/[id]/route.ts    # DELETE — dismiss single email
   api/agent/calendar-events/route.ts     # GET — list stored calendar events (auto-expires >90 days); DELETE — clear all
@@ -111,7 +113,7 @@ lib/
   utils.ts                    # cn() class merge utility
   generated/prisma/           # Prisma-generated client (gitignored)
 middleware.ts                 # Protects all routes; /api/agent/email and /api/agent/calendar are public (use x-agent-secret instead)
-server.js                     # Custom Node.js HTTP server wrapping Next.js; hosts /ws/agent and /ws/client WebSocket endpoints
+server.ts                     # Custom Node.js HTTP server wrapping Next.js; hosts /ws/agent and /ws/client WebSocket endpoints
 types/
   index.ts                    # Global shared types (ApiResponse<T>)
 prisma/
@@ -122,7 +124,7 @@ iac/                          # AWS CDK deployment stack
   lib/fsh-job-coach-stack.ts  # Fargate + ALB stack (fshjobcoach.com, priority 40)
 .github/workflows/
   cdk-deploy.yaml             # CI/CD: deploy on push to main
-Dockerfile                    # Node 24 slim, yarn install, prisma generate, next build; CMD: node server.js
+Dockerfile                    # Node 24 slim, yarn install, prisma generate, next build; CMD: yarn tsx server.ts
 ```
 
 ### Path Alias
@@ -234,7 +236,7 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 - Recommendation timestamp stored as `DateTime` (`lastRecommendationAt`), displayed as `MM-DD-YYYY hh:mm:ss`
 
 ## Desktop Agent Integration
-- `server.js` — custom Node.js HTTP server wrapping Next.js (`app.prepare().then(...)`). Runs as the dev and production entry point (`yarn dev` / `node server.js`).
+- `server.ts` — custom Node.js HTTP server wrapping Next.js (`app.prepare().then(...)`). Runs as the dev and production entry point (`yarn dev` / `yarn tsx server.ts`).
 - Uses `@next/env` `loadEnvConfig()` at startup to load `.env` before Next.js initializes.
 - Two WebSocket servers (both `noServer: true`, routed via `server.on('upgrade')`):
   - `/ws/agent` — for the Electron desktop agent; requires `?secret=AGENT_SECRET` query param; one connection at a time (new connection displaces existing)
@@ -243,7 +245,7 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 - **Email filtering**: `email_detected` events are intercepted, classified via `POST /api/agent/email` (Haiku, forced tool_use). Relevant emails are stored in `AgentEmail` and forwarded with classification attached. Irrelevant emails are dropped silently. Failures fail open.
 - **Calendar filtering**: `calendar_event` events are intercepted, classified via `POST /api/agent/calendar` (Haiku, forced tool_use). Relevant events are stored in `AgentCalendarEvent` and forwarded with classification attached. Irrelevant events are dropped silently. Failures fail open.
 - **Internal API routes** (`/api/agent/email`, `/api/agent/calendar`, `/api/agent/validate-secret`) are exempt from session middleware.
-- **Agent WebSocket auth**: on upgrade, `server.js` async-calls `POST /api/agent/validate-secret` with the `?secret=` query param before completing the WebSocket handshake. The route checks `settings.agentSecret` — if not set or mismatched, the upgrade is rejected. Configurable in Settings → Security. No env var fallback.
+- **Agent WebSocket auth**: on upgrade, `server.ts` async-calls `POST /api/agent/validate-secret` with the `?secret=` query param before completing the WebSocket handshake. The route checks `settings.agentSecret` — if not set or mismatched, the upgrade is rejected. Configurable in Settings → Security. No env var fallback.
 - **Test bypass**: subject or snippet containing `fsh-test` skips Claude classification and forces `relevant: true` (useful for end-to-end testing).
 - `lib/agentSocketContext.tsx` — React context managing `/ws/client` WebSocket with exponential backoff reconnect (2s → 30s cap). Exposes `{ status, lastEvent, events, send }` via `useAgentSocket()`. Tracks last 50 events.
 - `lib/agentNotificationHandler.tsx` — renderless `'use client'` component mounted in `Providers`; fires `new Notification(...)` for relevant `email_detected` events; dedupes via ref Set.
@@ -273,7 +275,7 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 
 ## Deployment
 - **URL**: `fshjobcoach.com` (ALB listener priority 40)
-- **Container startup**: `yarn prisma migrate deploy && node server.js`
+- **Container startup**: `yarn prisma migrate deploy && yarn tsx server.ts`
 - Migrations run automatically on every deploy as part of container startup
 - `DATABASE_URL` constructed in CDK from `POSTGRES_PASSWORD` + CloudFormation-exported Postgres IP
 - **GitHub Secrets**: `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `POSTGRES_PASSWORD`, `SESSION_SECRET`
@@ -293,7 +295,7 @@ yarn prisma generate
 # Run DB migration (requires interactive terminal)
 yarn prisma migrate dev --name <migration-name>
 
-# Dev server (runs server.js, not next dev directly)
+# Dev server (runs server.ts via tsx, not next dev directly)
 yarn dev
 
 # Type check
