@@ -110,6 +110,7 @@ interface AgentSocketContextValue {
   lastEvent: AgentEvent | null
   events: AgentEvent[]
   send: (msg: { type: string; payload?: Record<string, unknown> }) => void
+  reset: () => void
 }
 
 const AgentSocketCtx = createContext<AgentSocketContextValue>({
@@ -118,6 +119,7 @@ const AgentSocketCtx = createContext<AgentSocketContextValue>({
   lastEvent: null,
   events: [],
   send: () => {},
+  reset: () => {},
 })
 
 // --- Provider ---
@@ -227,9 +229,24 @@ export function AgentSocketProvider({
     [],
   )
 
+  const reset = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    wsRef.current?.close()
+    wsRef.current = null
+    backoffRef.current = INITIAL_BACKOFF
+    setStatus('disconnected')
+    setAgentConnected(false)
+    setLastEvent(null)
+    setEvents([])
+    connectRef.current()
+  }, [])
+
   return (
     <AgentSocketCtx.Provider
-      value={{ status, agentConnected, lastEvent, events, send }}
+      value={{ status, agentConnected, lastEvent, events, send, reset }}
     >
       {children}
     </AgentSocketCtx.Provider>

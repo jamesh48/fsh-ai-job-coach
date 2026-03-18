@@ -36,7 +36,7 @@ import { LogForm } from './LogForm'
 
 export function LogList() {
   const { logs, isLoading, error, add, update, remove } = useLogs()
-  const { agentConnected } = useAgentSocket()
+  const { agentConnected, reset: resetSocket } = useAgentSocket()
   const { enqueueSnackbar } = useSnackbar()
   const router = useRouter()
   const dispatch = useAppDispatch()
@@ -50,6 +50,7 @@ export function LogList() {
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     dispatch(api.util.resetApiState())
+    resetSocket()
     router.push('/login')
     router.refresh()
   }
