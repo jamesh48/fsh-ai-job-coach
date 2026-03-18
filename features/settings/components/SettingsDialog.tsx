@@ -52,6 +52,7 @@ import ReactMarkdown from 'react-markdown'
 import * as yup from 'yup'
 import {
   useGeneratePlanMutation,
+  useGetMeQuery,
   useGetSettingsQuery,
   useUpdateSettingsMutation,
 } from '@/lib/api'
@@ -140,6 +141,7 @@ export function SettingsDialog({ open, onClose }: Props) {
   const [selectedPrinterId, setSelectedPrinterId] = useState('')
   const usbSupported = typeof navigator !== 'undefined' && 'usb' in navigator
 
+  const { data: me } = useGetMeQuery(undefined, { skip: !open })
   const { data: settings } = useGetSettingsQuery(undefined, { skip: !open })
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
 
@@ -289,7 +291,19 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='xl'>
-      <DialogTitle sx={{ pb: 0 }}>Settings</DialogTitle>
+      <DialogTitle
+        sx={{
+          pb: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        Settings
+        <IconButton size='small' onClick={onClose}>
+          <CloseIcon fontSize='small' />
+        </IconButton>
+      </DialogTitle>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}>
         <Tabs
@@ -884,6 +898,19 @@ export function SettingsDialog({ open, onClose }: Props) {
         {/* Security */}
         {tab === 2 && (
           <Stack spacing={4}>
+            <Box>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
+                Account
+              </Typography>
+              <Typography variant='body1' mt={1.5}>
+                {me?.username ?? ''}
+              </Typography>
+            </Box>
+
             <Box>
               <Typography
                 variant='overline'

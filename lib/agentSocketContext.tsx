@@ -106,6 +106,7 @@ const MAX_EVENTS = 50
 
 interface AgentSocketContextValue {
   status: ConnectionStatus
+  agentConnected: boolean
   lastEvent: AgentEvent | null
   events: AgentEvent[]
   send: (msg: { type: string; payload?: Record<string, unknown> }) => void
@@ -113,6 +114,7 @@ interface AgentSocketContextValue {
 
 const AgentSocketCtx = createContext<AgentSocketContextValue>({
   status: 'disconnected',
+  agentConnected: false,
   lastEvent: null,
   events: [],
   send: () => {},
@@ -126,6 +128,7 @@ export function AgentSocketProvider({
   children: React.ReactNode
 }) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected')
+  const [agentConnected, setAgentConnected] = useState(false)
   const [lastEvent, setLastEvent] = useState<AgentEvent | null>(null)
   const [events, setEvents] = useState<AgentEvent[]>([])
 
@@ -174,6 +177,8 @@ export function AgentSocketProvider({
     ws.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data as string) as AgentEvent
+        if (event.type === 'agent_connected') setAgentConnected(true)
+        if (event.type === 'agent_disconnected') setAgentConnected(false)
         setLastEvent(event)
         setEvents((prev) => [event, ...prev].slice(0, MAX_EVENTS))
       } catch {
@@ -189,6 +194,7 @@ export function AgentSocketProvider({
       if (unmountedRef.current) return
       wsRef.current = null
       setStatus('disconnected')
+      setAgentConnected(false)
       scheduleRef.current()
     }
   }
@@ -222,7 +228,9 @@ export function AgentSocketProvider({
   )
 
   return (
-    <AgentSocketCtx.Provider value={{ status, lastEvent, events, send }}>
+    <AgentSocketCtx.Provider
+      value={{ status, agentConnected, lastEvent, events, send }}
+    >
       {children}
     </AgentSocketCtx.Provider>
   )

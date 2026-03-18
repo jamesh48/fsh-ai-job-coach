@@ -131,6 +131,9 @@ export const api = createApi({
       query: () => ({ url: '/agent/calendar-events', method: 'DELETE' }),
       invalidatesTags: ['AgentCalendarEvent'],
     }),
+    getMe: builder.query<{ username: string }, void>({
+      query: () => '/auth/me',
+    }),
     getSettings: builder.query<AppSettings, void>({
       query: () => '/settings',
       providesTags: ['Settings'],
@@ -161,6 +164,7 @@ export const {
   useGetAgentCalendarEventsQuery,
   useDeleteAgentCalendarEventMutation,
   useClearAgentCalendarEventsMutation,
+  useGetMeQuery,
   useGetSettingsQuery,
   useUpdateSettingsMutation,
 } = api

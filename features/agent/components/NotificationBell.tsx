@@ -156,7 +156,7 @@ function EmailDetailDialog({
               <Typography
                 component='span'
                 variant='caption'
-                color='text.disabled'
+                color='text.secondary'
               >
                 ({dayjs(email.receivedAt).fromNow()})
               </Typography>
@@ -320,7 +320,7 @@ function CalendarDetailDialog({
               <Typography
                 component='span'
                 variant='caption'
-                color='text.disabled'
+                color='text.secondary'
               >
                 ({dayjs(event.receivedAt).fromNow()})
               </Typography>
@@ -417,7 +417,7 @@ function EmailItem({
         {classification?.reason && (
           <Typography
             variant='caption'
-            color='text.disabled'
+            color='text.secondary'
             display='block'
             sx={{
               mt: 0.25,
@@ -437,7 +437,7 @@ function EmailItem({
           justifyContent='space-between'
           mt={0.5}
         >
-          <Typography variant='caption' color='text.disabled'>
+          <Typography variant='caption' color='text.secondary'>
             {dayjs(email.receivedAt).fromNow()}
           </Typography>
           <Link
@@ -532,7 +532,7 @@ function CalendarItem({
         {classification?.reason && (
           <Typography
             variant='caption'
-            color='text.disabled'
+            color='text.secondary'
             display='block'
             sx={{
               mt: 0.25,
@@ -552,7 +552,7 @@ function CalendarItem({
           justifyContent='space-between'
           mt={0.5}
         >
-          <Typography variant='caption' color='text.disabled'>
+          <Typography variant='caption' color='text.secondary'>
             {dayjs(event.receivedAt).fromNow()}
           </Typography>
           <Link
@@ -721,7 +721,7 @@ export function NotificationBell() {
                 <Typography variant='body2' color='text.secondary'>
                   No email notifications yet.
                 </Typography>
-                <Typography variant='caption' color='text.disabled'>
+                <Typography variant='caption' color='text.secondary'>
                   Relevant emails detected by the desktop agent will appear
                   here.
                 </Typography>
@@ -752,7 +752,7 @@ export function NotificationBell() {
                 <Typography variant='body2' color='text.secondary'>
                   No calendar notifications yet.
                 </Typography>
-                <Typography variant='caption' color='text.disabled'>
+                <Typography variant='caption' color='text.secondary'>
                   Job search calendar events detected by the desktop agent will
                   appear here.
                 </Typography>

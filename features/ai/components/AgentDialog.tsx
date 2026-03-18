@@ -17,7 +17,7 @@ import {
 } from '@mui/material'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import type { AgentEvent, ConnectionStatus } from '@/lib/agentSocketContext'
+import type { AgentEvent } from '@/lib/agentSocketContext'
 import { useAgentSocket } from '@/lib/agentSocketContext'
 
 dayjs.extend(relativeTime)
@@ -25,21 +25,6 @@ dayjs.extend(relativeTime)
 interface Props {
   open: boolean
   onClose: () => void
-}
-
-const STATUS_LABEL: Record<ConnectionStatus, string> = {
-  connected: 'Connected',
-  connecting: 'Connecting…',
-  disconnected: 'Not running',
-}
-
-const STATUS_COLOR: Record<
-  ConnectionStatus,
-  'success' | 'warning' | 'default'
-> = {
-  connected: 'success',
-  connecting: 'warning',
-  disconnected: 'default',
 }
 
 function EventItem({ event }: { event: AgentEvent }) {
@@ -252,7 +237,7 @@ function EventItem({ event }: { event: AgentEvent }) {
 }
 
 export function AgentDialog({ open, onClose }: Props) {
-  const { status, events } = useAgentSocket()
+  const { agentConnected, events } = useAgentSocket()
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
@@ -260,28 +245,27 @@ export function AgentDialog({ open, onClose }: Props) {
         <Box display='flex' alignItems='center' justifyContent='space-between'>
           Desktop Agent
           <Chip
-            label={STATUS_LABEL[status]}
-            color={STATUS_COLOR[status]}
+            label={agentConnected ? 'Connected' : 'Not running'}
+            color={agentConnected ? 'success' : 'default'}
             size='small'
             sx={{
               '@keyframes pulse': {
                 '0%, 100%': { opacity: 1 },
                 '50%': { opacity: 0.5 },
               },
-              animation:
-                status === 'connected'
-                  ? 'pulse 2s ease-in-out infinite'
-                  : 'none',
+              animation: agentConnected
+                ? 'pulse 2s ease-in-out infinite'
+                : 'none',
             }}
           />
         </Box>
       </DialogTitle>
 
       <DialogContent sx={{ pb: 3 }}>
-        {status === 'disconnected' && events.length === 0 ? (
+        {!agentConnected && events.length === 0 ? (
           <Box py={4} textAlign='center'>
             <Typography color='text.secondary' variant='body2'>
-              Desktop agent is not running.
+              Desktop agent is not connected.
             </Typography>
             <Typography color='text.secondary' variant='caption'>
               Start the desktop agent to receive real-time email, calendar, and

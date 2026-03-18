@@ -34,7 +34,7 @@ import { LogForm } from './LogForm'
 
 export function LogList() {
   const { logs, isLoading, error, add, update, remove } = useLogs()
-  const { status: agentStatus } = useAgentSocket()
+  const { agentConnected } = useAgentSocket()
   const { enqueueSnackbar } = useSnackbar()
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -115,11 +115,9 @@ export function LogList() {
         <Box display='flex' alignItems='center' gap={1}>
           <Tooltip
             title={
-              agentStatus === 'connected'
+              agentConnected
                 ? 'Desktop agent connected'
-                : agentStatus === 'connecting'
-                  ? 'Connecting to desktop agent…'
-                  : 'Desktop agent not running'
+                : 'Desktop agent not running'
             }
           >
             <IconButton size='small' onClick={() => setAgentOpen(true)}>
@@ -128,20 +126,14 @@ export function LogList() {
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  bgcolor:
-                    agentStatus === 'connected'
-                      ? 'success.main'
-                      : agentStatus === 'connecting'
-                        ? 'warning.main'
-                        : 'text.disabled',
+                  bgcolor: agentConnected ? 'success.main' : 'text.disabled',
                   '@keyframes pulse': {
                     '0%, 100%': { opacity: 1, transform: 'scale(1)' },
                     '50%': { opacity: 0.5, transform: 'scale(0.85)' },
                   },
-                  animation:
-                    agentStatus === 'connected'
-                      ? 'pulse 2s ease-in-out infinite'
-                      : 'none',
+                  animation: agentConnected
+                    ? 'pulse 2s ease-in-out infinite'
+                    : 'none',
                 }}
               />
             </IconButton>

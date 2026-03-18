@@ -3,12 +3,14 @@ import { loadEnvConfig } from '@next/env'
 loadEnvConfig(process.cwd())
 
 import { randomUUID } from 'node:crypto'
+import type { IncomingMessage } from 'node:http'
 import { createServer } from 'node:http'
 import { parse } from 'node:url'
+import { jwtVerify } from 'jose'
 import next from 'next'
 import { type RawData, type WebSocket, WebSocketServer } from 'ws'
 
-// In-process secret for server.js → Next.js API route authentication.
+// In-process secret for server.ts → Next.js API route authentication.
 // Generated fresh on each startup; both sides share the same process so
 // Next.js API routes can read it from process.env.
 const INTERNAL_SECRET = randomUUID()
@@ -52,6 +54,36 @@ async function validateAgentSecret(
     return result.authorized && result.userId ? result.userId : false
   } catch {
     return false
+  }
+}
+
+/**
+ * Extract the userId from the session JWT in the request's Cookie header.
+ * Returns null if the cookie is missing or invalid.
+ */
+async function getClientUserId(req: IncomingMessage): Promise<string | null> {
+  const cookieHeader = req.headers.cookie
+  if (!cookieHeader) return null
+
+  const cookies = Object.fromEntries(
+    cookieHeader.split(';').map((c) => {
+      const [k, ...v] = c.trim().split('=')
+      return [k.trim(), v.join('=')]
+    }),
+  )
+
+  const token = cookies.session
+  if (!token) return null
+
+  try {
+    const sessionSecret = process.env.SESSION_SECRET
+    if (!sessionSecret) return null
+    const secret = new TextEncoder().encode(sessionSecret)
+    const { payload } = await jwtVerify(token, secret)
+    if (typeof payload.userId !== 'string') return null
+    return payload.userId
+  } catch {
+    return null
   }
 }
 
@@ -122,18 +154,23 @@ const handle = app.getRequestHandler()
 
 let agentSocket: WebSocket | null = null
 let agentUserId: string | null = null
-const clients = new Set<WebSocket>()
 
-function broadcast(data: string | RawData): void {
-  for (const client of clients) {
-    if (client.readyState === client.OPEN) {
+// Maps each browser client WebSocket to the userId of the logged-in user.
+const clients = new Map<WebSocket, string>()
+
+function broadcastToUser(userId: string, data: string | RawData): void {
+  for (const [client, clientUserId] of clients) {
+    if (clientUserId === userId && client.readyState === client.OPEN) {
       client.send(data)
     }
   }
 }
 
-function broadcastJSON(msg: Record<string, unknown>): void {
-  broadcast(JSON.stringify(msg))
+function broadcastJSONToUser(
+  userId: string,
+  msg: Record<string, unknown>,
+): void {
+  broadcastToUser(userId, JSON.stringify(msg))
 }
 
 function setupKeepalive(ws: WebSocket): void {
@@ -169,67 +206,69 @@ app.prepare().then(() => {
     }
     agentSocket = ws
 
-    broadcastJSON({
-      type: 'agent_connected',
-      timestamp: new Date().toISOString(),
-    })
+    if (agentUserId) {
+      broadcastJSONToUser(agentUserId, {
+        type: 'agent_connected',
+        timestamp: new Date().toISOString(),
+      })
+    }
     setupKeepalive(ws)
 
     ws.on('message', async (data: RawData) => {
+      if (!agentUserId) return
+
       let parsed: AgentMessage
       try {
         parsed = JSON.parse(data.toString()) as AgentMessage
       } catch {
         console.log('[ws] agent message unparseable — forwarding as-is')
-        broadcast(data)
+        broadcastToUser(agentUserId, data)
         return
       }
 
       if (parsed.type === 'email_detected') {
-        const result = agentUserId
-          ? await classifyAndStoreEmail(parsed.payload, agentUserId)
-          : null
+        const result = await classifyAndStoreEmail(parsed.payload, agentUserId)
         if (result === null) {
-          broadcast(data)
+          broadcastToUser(agentUserId, data)
         } else if (result.relevant) {
           parsed.payload = {
             ...parsed.payload,
             classification: result.classification,
           }
-          broadcast(JSON.stringify(parsed))
+          broadcastToUser(agentUserId, JSON.stringify(parsed))
         }
         return
       }
 
       if (parsed.type === 'calendar_event') {
-        const result = agentUserId
-          ? await classifyCalendarEvent(parsed.payload, agentUserId)
-          : null
+        const result = await classifyCalendarEvent(parsed.payload, agentUserId)
         if (result === null) {
-          broadcast(data)
+          broadcastToUser(agentUserId, data)
         } else if (result.relevant) {
           parsed.payload = {
             ...parsed.payload,
             classification: result.classification,
           }
-          broadcast(JSON.stringify(parsed))
+          broadcastToUser(agentUserId, JSON.stringify(parsed))
         }
         return
       }
 
-      broadcast(data)
+      broadcastToUser(agentUserId, data)
     })
 
     ws.on('close', () => {
       console.log('[ws] agent disconnected')
       if (agentSocket === ws) {
+        if (agentUserId) {
+          broadcastJSONToUser(agentUserId, {
+            type: 'agent_disconnected',
+            timestamp: new Date().toISOString(),
+          })
+        }
         agentSocket = null
         agentUserId = null
       }
-      broadcastJSON({
-        type: 'agent_disconnected',
-        timestamp: new Date().toISOString(),
-      })
     })
 
     ws.on('error', (err: Error) => {
@@ -238,17 +277,36 @@ app.prepare().then(() => {
   })
 
   // --- Webapp client connections (/ws/client) ---
-  clientWss.on('connection', (ws: WebSocket) => {
-    clients.add(ws)
-    console.log(`[ws] browser client connected (total: ${clients.size})`)
-    setupKeepalive(ws)
+  clientWss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+    getClientUserId(req).then((userId) => {
+      if (!userId) {
+        ws.close(1008, 'Unauthorized')
+        return
+      }
+      clients.set(ws, userId)
+      console.log(`[ws] browser client connected (total: ${clients.size})`)
 
-    ws.on('close', () => {
-      clients.delete(ws)
-      console.log(`[ws] browser client disconnected (total: ${clients.size})`)
-    })
-    ws.on('error', (err: Error) => {
-      console.log(`[ws] client socket error: ${err}`)
+      // Send current agent connection state so the client doesn't have to wait
+      // for the next agent_connected/agent_disconnected event.
+      if (ws.readyState === ws.OPEN) {
+        ws.send(
+          JSON.stringify({
+            type:
+              agentUserId === userId ? 'agent_connected' : 'agent_disconnected',
+            timestamp: new Date().toISOString(),
+          }),
+        )
+      }
+
+      setupKeepalive(ws)
+
+      ws.on('close', () => {
+        clients.delete(ws)
+        console.log(`[ws] browser client disconnected (total: ${clients.size})`)
+      })
+      ws.on('error', (err: Error) => {
+        console.log(`[ws] client socket error: ${err}`)
+      })
     })
   })
 
