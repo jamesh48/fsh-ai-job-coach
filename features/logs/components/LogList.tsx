@@ -26,7 +26,9 @@ import { NotificationBell } from '@/features/agent/components/NotificationBell'
 import { AgentDialog } from '@/features/ai/components/AgentDialog'
 import { AiAssistDialog } from '@/features/ai/components/AiAssistDialog'
 import { SettingsDialog } from '@/features/settings'
+import { useAppDispatch } from '@/hooks/redux'
 import { useAgentSocket } from '@/lib/agentSocketContext'
+import { api } from '@/lib/api'
 import { useLogs } from '../hooks/useLogs'
 import type { DailyLog, LogFormValues } from '../types'
 import { LogCard } from './LogCard'
@@ -37,6 +39,7 @@ export function LogList() {
   const { agentConnected } = useAgentSocket()
   const { enqueueSnackbar } = useSnackbar()
   const router = useRouter()
+  const dispatch = useAppDispatch()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<DailyLog | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -46,6 +49,7 @@ export function LogList() {
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
+    dispatch(api.util.resetApiState())
     router.push('/login')
     router.refresh()
   }

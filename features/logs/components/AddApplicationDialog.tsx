@@ -109,6 +109,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   const applicationUrl = useWatch({ control, name: 'applicationUrl' })
   const fitScore = useWatch({ control, name: 'fitScore' }) as FitScore | null
   const fitRationale = useWatch({ control, name: 'fitRationale' })
+  const impressionValue = useWatch({ control, name: 'impression' })
 
   useEffect(() => {
     if (open) reset(editing ? { ...editing.app } : { ...EMPTY_APPLICATION })
@@ -173,9 +174,9 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
     setDraftingImpression(true)
     try {
       const result = await draftImpression({
+        impression: app.impression,
         jobTitle: app.jobTitle,
         company: app.company,
-        priority: app.priority,
         roleDescription: app.roleDescription,
       })
       if (!('error' in result) && result.data) {
@@ -536,17 +537,17 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                 multiline
                 rows={4}
                 fullWidth
-                placeholder='Excitement level, concerns, how well it fits your goals…'
+                placeholder='Jot down your raw thoughts — excitement, concerns, fit — then use "Clean up with AI" to polish them…'
                 {...register('impression')}
               />
               <Button
                 size='small'
                 startIcon={<MagicWandIcon size={16} weight='fill' />}
                 onClick={handleDraftImpression}
-                disabled={draftingImpression}
+                disabled={draftingImpression || !impressionValue?.trim()}
                 sx={{ mt: 0.5 }}
               >
-                {draftingImpression ? 'Drafting…' : 'Draft with AI'}
+                {draftingImpression ? 'Cleaning up…' : 'Clean up with AI'}
               </Button>
             </Box>
           </Stack>

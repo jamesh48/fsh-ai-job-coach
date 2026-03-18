@@ -55,9 +55,9 @@ export const api = createApi({
     draftImpression: builder.mutation<
       { impression: string },
       {
+        impression: string
         jobTitle?: string
         company?: string
-        priority?: string
         roleDescription?: string
       }
     >({

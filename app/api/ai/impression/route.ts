@@ -6,15 +6,15 @@ import { getSession } from '@/lib/session'
 export async function POST(
   request: Request,
 ): Promise<NextResponse<{ impression: string } | { error: string }>> {
-  const { jobTitle, company, priority, roleDescription } = await request
+  const { impression, jobTitle, company, roleDescription } = await request
     .json()
     .catch(() => ({}))
 
-  if (!jobTitle && !company && !roleDescription) {
+  if (!impression?.trim()) {
     return NextResponse.json(
       {
         error:
-          'Fill in at least the job title, company, or role description first.',
+          'Write your initial thoughts first, then use this to clean them up.',
       },
       { status: 400 },
     )
@@ -37,9 +37,9 @@ export async function POST(
   }
 
   const context = [
+    `My thoughts: ${impression}`,
     jobTitle && `Role: ${jobTitle}`,
     company && `Company: ${company}`,
-    priority && `Priority: ${priority}`,
     roleDescription && `Role description: ${roleDescription}`,
   ]
     .filter(Boolean)
@@ -51,7 +51,7 @@ export async function POST(
       model: 'claude-sonnet-4-6',
       max_tokens: 200,
       system:
-        'You are helping a job seeker articulate their honest reaction to a job opportunity. Given context about the role, write 2–3 sentences capturing their excitement level, any concerns, and how well it fits their goals. If initial thoughts are provided, polish and condense them. Be candid and first-person. Plain prose only.',
+        'You are helping a job seeker clean up and clarify their own thoughts about a job opportunity. Your job is to polish what they wrote — improving clarity, grammar, and flow — while strictly preserving their ideas, opinions, and voice. Do not add new thoughts, assessments, or enthusiasm they did not express. Keep it first-person, concise (2–3 sentences), and plain prose only.',
       messages: [{ role: 'user', content: context }],
     })
     const impression = message.content

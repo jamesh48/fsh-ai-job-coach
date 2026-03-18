@@ -233,9 +233,9 @@ export function LogForm({
     setImpressionIndex(index)
     try {
       const result = await draftImpression({
+        impression: app.impression,
         jobTitle: app.jobTitle,
         company: app.company,
-        priority: app.priority,
         roleDescription: app.roleDescription,
       })
       if (!('error' in result) && result.data) {
@@ -762,19 +762,22 @@ export function LogForm({
                           multiline
                           rows={4}
                           fullWidth
-                          placeholder='Excitement level, concerns, how well it fits your goals…'
+                          placeholder='Jot down your raw thoughts — excitement, concerns, fit — then use "Clean up with AI" to polish them…'
                           {...register(`applications.${index}.impression`)}
                         />
                         <Button
                           size='small'
                           startIcon={<MagicWandIcon size={16} weight='fill' />}
                           onClick={() => handleDraftImpression(index)}
-                          disabled={impressionIndex === index}
+                          disabled={
+                            impressionIndex === index ||
+                            !watchedApps?.[index]?.impression?.trim()
+                          }
                           sx={{ mt: 0.5 }}
                         >
                           {impressionIndex === index
-                            ? 'Drafting…'
-                            : 'Draft with AI'}
+                            ? 'Cleaning up…'
+                            : 'Clean up with AI'}
                         </Button>
                       </Box>
                     </Stack>
