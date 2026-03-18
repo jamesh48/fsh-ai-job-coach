@@ -7,10 +7,13 @@ An AI-powered job search coaching app built for the modern job hunt. Log your da
 ## Features
 
 - **Daily activity log** — record what you did each day in your job search
-- **Job application tracker** — track status, priority, recruiter info, and notes per application
+- **Job application tracker** — track status, priority, recruiter info, compensation, and notes per application
 - **AI daily coach** — get personalized, actionable recommendations based on your recent activity
 - **AI writing assistant** — get help with cover letters, emails, and anything else you need to write
 - **Auto-fill from URL** — paste a job posting URL and let AI extract the details
+- **Fit score** — AI rates how well a job matches your career profile and resume (Strong / Good / Partial / Weak)
+- **Desktop agent integration** — connects to an Electron companion app via WebSocket; AI-filters incoming emails and calendar events and surfaces relevant ones as in-app notifications
+- **Email notifications** — relevant job search emails (recruiter intros, interview requests, offers, etc.) appear as in-app notifications with dismiss and clear-all; auto-expire after 90 days
 - **ESC/POS printing** — print your daily coaching report to a receipt printer (Chrome/Edge + HTTPS)
 - **Dark mode** — because you'll be using this a lot
 
@@ -20,7 +23,8 @@ An AI-powered job search coaching app built for the modern job hunt. Log your da
 - [Material UI v7](https://mui.com)
 - [Redux Toolkit](https://redux-toolkit.js.org) + RTK Query
 - [Prisma 7](https://prisma.io) + PostgreSQL
-- [Anthropic Claude](https://anthropic.com) (`claude-sonnet-4-6`)
+- [Anthropic Claude](https://anthropic.com) (`claude-sonnet-4-6` / `claude-haiku-4-5`)
+- WebSocket relay server (`ws`) for desktop agent integration
 - Deployed on AWS Fargate via CDK
 
 ## Self-Hosting
@@ -38,10 +42,10 @@ An AI-powered job search coaching app built for the modern job hunt. Log your da
 yarn
 
 # Generate Prisma client
-npx prisma generate
+yarn prisma generate
 
 # Run migrations
-npx prisma migrate deploy
+yarn prisma migrate deploy
 
 # Start dev server
 yarn dev

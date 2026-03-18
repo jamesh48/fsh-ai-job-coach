@@ -22,8 +22,11 @@ import { MagicWandIcon } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useSnackbar } from 'notistack'
 import { useState } from 'react'
+import { NotificationBell } from '@/features/agent/components/NotificationBell'
+import { AgentDialog } from '@/features/ai/components/AgentDialog'
 import { AiAssistDialog } from '@/features/ai/components/AiAssistDialog'
 import { SettingsDialog } from '@/features/settings'
+import { useAgentSocket } from '@/lib/agentSocketContext'
 import { useLogs } from '../hooks/useLogs'
 import type { DailyLog, LogFormValues } from '../types'
 import { LogCard } from './LogCard'
@@ -31,12 +34,14 @@ import { LogForm } from './LogForm'
 
 export function LogList() {
   const { logs, isLoading, error, add, update, remove } = useLogs()
+  const { status: agentStatus } = useAgentSocket()
   const { enqueueSnackbar } = useSnackbar()
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<DailyLog | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [assistOpen, setAssistOpen] = useState(false)
+  const [agentOpen, setAgentOpen] = useState(false)
   const [search, setSearch] = useState('')
 
   async function handleLogout() {
@@ -108,15 +113,40 @@ export function LogList() {
           </Typography>
         </Box>
         <Box display='flex' alignItems='center' gap={1}>
-          <Button
-            variant='contained'
-            disableElevation
-            startIcon={<AddIcon />}
-            onClick={openAdd}
-            size='small'
+          <Tooltip
+            title={
+              agentStatus === 'connected'
+                ? 'Desktop agent connected'
+                : agentStatus === 'connecting'
+                  ? 'Connecting to desktop agent…'
+                  : 'Desktop agent not running'
+            }
           >
-            Add Entry
-          </Button>
+            <IconButton size='small' onClick={() => setAgentOpen(true)}>
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  bgcolor:
+                    agentStatus === 'connected'
+                      ? 'success.main'
+                      : agentStatus === 'connecting'
+                        ? 'warning.main'
+                        : 'text.disabled',
+                  '@keyframes pulse': {
+                    '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+                    '50%': { opacity: 0.5, transform: 'scale(0.85)' },
+                  },
+                  animation:
+                    agentStatus === 'connected'
+                      ? 'pulse 2s ease-in-out infinite'
+                      : 'none',
+                }}
+              />
+            </IconButton>
+          </Tooltip>
+          <NotificationBell />
           <Tooltip title='AI Writing Assistant'>
             <IconButton
               size='small'
@@ -149,7 +179,7 @@ export function LogList() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         sx={{
-          mb: 3,
+          mb: 2,
           '& .MuiOutlinedInput-root': term
             ? {
                 '& fieldset': { borderColor: 'primary.main', borderWidth: 2 },
@@ -180,6 +210,18 @@ export function LogList() {
           },
         }}
       />
+
+      <Box display='flex' justifyContent='flex-end' mb={3}>
+        <Button
+          variant='contained'
+          disableElevation
+          startIcon={<AddIcon />}
+          onClick={openAdd}
+          size='small'
+        >
+          Add Entry
+        </Button>
+      </Box>
 
       {isLoading && (
         <Box display='flex' justifyContent='center' py={10}>
@@ -231,6 +273,7 @@ export function LogList() {
         onClose={() => setOpen(false)}
       />
 
+      <AgentDialog open={agentOpen} onClose={() => setAgentOpen(false)} />
       <AiAssistDialog open={assistOpen} onClose={() => setAssistOpen(false)} />
 
       <SettingsDialog

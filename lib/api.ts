@@ -1,5 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type {
+  AgentCalendarEvent,
+  AgentEmail,
   AiRecommendationResponse,
   StoredRecommendationResponse,
 } from '@/features/ai/types'
@@ -9,7 +11,13 @@ import type { AppSettings, SettingsFormValues } from '@/features/settings/types'
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Log', 'Settings', 'AiRecommendation'],
+  tagTypes: [
+    'Log',
+    'Settings',
+    'AiRecommendation',
+    'AgentEmail',
+    'AgentCalendarEvent',
+  ],
   endpoints: (builder) => ({
     getLogs: builder.query<DailyLog[], void>({
       query: () => '/logs',
@@ -96,6 +104,33 @@ export const api = createApi({
     >({
       query: (body) => ({ url: '/ai/generate-plan', method: 'POST', body }),
     }),
+    getAgentEmails: builder.query<AgentEmail[], void>({
+      query: () => '/agent/emails',
+      providesTags: ['AgentEmail'],
+    }),
+    deleteAgentEmail: builder.mutation<void, string>({
+      query: (id) => ({ url: `/agent/emails/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['AgentEmail'],
+    }),
+    clearAgentEmails: builder.mutation<void, void>({
+      query: () => ({ url: '/agent/emails', method: 'DELETE' }),
+      invalidatesTags: ['AgentEmail'],
+    }),
+    getAgentCalendarEvents: builder.query<AgentCalendarEvent[], void>({
+      query: () => '/agent/calendar-events',
+      providesTags: ['AgentCalendarEvent'],
+    }),
+    deleteAgentCalendarEvent: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `/agent/calendar-events/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['AgentCalendarEvent'],
+    }),
+    clearAgentCalendarEvents: builder.mutation<void, void>({
+      query: () => ({ url: '/agent/calendar-events', method: 'DELETE' }),
+      invalidatesTags: ['AgentCalendarEvent'],
+    }),
     getSettings: builder.query<AppSettings, void>({
       query: () => '/settings',
       providesTags: ['Settings'],
@@ -120,6 +155,12 @@ export const {
   useFillFromUrlMutation,
   useAiAssistMutation,
   useGeneratePlanMutation,
+  useGetAgentEmailsQuery,
+  useDeleteAgentEmailMutation,
+  useClearAgentEmailsMutation,
+  useGetAgentCalendarEventsQuery,
+  useDeleteAgentCalendarEventMutation,
+  useClearAgentCalendarEventsMutation,
   useGetSettingsQuery,
   useUpdateSettingsMutation,
 } = api

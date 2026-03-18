@@ -55,7 +55,7 @@ export async function POST(
   cutoff.setDate(cutoff.getDate() - 30)
   const cutoffStr = cutoff.toISOString().slice(0, 10)
 
-  const [recentLogs, oldPriorityLogs] = await Promise.all([
+  const [recentLogs, oldPriorityLogs, recentEmails] = await Promise.all([
     prisma.dailyLog.findMany({
       where: { date: { gte: cutoffStr } },
       orderBy: { date: 'asc' },
@@ -69,6 +69,10 @@ export async function POST(
         ],
       },
       orderBy: { date: 'asc' },
+    }),
+    prisma.agentEmail.findMany({
+      where: { receivedAt: { gte: cutoff } },
+      orderBy: { receivedAt: 'asc' },
     }),
   ])
 
@@ -90,6 +94,26 @@ export async function POST(
   const today = date ?? new Date().toISOString().slice(0, 10)
   const planContext = buildPlanContext(jobSearchPlan)
 
+  const emailContext =
+    recentEmails.length > 0
+      ? `\nRecent notable emails (auto-detected, AI-filtered):\n${recentEmails
+          .map(
+            (e: {
+              subject: string
+              sender: string
+              date: string
+              classification: unknown
+            }) => {
+              const c = e.classification as {
+                type: string
+                reason: string
+              } | null
+              return `- "${e.subject}" from ${e.sender} (${e.date})${c ? ` [${c.type}]: ${c.reason}` : ''}`
+            },
+          )
+          .join('\n')}\n`
+      : ''
+
   try {
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
@@ -97,7 +121,7 @@ export async function POST(
       max_tokens: 800,
       system: `You are an expert job search coach. The user shares their daily job search activity log.
 Today's date is ${today}. When referring to dates, always write them in human-readable form (e.g. "March 15" or "March 15, 2026") — never use YYYY-MM-DD format.
-${careerProfile ? `\nCandidate profile:\n${careerProfile}\n` : ''}${resume ? `\nCandidate resume:\n${resume}\n` : ''}${linksContext}${planContext}
+${careerProfile ? `\nCandidate profile:\n${careerProfile}\n` : ''}${resume ? `\nCandidate resume:\n${resume}\n` : ''}${linksContext}${planContext}${emailContext}
 
 Job application priority levels — use these to calibrate follow-up advice:
 - Quick Apply: low-effort submission (e.g. LinkedIn Easy Apply). Do NOT recommend following up unless there is a compelling reason.

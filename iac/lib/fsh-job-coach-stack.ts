@@ -67,15 +67,12 @@ export class FshJobCoachStack extends cdk.Stack {
 
     taskDef.addContainer('fsh-job-coach-container', {
       image: ecs.ContainerImage.fromAsset('../'),
-      command: [
-        'sh',
-        '-c',
-        `npx prisma migrate deploy && npx next start -p ${PORT}`,
-      ],
+      command: ['sh', '-c', `yarn prisma migrate deploy && node server.js`],
       environment: {
         DATABASE_URL: databaseUrl,
         SESSION_SECRET: props.sessionSecret,
         NODE_ENV: 'production',
+        PORT: PORT.toString(),
       },
       logging: new ecs.AwsLogDriver({
         streamPrefix: 'fsh-job-coach',

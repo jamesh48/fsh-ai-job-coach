@@ -9,6 +9,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import LightModeIcon from '@mui/icons-material/LightMode'
 import PrintIcon from '@mui/icons-material/Print'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import SecurityIcon from '@mui/icons-material/Security'
 import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness'
 import TuneIcon from '@mui/icons-material/Tune'
@@ -40,6 +41,7 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import { MagicWandIcon, SparkleIcon } from '@phosphor-icons/react'
@@ -76,6 +78,7 @@ const TABS = [
 
 const schema = yup.object({
   anthropicApiKey: yup.string().default(''),
+  agentSecret: yup.string().default(''),
   careerProfile: yup.string().default(''),
   resume: yup.string().default(''),
   jobSearchPlan: yup.string().default(''),
@@ -129,6 +132,7 @@ export function SettingsDialog({ open, onClose }: Props) {
   const { enqueueSnackbar } = useSnackbar()
   const [tab, setTab] = useState(0)
   const [showKey, setShowKey] = useState(false)
+  const [showAgentSecret, setShowAgentSecret] = useState(false)
   const { preference: themePreference, setPreference: setThemePreference } =
     useThemeMode()
   const [autoPrint, setAutoPrint] = useAutoPrint()
@@ -144,6 +148,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       resolver: yupResolver(schema),
       defaultValues: {
         anthropicApiKey: '',
+        agentSecret: '',
         careerProfile: '',
         resume: '',
         jobSearchPlan: '',
@@ -185,6 +190,7 @@ export function SettingsDialog({ open, onClose }: Props) {
     if (settings) {
       reset({
         anthropicApiKey: settings.anthropicApiKey ?? '',
+        agentSecret: settings.agentSecret ?? '',
         careerProfile: settings.careerProfile ?? '',
         resume: settings.resume ?? '',
         jobSearchPlan: settings.jobSearchPlan ?? '',
@@ -877,50 +883,110 @@ export function SettingsDialog({ open, onClose }: Props) {
 
         {/* Security */}
         {tab === 2 && (
-          <Box>
-            <Typography
-              variant='overline'
-              color='text.secondary'
-              fontWeight={600}
-            >
-              Change Password
-            </Typography>
-            <form onSubmit={handleSubmitPw(onPasswordSubmit)}>
-              <Stack spacing={2} mt={1.5}>
-                <TextField
-                  label='Current Password'
-                  type='password'
-                  {...registerPw('currentPassword')}
-                  error={!!pwErrors.currentPassword}
-                  helperText={pwErrors.currentPassword?.message}
-                />
-                <TextField
-                  label='New Password'
-                  type='password'
-                  {...registerPw('newPassword')}
-                  error={!!pwErrors.newPassword}
-                  helperText={pwErrors.newPassword?.message}
-                />
-                <TextField
-                  label='Confirm New Password'
-                  type='password'
-                  {...registerPw('confirmPassword')}
-                  error={!!pwErrors.confirmPassword}
-                  helperText={pwErrors.confirmPassword?.message}
-                />
-                <Box>
-                  <Button
-                    type='submit'
-                    variant='contained'
-                    size='small'
-                    disabled={savingPassword}
-                  >
-                    Change Password
-                  </Button>
-                </Box>
-              </Stack>
-            </form>
-          </Box>
+          <Stack spacing={4}>
+            <Box>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
+                Desktop Agent Secret
+              </Typography>
+              <Typography
+                variant='body2'
+                color='text.secondary'
+                mt={0.5}
+                mb={1.5}
+              >
+                Shared secret used to authenticate the Electron desktop agent
+                WebSocket connection. Set the same value in the desktop agent
+                config.
+              </Typography>
+              <TextField
+                label='Agent Secret'
+                type={showAgentSecret ? 'text' : 'password'}
+                fullWidth
+                helperText='Set the same value in the desktop agent config to allow it to connect.'
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  input: {
+                    readOnly: true,
+                    endAdornment: (
+                      <InputAdornment position='end'>
+                        <Tooltip title='Generate new secret'>
+                          <IconButton
+                            size='small'
+                            onClick={() => {
+                              setValue('agentSecret', crypto.randomUUID())
+                              setShowAgentSecret(true)
+                            }}
+                          >
+                            <RefreshIcon fontSize='small' />
+                          </IconButton>
+                        </Tooltip>
+                        <IconButton
+                          size='small'
+                          onClick={() => setShowAgentSecret((s) => !s)}
+                        >
+                          {showAgentSecret ? (
+                            <VisibilityOffIcon fontSize='small' />
+                          ) : (
+                            <VisibilityIcon fontSize='small' />
+                          )}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                {...register('agentSecret')}
+              />
+            </Box>
+
+            <Box>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
+                Change Password
+              </Typography>
+              <form onSubmit={handleSubmitPw(onPasswordSubmit)}>
+                <Stack spacing={2} mt={1.5}>
+                  <TextField
+                    label='Current Password'
+                    type='password'
+                    {...registerPw('currentPassword')}
+                    error={!!pwErrors.currentPassword}
+                    helperText={pwErrors.currentPassword?.message}
+                  />
+                  <TextField
+                    label='New Password'
+                    type='password'
+                    {...registerPw('newPassword')}
+                    error={!!pwErrors.newPassword}
+                    helperText={pwErrors.newPassword?.message}
+                  />
+                  <TextField
+                    label='Confirm New Password'
+                    type='password'
+                    {...registerPw('confirmPassword')}
+                    error={!!pwErrors.confirmPassword}
+                    helperText={pwErrors.confirmPassword?.message}
+                  />
+                  <Box>
+                    <Button
+                      type='submit'
+                      variant='contained'
+                      size='small'
+                      disabled={savingPassword}
+                    >
+                      Change Password
+                    </Button>
+                  </Box>
+                </Stack>
+              </form>
+            </Box>
+          </Stack>
         )}
       </DialogContent>
 
@@ -931,9 +997,9 @@ export function SettingsDialog({ open, onClose }: Props) {
           variant='outlined'
           disabled={generatingPlan}
         >
-          {tab === 1 ? 'Cancel' : 'Close'}
+          {tab === 1 || tab === 2 ? 'Cancel' : 'Close'}
         </Button>
-        {tab === 1 && (
+        {(tab === 1 || tab === 2) && (
           <Button
             variant='contained'
             disabled={saving || generatingPlan}

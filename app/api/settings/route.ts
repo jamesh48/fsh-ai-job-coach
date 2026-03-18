@@ -16,6 +16,7 @@ export async function GET() {
       : {
           id: ID,
           anthropicApiKey: null,
+          agentSecret: null,
           careerProfile: null,
           resume: null,
           jobSearchPlan: null,
@@ -34,6 +35,7 @@ export async function PUT(request: Request) {
     where: { id: ID },
     update: {
       anthropicApiKey: body.anthropicApiKey || null,
+      agentSecret: body.agentSecret || null,
       careerProfile: body.careerProfile || null,
       resume: body.resume || null,
       jobSearchPlan: body.jobSearchPlan || null,
@@ -42,6 +44,7 @@ export async function PUT(request: Request) {
     create: {
       id: ID,
       anthropicApiKey: body.anthropicApiKey || null,
+      agentSecret: body.agentSecret || null,
       careerProfile: body.careerProfile || null,
       resume: body.resume || null,
       jobSearchPlan: body.jobSearchPlan || null,

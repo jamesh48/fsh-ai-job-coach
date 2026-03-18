@@ -3,6 +3,7 @@ export type ProfileLink = { label: string; url: string }
 export type AppSettings = {
   id: string
   anthropicApiKey: string | null
+  agentSecret: string | null
   careerProfile: string | null
   resume: string | null
   jobSearchPlan: string | null
@@ -12,6 +13,7 @@ export type AppSettings = {
 
 export type SettingsFormValues = {
   anthropicApiKey: string
+  agentSecret: string
   careerProfile: string
   resume: string
   jobSearchPlan: string

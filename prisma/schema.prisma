@@ -15,9 +15,34 @@ model DailyLog {
   updatedAt DateTime @updatedAt
 }
 
+model AgentEmail {
+  id             String   @id @default(cuid())
+  emailId        String   @unique
+  threadId       String
+  subject        String
+  sender         String
+  snippet        String
+  date           String
+  classification Json
+  receivedAt     DateTime @default(now())
+}
+
+model AgentCalendarEvent {
+  id             String   @id @default(cuid())
+  eventId        String   @unique
+  summary        String
+  description    String?
+  start          String?
+  end            String?
+  organizer      String?
+  classification Json
+  receivedAt     DateTime @default(now())
+}
+
 model Settings {
   id                     String   @id @default("singleton")
   anthropicApiKey        String?
+  agentSecret            String?
   passwordHash           String?
   lastRecommendation     String?
   lastRecommendationAt   DateTime?

@@ -5,6 +5,8 @@ import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { SnackbarProvider } from 'notistack'
 import { useMemo } from 'react'
 import { Provider } from 'react-redux'
+import { AgentNotificationHandler } from '@/lib/agentNotificationHandler'
+import { AgentSocketProvider } from '@/lib/agentSocketContext'
 import { store } from '@/lib/store'
 import { ThemeModeProvider, useThemeMode } from '@/lib/themeModeContext'
 
@@ -162,7 +164,10 @@ export function Providers({
   return (
     <Provider store={store}>
       <ThemeModeProvider initialMode={initialThemeMode}>
-        <ThemedApp>{children}</ThemedApp>
+        <AgentSocketProvider>
+          <AgentNotificationHandler />
+          <ThemedApp>{children}</ThemedApp>
+        </AgentSocketProvider>
       </ThemeModeProvider>
     </Provider>
   )
