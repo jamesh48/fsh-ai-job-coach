@@ -1,17 +1,24 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSession } from '@/lib/session'
 
 const EXPIRY_DAYS = 90
 
 export async function GET() {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - EXPIRY_DAYS)
 
   await prisma.agentCalendarEvent.deleteMany({
-    where: { receivedAt: { lt: cutoff } },
+    where: { userId: session.userId, receivedAt: { lt: cutoff } },
   })
 
   const events = await prisma.agentCalendarEvent.findMany({
+    where: { userId: session.userId },
     orderBy: { receivedAt: 'desc' },
     take: 50,
   })
@@ -19,6 +26,13 @@ export async function GET() {
 }
 
 export async function DELETE() {
-  await prisma.agentCalendarEvent.deleteMany({})
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  await prisma.agentCalendarEvent.deleteMany({
+    where: { userId: session.userId },
+  })
   return NextResponse.json({ ok: true })
 }

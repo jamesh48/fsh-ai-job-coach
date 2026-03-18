@@ -8,15 +8,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ authorized: false })
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+  const settings = await prisma.settings.findFirst({
+    where: { agentSecret: secret },
   })
 
-  const expected = settings?.agentSecret
-
-  if (!expected) {
+  if (!settings) {
     return NextResponse.json({ authorized: false })
   }
 
-  return NextResponse.json({ authorized: secret === expected })
+  return NextResponse.json({ authorized: true, userId: settings.userId })
 }

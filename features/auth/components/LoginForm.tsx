@@ -14,21 +14,15 @@ import {
   Typography,
 } from '@mui/material'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 export function LoginForm() {
   const router = useRouter()
-  const [hasPassword, setHasPassword] = useState<boolean | null>(null)
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    fetch('/api/auth/status')
-      .then((r) => r.json())
-      .then((data) => setHasPassword(data.hasPassword))
-  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -38,7 +32,7 @@ export function LoginForm() {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ username, password }),
     })
 
     const data = await res.json()
@@ -51,21 +45,6 @@ export function LoginForm() {
       router.refresh()
     }
   }
-
-  if (hasPassword === null) {
-    return (
-      <Box
-        display='flex'
-        justifyContent='center'
-        alignItems='center'
-        minHeight='100vh'
-      >
-        <CircularProgress />
-      </Box>
-    )
-  }
-
-  const isSetup = !hasPassword
 
   return (
     <Box
@@ -88,23 +67,28 @@ export function LoginForm() {
         </Box>
 
         <Typography variant='body2' color='text.secondary' mb={3}>
-          {isSetup
-            ? 'Create a password to protect your job search data.'
-            : 'Enter your password to continue.'}
+          Sign in to continue. New users are registered automatically.
         </Typography>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
+          <TextField
+            label='Username'
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            fullWidth
+            autoFocus
+            autoComplete='username'
+            sx={{ mb: 2 }}
+          />
           <TextField
             label='Password'
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             fullWidth
-            autoFocus
+            autoComplete='current-password'
             error={!!error}
-            helperText={
-              error || (isSetup ? 'Minimum 8 characters.' : undefined)
-            }
+            helperText={error || 'Minimum 8 characters.'}
             slotProps={{
               input: {
                 endAdornment: (
@@ -133,13 +117,7 @@ export function LoginForm() {
             disabled={loading}
             sx={{ mt: 2 }}
           >
-            {loading ? (
-              <CircularProgress size={20} />
-            ) : isSetup ? (
-              'Create Password'
-            ) : (
-              'Sign In'
-            )}
+            {loading ? <CircularProgress size={20} /> : 'Sign In'}
           </Button>
         </form>
       </Paper>

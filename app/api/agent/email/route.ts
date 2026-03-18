@@ -76,10 +76,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await request.json()
+  const { userId, ...body } = await request.json()
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
+  }
 
   const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+    where: { userId },
   })
 
   const apiKey = settings?.anthropicApiKey
@@ -108,8 +112,9 @@ export async function POST(request: Request) {
   }
 
   await prisma.agentEmail.upsert({
-    where: { emailId: body.id },
+    where: { userId_emailId: { userId, emailId: body.id } },
     create: {
+      userId,
       emailId: body.id,
       threadId: body.threadId,
       subject: body.subject,

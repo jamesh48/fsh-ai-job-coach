@@ -1,12 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSession } from '@/lib/session'
 
 export async function POST(
   request: Request,
 ): Promise<NextResponse<{ plan: string } | { error: string }>> {
   const { startDate, durationWeeks, priorities, additionalContext } =
     await request.json().catch(() => ({}))
+
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   if (!startDate && !durationWeeks && !priorities) {
     return NextResponse.json(
@@ -16,7 +22,7 @@ export async function POST(
   }
 
   const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+    where: { userId: session.userId },
   })
   const apiKey = settings?.anthropicApiKey
   if (!apiKey) {
@@ -60,9 +66,9 @@ Keep the total response under 900 words. Prioritize structure and specificity ov
       .join('')
 
     await prisma.settings.upsert({
-      where: { id: 'singleton' },
+      where: { userId: session.userId },
       update: { jobSearchPlan: plan },
-      create: { id: 'singleton', jobSearchPlan: plan },
+      create: { userId: session.userId, jobSearchPlan: plan },
     })
 
     return NextResponse.json({ plan })

@@ -7,17 +7,34 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id             String               @id @default(cuid())
+  username       String               @unique
+  passwordHash   String
+  createdAt      DateTime             @default(now())
+  settings       Settings?
+  logs           DailyLog[]
+  agentEmails    AgentEmail[]
+  calendarEvents AgentCalendarEvent[]
+}
+
 model DailyLog {
   id        String   @id @default(cuid())
-  date      String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String
   content   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
 }
 
 model AgentEmail {
   id             String   @id @default(cuid())
-  emailId        String   @unique
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailId        String
   threadId       String
   subject        String
   sender         String
@@ -25,11 +42,15 @@ model AgentEmail {
   date           String
   classification Json
   receivedAt     DateTime @default(now())
+
+  @@unique([userId, emailId])
 }
 
 model AgentCalendarEvent {
   id             String   @id @default(cuid())
-  eventId        String   @unique
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId        String
   summary        String
   description    String?
   start          String?
@@ -37,18 +58,21 @@ model AgentCalendarEvent {
   organizer      String?
   classification Json
   receivedAt     DateTime @default(now())
+
+  @@unique([userId, eventId])
 }
 
 model Settings {
-  id                     String   @id @default("singleton")
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   anthropicApiKey        String?
   agentSecret            String?
-  passwordHash           String?
   lastRecommendation     String?
   lastRecommendationAt   DateTime?
   careerProfile          String?
   resume                 String?
   jobSearchPlan          String?
   profileLinks           String?
-  updatedAt              DateTime @updatedAt
+  updatedAt              DateTime  @updatedAt
 }

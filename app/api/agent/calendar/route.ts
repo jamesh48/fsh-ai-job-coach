@@ -76,10 +76,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await request.json()
+  const { userId, ...body } = await request.json()
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
+  }
 
   const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+    where: { userId },
   })
 
   const apiKey = settings?.anthropicApiKey
@@ -109,8 +113,9 @@ export async function POST(request: Request) {
     body.eventId ??
     `${body.summary ?? 'event'}-${body.start ?? Date.now()}`
   await prisma.agentCalendarEvent.upsert({
-    where: { eventId },
+    where: { userId_eventId: { userId, eventId } },
     create: {
+      userId,
       eventId,
       summary: body.summary ?? '',
       description: body.description ?? null,

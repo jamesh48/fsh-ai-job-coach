@@ -1,29 +1,40 @@
-// @ts-check
+import { loadEnvConfig } from '@next/env'
 
-const { loadEnvConfig } = require('@next/env')
 loadEnvConfig(process.cwd())
 
-const { randomUUID } = require('node:crypto')
-const { createServer } = require('node:http')
-const { parse } = require('node:url')
-const next = require('next')
-const { WebSocketServer } = require('ws')
+import { randomUUID } from 'node:crypto'
+import { createServer } from 'node:http'
+import { parse } from 'node:url'
+import next from 'next'
+import { type RawData, type WebSocket, WebSocketServer } from 'ws'
 
 // In-process secret for server.js → Next.js API route authentication.
 // Generated fresh on each startup; both sides share the same process so
 // Next.js API routes can read it from process.env.
-process.env.INTERNAL_SECRET = randomUUID()
+const INTERNAL_SECRET = randomUUID()
+process.env.INTERNAL_SECRET = INTERNAL_SECRET
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = '0.0.0.0'
 const port = parseInt(process.env.PORT ?? '3000', 10)
 
+interface ClassifyResult {
+  relevant: boolean
+  classification: Record<string, unknown> | null
+}
+
+interface AgentMessage {
+  type: string
+  payload: Record<string, unknown>
+}
+
 /**
- * Validate the agent WebSocket secret against Settings DB (env var fallback).
- * @param {string | string[] | undefined} secret
- * @returns {Promise<boolean>}
+ * Validate the agent WebSocket secret against Settings DB.
+ * Returns the userId on success, false on failure.
  */
-async function validateAgentSecret(secret) {
+async function validateAgentSecret(
+  secret: string | string[] | undefined,
+): Promise<string | false> {
   try {
     const res = await fetch(
       `http://localhost:${port}/api/agent/validate-secret`,
@@ -34,37 +45,38 @@ async function validateAgentSecret(secret) {
       },
     )
     if (!res.ok) return false
-    const result = await res.json()
-    return result.authorized === true
+    const result = (await res.json()) as {
+      authorized: boolean
+      userId?: string
+    }
+    return result.authorized && result.userId ? result.userId : false
   } catch {
     return false
   }
 }
 
-/**
- * Classify and conditionally store an email via the internal API route.
- * Returns { relevant, classification } on success, or null on any failure
- * (caller should fail open).
- * @param {object} payload - email_detected payload
- * @returns {Promise<{ relevant: boolean, classification: object | null } | null>}
- */
-async function classifyAndStoreEmail(payload) {
+async function classifyAndStoreEmail(
+  payload: Record<string, unknown>,
+  userId: string,
+): Promise<ClassifyResult | null> {
   try {
     const res = await fetch(`http://localhost:${port}/api/agent/email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-internal-secret': process.env.INTERNAL_SECRET,
+        'x-internal-secret': INTERNAL_SECRET,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ userId, ...payload }),
     })
     if (!res.ok) {
       console.log(`[ws] email classification API error: ${res.status}`)
       return null
     }
-    const result = await res.json()
+    const result = (await res.json()) as ClassifyResult
+    const type =
+      (result.classification as Record<string, string> | null)?.type ?? 'none'
     console.log(
-      `[ws] email classified: relevant=${result.relevant} type=${result.classification?.type ?? 'none'}`,
+      `[ws] email classified: relevant=${result.relevant} type=${type}`,
     )
     return result
   } catch (err) {
@@ -73,30 +85,28 @@ async function classifyAndStoreEmail(payload) {
   }
 }
 
-/**
- * Classify a calendar event via the internal API route.
- * Returns { relevant, classification } on success, or null on any failure
- * (caller should fail open).
- * @param {object} payload - calendar_event payload
- * @returns {Promise<{ relevant: boolean, classification: object | null } | null>}
- */
-async function classifyCalendarEvent(payload) {
+async function classifyCalendarEvent(
+  payload: Record<string, unknown>,
+  userId: string,
+): Promise<ClassifyResult | null> {
   try {
     const res = await fetch(`http://localhost:${port}/api/agent/calendar`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-internal-secret': process.env.INTERNAL_SECRET,
+        'x-internal-secret': INTERNAL_SECRET,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ userId, ...payload }),
     })
     if (!res.ok) {
       console.log(`[ws] calendar classification API error: ${res.status}`)
       return null
     }
-    const result = await res.json()
+    const result = (await res.json()) as ClassifyResult
+    const type =
+      (result.classification as Record<string, string> | null)?.type ?? 'none'
     console.log(
-      `[ws] calendar classified: relevant=${result.relevant} type=${result.classification?.type ?? 'none'}`,
+      `[ws] calendar classified: relevant=${result.relevant} type=${type}`,
     )
     return result
   } catch (err) {
@@ -110,17 +120,11 @@ const PING_INTERVAL_MS = 30_000
 const app = next({ dev, hostname, port })
 const handle = app.getRequestHandler()
 
-/** @type {import('ws').WebSocket | null} */
-let agentSocket = null
+let agentSocket: WebSocket | null = null
+let agentUserId: string | null = null
+const clients = new Set<WebSocket>()
 
-/** @type {Set<import('ws').WebSocket>} */
-const clients = new Set()
-
-/**
- * Forward a raw message buffer to all connected webapp clients.
- * @param {import('ws').RawData} data
- */
-function broadcast(data) {
+function broadcast(data: string | RawData): void {
   for (const client of clients) {
     if (client.readyState === client.OPEN) {
       client.send(data)
@@ -128,20 +132,11 @@ function broadcast(data) {
   }
 }
 
-/**
- * Send a JSON message to all connected webapp clients.
- * @param {object} msg
- */
-function broadcastJSON(msg) {
+function broadcastJSON(msg: Record<string, unknown>): void {
   broadcast(JSON.stringify(msg))
 }
 
-/**
- * Set up ping/pong keepalive on a WebSocket. Terminates the socket if a pong
- * is not received within one interval.
- * @param {import('ws').WebSocket} ws
- */
-function setupKeepalive(ws) {
+function setupKeepalive(ws: WebSocket): void {
   let alive = true
   const timer = setInterval(() => {
     if (!alive) {
@@ -167,9 +162,8 @@ app.prepare().then(() => {
   const clientWss = new WebSocketServer({ noServer: true })
 
   // --- Agent connections (/ws/agent) ---
-  agentWss.on('connection', (ws) => {
+  agentWss.on('connection', (ws: WebSocket) => {
     console.log('[ws] agent connected')
-    // Displace any existing agent connection
     if (agentSocket) {
       agentSocket.terminate()
     }
@@ -179,13 +173,12 @@ app.prepare().then(() => {
       type: 'agent_connected',
       timestamp: new Date().toISOString(),
     })
-
     setupKeepalive(ws)
 
-    ws.on('message', async (data) => {
-      let parsed
+    ws.on('message', async (data: RawData) => {
+      let parsed: AgentMessage
       try {
-        parsed = JSON.parse(data.toString())
+        parsed = JSON.parse(data.toString()) as AgentMessage
       } catch {
         console.log('[ws] agent message unparseable — forwarding as-is')
         broadcast(data)
@@ -193,7 +186,9 @@ app.prepare().then(() => {
       }
 
       if (parsed.type === 'email_detected') {
-        const result = await classifyAndStoreEmail(parsed.payload)
+        const result = agentUserId
+          ? await classifyAndStoreEmail(parsed.payload, agentUserId)
+          : null
         if (result === null) {
           broadcast(data)
         } else if (result.relevant) {
@@ -207,7 +202,9 @@ app.prepare().then(() => {
       }
 
       if (parsed.type === 'calendar_event') {
-        const result = await classifyCalendarEvent(parsed.payload)
+        const result = agentUserId
+          ? await classifyCalendarEvent(parsed.payload, agentUserId)
+          : null
         if (result === null) {
           broadcast(data)
         } else if (result.relevant) {
@@ -220,13 +217,14 @@ app.prepare().then(() => {
         return
       }
 
-      broadcast(data) // all other events relay as-is
+      broadcast(data)
     })
 
     ws.on('close', () => {
       console.log('[ws] agent disconnected')
       if (agentSocket === ws) {
         agentSocket = null
+        agentUserId = null
       }
       broadcastJSON({
         type: 'agent_disconnected',
@@ -234,13 +232,13 @@ app.prepare().then(() => {
       })
     })
 
-    ws.on('error', (err) => {
+    ws.on('error', (err: Error) => {
       console.log(`[ws] agent socket error: ${err}`)
     })
   })
 
   // --- Webapp client connections (/ws/client) ---
-  clientWss.on('connection', (ws) => {
+  clientWss.on('connection', (ws: WebSocket) => {
     clients.add(ws)
     console.log(`[ws] browser client connected (total: ${clients.size})`)
     setupKeepalive(ws)
@@ -249,7 +247,7 @@ app.prepare().then(() => {
       clients.delete(ws)
       console.log(`[ws] browser client disconnected (total: ${clients.size})`)
     })
-    ws.on('error', (err) => {
+    ws.on('error', (err: Error) => {
       console.log(`[ws] client socket error: ${err}`)
     })
   })
@@ -259,13 +257,14 @@ app.prepare().then(() => {
     const { pathname, query } = parse(req.url ?? '/', true)
 
     if (pathname === '/ws/agent') {
-      validateAgentSecret(query.secret).then((authorized) => {
-        if (!authorized) {
+      validateAgentSecret(query.secret).then((userId) => {
+        if (!userId) {
           console.log('[ws] agent auth failed — rejecting upgrade')
           socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
           socket.destroy()
           return
         }
+        agentUserId = userId
         agentWss.handleUpgrade(req, socket, head, (ws) => {
           agentWss.emit('connection', ws, req)
         })

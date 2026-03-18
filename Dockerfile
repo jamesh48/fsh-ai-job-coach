@@ -9,7 +9,7 @@ RUN yarn install --frozen-lockfile
 
 COPY prisma/ ./prisma/
 COPY prisma.config.ts ./
-RUN npx prisma generate
+RUN yarn prisma generate
 
 COPY . .
 RUN yarn build
@@ -17,4 +17,4 @@ RUN yarn build
 ENV NODE_ENV=production
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+CMD ["sh", "-c", "yarn prisma migrate deploy && yarn tsx server.ts"]

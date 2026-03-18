@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSession } from '@/lib/session'
 
 export async function POST(
   request: Request,
@@ -19,8 +20,13 @@ export async function POST(
     )
   }
 
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+    where: { userId: session.userId },
   })
   const apiKey = settings?.anthropicApiKey
   if (!apiKey) {

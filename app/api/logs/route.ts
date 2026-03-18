@@ -1,19 +1,31 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
+import { getSession } from '@/lib/session'
 
 export async function GET() {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const logs = await prisma.dailyLog.findMany({
+    where: { userId: session.userId },
     orderBy: { date: 'desc' },
   })
   return NextResponse.json(logs)
 }
 
 export async function POST(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json()
   try {
     const log = await prisma.dailyLog.create({
-      data: { date: body.date, content: body.content },
+      data: { userId: session.userId, date: body.date, content: body.content },
     })
     return NextResponse.json(log, { status: 201 })
   } catch (e) {

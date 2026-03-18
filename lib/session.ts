@@ -1,4 +1,4 @@
-import { SignJWT } from 'jose'
+import { jwtVerify, SignJWT } from 'jose'
 import { cookies } from 'next/headers'
 
 const SESSION_COOKIE = 'session'
@@ -11,8 +11,8 @@ function getSecret() {
   return new TextEncoder().encode(secret)
 }
 
-export async function createSession() {
-  const token = await new SignJWT({ authenticated: true })
+export async function createSession(userId: string) {
+  const token = await new SignJWT({ authenticated: true, userId })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime(`${EXPIRES_IN}s`)
     .sign(getSecret())
@@ -25,6 +25,20 @@ export async function createSession() {
     maxAge: EXPIRES_IN,
     path: '/',
   })
+}
+
+export async function getSession(): Promise<{ userId: string } | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(SESSION_COOKIE)?.value
+  if (!token) return null
+  try {
+    const { payload } = await jwtVerify(token, getSecret())
+    const userId = payload.userId
+    if (typeof userId !== 'string') return null
+    return { userId }
+  } catch {
+    return null
+  }
 }
 
 export async function destroySession() {

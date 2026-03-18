@@ -4,35 +4,43 @@ import { prisma } from '@/lib/prisma'
 import { createSession } from '@/lib/session'
 
 export async function POST(request: Request) {
-  const { password } = await request.json()
+  const { username, password } = await request.json()
 
-  const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+  if (!username || typeof username !== 'string' || username.trim().length < 2) {
+    return NextResponse.json(
+      { error: 'Username must be at least 2 characters.' },
+      { status: 400 },
+    )
+  }
+
+  if (!password || password.length < 8) {
+    return NextResponse.json(
+      { error: 'Password must be at least 8 characters.' },
+      { status: 400 },
+    )
+  }
+
+  const trimmed = username.trim()
+  const existing = await prisma.user.findUnique({
+    where: { username: trimmed },
   })
 
-  // First-time setup: no password set yet
-  if (!settings?.passwordHash) {
-    if (!password || password.length < 8) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters.' },
-        { status: 400 },
-      )
-    }
+  if (!existing) {
+    // Registration — open to anyone
     const hash = await bcrypt.hash(password, 12)
-    await prisma.settings.upsert({
-      where: { id: 'singleton' },
-      update: { passwordHash: hash },
-      create: { id: 'singleton', passwordHash: hash },
+    const user = await prisma.user.create({
+      data: { username: trimmed, passwordHash: hash },
     })
-    await createSession()
+    await createSession(user.id)
     return NextResponse.json({ ok: true })
   }
 
-  const valid = await bcrypt.compare(password, settings.passwordHash)
+  // Login
+  const valid = await bcrypt.compare(password, existing.passwordHash)
   if (!valid) {
     return NextResponse.json({ error: 'Incorrect password.' }, { status: 401 })
   }
 
-  await createSession()
+  await createSession(existing.id)
   return NextResponse.json({ ok: true })
 }

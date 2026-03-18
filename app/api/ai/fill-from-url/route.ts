@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSession } from '@/lib/session'
 
 interface FillResult {
   jobTitle?: string
@@ -71,8 +72,13 @@ export async function POST(
     return NextResponse.json({ error: 'URL is required.' }, { status: 400 })
   }
 
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const settings = await prisma.settings.findUnique({
-    where: { id: 'singleton' },
+    where: { userId: session.userId },
   })
   const apiKey = settings?.anthropicApiKey
   const careerProfile = settings?.careerProfile ?? null

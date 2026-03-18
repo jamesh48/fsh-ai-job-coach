@@ -5,13 +5,22 @@ import type {
   StoredRecommendationResponse,
 } from '@/features/ai/types'
 import { prisma } from '@/lib/prisma'
-
-const ID = 'singleton'
+import { getSession } from '@/lib/session'
 
 export async function GET(): Promise<
   NextResponse<StoredRecommendationResponse>
 > {
-  const settings = await prisma.settings.findUnique({ where: { id: ID } })
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json(
+      { recommendation: null, date: null },
+      { status: 401 },
+    )
+  }
+
+  const settings = await prisma.settings.findUnique({
+    where: { userId: session.userId },
+  })
   return NextResponse.json({
     recommendation: settings?.lastRecommendation ?? null,
     date: settings?.lastRecommendationAt
@@ -28,9 +37,14 @@ function buildPlanContext(plan: string | null): string {
 export async function POST(
   request: Request,
 ): Promise<NextResponse<AiRecommendationResponse | { error: string }>> {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { date } = await request.json().catch(() => ({}))
   const settings = await prisma.settings.findUnique({
-    where: { id: ID },
+    where: { userId: session.userId },
   })
   const apiKey = settings?.anthropicApiKey
   const careerProfile = settings?.careerProfile
@@ -57,11 +71,12 @@ export async function POST(
 
   const [recentLogs, oldPriorityLogs, recentEmails] = await Promise.all([
     prisma.dailyLog.findMany({
-      where: { date: { gte: cutoffStr } },
+      where: { userId: session.userId, date: { gte: cutoffStr } },
       orderBy: { date: 'asc' },
     }),
     prisma.dailyLog.findMany({
       where: {
+        userId: session.userId,
         date: { lt: cutoffStr },
         OR: [
           { content: { contains: 'Priority: Hot Lead' } },
@@ -71,7 +86,7 @@ export async function POST(
       orderBy: { date: 'asc' },
     }),
     prisma.agentEmail.findMany({
-      where: { receivedAt: { gte: cutoff } },
+      where: { userId: session.userId, receivedAt: { gte: cutoff } },
       orderBy: { receivedAt: 'asc' },
     }),
   ])
@@ -152,13 +167,13 @@ Be direct and concrete. No preamble. Use markdown formatting (bold headers, shor
       .join('')
 
     await prisma.settings.upsert({
-      where: { id: ID },
+      where: { userId: session.userId },
       update: {
         lastRecommendation: recommendation,
         lastRecommendationAt: new Date(),
       },
       create: {
-        id: ID,
+        userId: session.userId,
         lastRecommendation: recommendation,
         lastRecommendationAt: new Date(),
       },

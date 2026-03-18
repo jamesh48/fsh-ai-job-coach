@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-const ID = 'singleton'
+import { getSession } from '@/lib/session'
 
 export async function GET() {
-  const settings = await prisma.settings.findUnique({ where: { id: ID } })
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const settings = await prisma.settings.findUnique({
+    where: { userId: session.userId },
+  })
   return NextResponse.json(
     settings
       ? {
@@ -14,7 +20,6 @@ export async function GET() {
             : [],
         }
       : {
-          id: ID,
           anthropicApiKey: null,
           agentSecret: null,
           careerProfile: null,
@@ -27,12 +32,17 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json()
   const profileLinksJson = body.profileLinks?.length
     ? JSON.stringify(body.profileLinks)
     : null
   const settings = await prisma.settings.upsert({
-    where: { id: ID },
+    where: { userId: session.userId },
     update: {
       anthropicApiKey: body.anthropicApiKey || null,
       agentSecret: body.agentSecret || null,
@@ -42,7 +52,7 @@ export async function PUT(request: Request) {
       profileLinks: profileLinksJson,
     },
     create: {
-      id: ID,
+      userId: session.userId,
       anthropicApiKey: body.anthropicApiKey || null,
       agentSecret: body.agentSecret || null,
       careerProfile: body.careerProfile || null,

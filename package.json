@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node server.js",
+    "dev": "tsx server.ts",
     "build": "next build",
-    "start": "node server.js",
+    "start": "tsx server.ts",
     "lint": "biome check",
     "format": "biome format --write",
     "prepare": "husky"
@@ -51,6 +51,7 @@
     "@types/react-dom": "^19",
     "@types/w3c-web-usb": "^1.0.13",
     "@types/ws": "^8.18.1",
+    "tsx": "^4.19.4",
     "husky": "^9.1.7",
     "lint-staged": "^16.3.2",
     "prisma": "^7.5.0",
