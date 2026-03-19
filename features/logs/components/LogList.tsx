@@ -34,7 +34,7 @@ import type { DailyLog, LogFormValues } from '../types'
 import { LogCard } from './LogCard'
 import { LogForm } from './LogForm'
 
-export function LogList() {
+export function LogList({ onSearch }: { onSearch?: () => void }) {
   const { logs, isLoading, error, add, update, remove } = useLogs()
   const { agentConnected, reset: resetSocket } = useAgentSocket()
   const { enqueueSnackbar } = useSnackbar()
@@ -46,6 +46,11 @@ export function LogList() {
   const [assistOpen, setAssistOpen] = useState(false)
   const [agentOpen, setAgentOpen] = useState(false)
   const [search, setSearch] = useState('')
+
+  function handleSearch(value: string) {
+    setSearch(value)
+    if (value) onSearch?.()
+  }
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -174,7 +179,7 @@ export function LogList() {
         size='small'
         placeholder='Search entries…'
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={(e) => handleSearch(e.target.value)}
         sx={{
           mb: 2,
           '& .MuiOutlinedInput-root': term

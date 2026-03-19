@@ -19,7 +19,7 @@ export function HomeLayout() {
           overflowY: 'auto',
         }}
       >
-        <LogList />
+        <LogList onSearch={() => setCollapsed(true)} />
       </div>
       <div
         style={{
