@@ -12,6 +12,7 @@ async function classifyEmail(
   apiKey: string,
   subject: string,
   snippet: string,
+  sender: string,
 ): Promise<EmailClassification | null> {
   try {
     const client = new Anthropic({ apiKey })
@@ -50,12 +51,15 @@ async function classifyEmail(
       messages: [
         {
           role: 'user',
-          content: `You are filtering job search emails. Classify whether this email is worth surfacing to a job seeker.
+          content: `You are filtering job search emails for a job seeker. Classify whether this email is worth surfacing to them.
+
+IMPORTANT: Only classify as relevant emails that were RECEIVED by the job seeker — i.e. emails sent to them by a recruiter, hiring manager, or employer. If the sender appears to be the job seeker themselves (e.g. the email is in their Sent folder, or the sender address matches a personal name rather than a company/recruiter), return relevant: false.
 
 Return relevant: true ONLY for emails representing real human interaction or next steps: recruiter intros, interview requests or confirmations, hiring manager outreach, requests for availability, offer details, rejection letters from humans.
 
-Return relevant: false for automated emails: application confirmations, "your application was received", job alert digests, LinkedIn notifications, automated status updates.
+Return relevant: false for: automated emails (application confirmations, "your application was received", job alert digests, LinkedIn notifications, automated status updates), AND emails sent by the job seeker themselves.
 
+From: ${sender}
 Subject: ${subject}
 Snippet: ${snippet}`,
         },
@@ -100,7 +104,7 @@ export async function POST(request: Request) {
 
   const classification = isBypass
     ? { relevant: true, type: 'other', reason: 'Test bypass' }
-    : await classifyEmail(apiKey, body.subject, body.snippet)
+    : await classifyEmail(apiKey, body.subject, body.snippet, body.from ?? '')
 
   // Classification failed — fail open (don't store)
   if (!classification) {
