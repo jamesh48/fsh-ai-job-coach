@@ -333,6 +333,12 @@ export function AiAssistDialog({
               </Box>
             </Box>
             <Box
+              onCopy={(e) => {
+                const selection = window.getSelection()
+                if (!selection || selection.isCollapsed) return
+                e.preventDefault()
+                e.clipboardData.setData('text/plain', selection.toString())
+              }}
               sx={{
                 fontSize: '0.875rem',
                 lineHeight: 1.6,
