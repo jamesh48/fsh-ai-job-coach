@@ -2,6 +2,7 @@
 
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined'
+import CloseIcon from '@mui/icons-material/Close'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
@@ -43,6 +44,7 @@ import type {
 import {
   ACTIVITY_LABELS,
   FIT_SCORE_DISPLAY,
+  formatPhone,
   parseContent,
   STATUS_LABELS,
   serializeToContent,
@@ -483,7 +485,7 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                                   href={`tel:${app.recruiterPhone}`}
                                   style={{ color: 'inherit' }}
                                 >
-                                  {app.recruiterPhone}
+                                  {formatPhone(app.recruiterPhone)}
                                 </a>
                               </>
                             )}
@@ -757,7 +759,16 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
         maxWidth='md'
         slotProps={{ paper: { sx: { minHeight: '60vh' } } }}
       >
-        <DialogTitle>{viewingDoc?.label}</DialogTitle>
+        <DialogTitle sx={{ pr: 6 }}>
+          {viewingDoc?.label}
+          <IconButton
+            size='small'
+            onClick={() => setViewingDoc(null)}
+            sx={{ position: 'absolute', top: 12, right: 12 }}
+          >
+            <CloseIcon fontSize='small' />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <Box
             sx={{

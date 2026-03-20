@@ -2,6 +2,7 @@
 
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import CloseIcon from '@mui/icons-material/Close'
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline'
@@ -12,6 +13,7 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  IconButton,
   Stack,
   Typography,
 } from '@mui/material'
@@ -241,8 +243,8 @@ export function AgentDialog({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='sm'>
-      <DialogTitle>
-        <Box display='flex' alignItems='center' justifyContent='space-between'>
+      <DialogTitle sx={{ pr: 6 }}>
+        <Box display='flex' alignItems='center' gap={1.5}>
           Desktop Agent
           <Chip
             label={agentConnected ? 'Connected' : 'Not running'}
@@ -259,6 +261,13 @@ export function AgentDialog({ open, onClose }: Props) {
             }}
           />
         </Box>
+        <IconButton
+          size='small'
+          onClick={onClose}
+          sx={{ position: 'absolute', top: 12, right: 12 }}
+        >
+          <CloseIcon fontSize='small' />
+        </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ pb: 3 }}>

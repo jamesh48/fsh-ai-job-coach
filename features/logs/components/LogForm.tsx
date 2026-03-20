@@ -46,6 +46,7 @@ import {
 import type { FitScore, JobApplicationEntry } from '../applicationFormUtils'
 import {
   EMPTY_APPLICATION,
+  formatPhone,
   parseContent,
   SOURCE_SUGGESTIONS,
   STATUS_LABELS,
@@ -712,6 +713,12 @@ export function LogForm({
                           type='tel'
                           placeholder='+1 (555) 000-0000'
                           {...register(`applications.${index}.recruiterPhone`)}
+                          onChange={(e) =>
+                            setValue(
+                              `applications.${index}.recruiterPhone`,
+                              formatPhone(e.target.value),
+                            )
+                          }
                         />
                         <TextField
                           label='Recruiter Email'

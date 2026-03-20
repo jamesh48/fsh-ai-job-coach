@@ -1,6 +1,7 @@
 'use client'
 
 import { yupResolver } from '@hookform/resolvers/yup'
+import CloseIcon from '@mui/icons-material/Close'
 import {
   Box,
   Button,
@@ -10,6 +11,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -42,6 +44,7 @@ import type {
 import {
   EMPTY_APPLICATION,
   FIT_SCORE_DISPLAY,
+  formatPhone,
   parseContent,
   SOURCE_SUGGESTIONS,
   STATUS_LABELS,
@@ -252,8 +255,15 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth='md'>
-      <DialogTitle>
+      <DialogTitle sx={{ pr: 6 }}>
         {editing ? 'Edit Job Application' : 'Add Job Application'}
+        <IconButton
+          size='small'
+          onClick={onClose}
+          sx={{ position: 'absolute', top: 12, right: 12 }}
+        >
+          <CloseIcon fontSize='small' />
+        </IconButton>
       </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
@@ -448,6 +458,9 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
                 type='tel'
                 placeholder='+1 (555) 000-0000'
                 {...register('recruiterPhone')}
+                onChange={(e) =>
+                  setValue('recruiterPhone', formatPhone(e.target.value))
+                }
               />
               <TextField
                 label='Recruiter Email'

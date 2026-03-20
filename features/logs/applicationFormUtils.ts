@@ -134,6 +134,17 @@ export const EMPTY_APPLICATION: JobApplicationEntry = {
   documents: [],
 }
 
+export function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  if (!digits) return ''
+  if (digits.length === 11 && digits[0] === '1') {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 11)}`
+  }
+  if (digits.length <= 3) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
+}
+
 export function serializeToContent(values: ParsedContent): string {
   const parts: string[] = []
 

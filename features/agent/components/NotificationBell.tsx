@@ -130,6 +130,13 @@ function EmailDetailDialog({
             )}
           </Box>
         </Box>
+        <IconButton
+          size='small'
+          onClick={onClose}
+          sx={{ position: 'absolute', top: 12, right: 12 }}
+        >
+          <CloseIcon fontSize='small' />
+        </IconButton>
       </DialogTitle>
       <DialogContent sx={{ pb: 3 }}>
         <Stack spacing={2.5}>
@@ -245,6 +252,13 @@ function CalendarDetailDialog({
             )}
           </Box>
         </Box>
+        <IconButton
+          size='small'
+          onClick={onClose}
+          sx={{ position: 'absolute', top: 12, right: 12 }}
+        >
+          <CloseIcon fontSize='small' />
+        </IconButton>
       </DialogTitle>
       <DialogContent sx={{ pb: 3 }}>
         <Stack spacing={2.5}>
@@ -628,7 +642,12 @@ export function NotificationBell() {
   return (
     <>
       <Tooltip title='Notifications'>
-        <IconButton size='small' ref={anchorRef} onClick={handleOpen}>
+        <IconButton
+          size='small'
+          ref={anchorRef}
+          onClick={handleOpen}
+          sx={{ '&:hover': { color: 'primary.main' } }}
+        >
           <Badge badgeContent={totalUnread} color='error' max={99}>
             <NotificationsNoneIcon fontSize='small' />
           </Badge>
@@ -638,7 +657,10 @@ export function NotificationBell() {
       <Popover
         open={open}
         anchorEl={anchorRef.current}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false)
+          setTab(0)
+        }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{

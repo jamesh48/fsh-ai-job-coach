@@ -1,6 +1,7 @@
 'use client'
 
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd'
+import CloseIcon from '@mui/icons-material/Close'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DownloadIcon from '@mui/icons-material/Download'
 import {
@@ -228,8 +229,15 @@ export function AiAssistDialog({
       maxWidth='md'
       slotProps={{ paper: { sx: { minHeight: '75vh' } } }}
     >
-      <DialogTitle sx={{ pb: hasJobContext ? 1 : undefined }}>
+      <DialogTitle sx={{ pb: hasJobContext ? 1 : undefined, pr: 6 }}>
         AI Writing Assistant
+        <IconButton
+          size='small'
+          onClick={onClose}
+          sx={{ position: 'absolute', top: 12, right: 12 }}
+        >
+          <CloseIcon fontSize='small' />
+        </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ pt: '1.5rem !important' }}>

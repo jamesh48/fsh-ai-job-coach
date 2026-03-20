@@ -154,7 +154,6 @@ export function LogList({ onSearch }: { onSearch?: () => void }) {
               size='small'
               onClick={() => setAssistOpen(true)}
               sx={{
-                color: 'text.secondary',
                 '&:hover': { color: 'secondary.main' },
               }}
             >
@@ -162,12 +161,20 @@ export function LogList({ onSearch }: { onSearch?: () => void }) {
             </IconButton>
           </Tooltip>
           <Tooltip title='Settings'>
-            <IconButton size='small' onClick={() => setSettingsOpen(true)}>
+            <IconButton
+              size='small'
+              onClick={() => setSettingsOpen(true)}
+              sx={{ '&:hover': { color: 'primary.main' } }}
+            >
               <SettingsIcon fontSize='small' />
             </IconButton>
           </Tooltip>
           <Tooltip title='Sign out'>
-            <IconButton size='small' onClick={handleLogout}>
+            <IconButton
+              size='small'
+              onClick={handleLogout}
+              sx={{ '&:hover': { color: 'error.main' } }}
+            >
               <LogoutIcon fontSize='small' />
             </IconButton>
           </Tooltip>

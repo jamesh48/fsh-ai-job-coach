@@ -203,6 +203,29 @@ model AgentCalendarEvent {
 - Biome enforces single quotes and semicolons only as needed
 - Do NOT add `* { box-sizing: border-box }` to globals.css — MUI CssBaseline owns box-sizing via the `inherit` pattern and a duplicate rule breaks width calculations
 
+### Dialogs
+- Every MUI Dialog must have a close `IconButton` in the upper-right corner of `DialogTitle`
+- Pattern: add `sx={{ pr: 6 }}` to `<DialogTitle>`, then render an absolutely-positioned `IconButton` inside it:
+  ```tsx
+  <DialogTitle sx={{ pr: 6 }}>
+    Title text
+    <IconButton
+      size='small'
+      onClick={onClose}
+      sx={{ position: 'absolute', top: 12, right: 12 }}
+    >
+      <CloseIcon fontSize='small' />
+    </IconButton>
+  </DialogTitle>
+  ```
+
+### Icon hover colors (header / toolbar icons)
+- Default state: inherit (no explicit color set)
+- Hover colors by semantic role:
+  - **Primary actions / navigation** (Settings, Notifications): `'&:hover': { color: 'primary.main' }` — indigo
+  - **AI actions** (AI Writing Assistant): `'&:hover': { color: 'secondary.main' }` — violet
+  - **Destructive actions** (Sign out): `'&:hover': { color: 'error.main' }` — red
+
 ## Theme
 - Defined in `app/providers.tsx` via `createAppTheme(mode: 'light' | 'dark')`
 - **Primary**: Indigo — `#4F46E5` (light) / `#818CF8` (dark)
