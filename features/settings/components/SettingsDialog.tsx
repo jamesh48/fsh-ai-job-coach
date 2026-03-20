@@ -2,7 +2,9 @@
 
 import { yupResolver } from '@hookform/resolvers/yup'
 import AddIcon from '@mui/icons-material/Add'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import CloseIcon from '@mui/icons-material/Close'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import EditIcon from '@mui/icons-material/Edit'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
@@ -14,12 +16,12 @@ import SecurityIcon from '@mui/icons-material/Security'
 import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness'
 import TuneIcon from '@mui/icons-material/Tune'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
-import VisibilityIcon from '@mui/icons-material/Visibility'
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import {
+  Alert,
   Autocomplete,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -133,10 +135,8 @@ const passwordSchema = yup.object({
 export function SettingsDialog({ open, onClose }: Props) {
   const { enqueueSnackbar } = useSnackbar()
   const [tab, setTab] = useState(0)
-  const [showKey, setShowKey] = useState(false)
   const [parsingResume, setParsing] = useState(false)
   const resumeFileRef = useRef<HTMLInputElement>(null)
-  const [showAgentSecret, setShowAgentSecret] = useState(false)
   const { preference: themePreference, setPreference: setThemePreference } =
     useThemeMode()
   const [autoPrint, setAutoPrint] = useAutoPrint()
@@ -145,10 +145,16 @@ export function SettingsDialog({ open, onClose }: Props) {
   const usbSupported = typeof navigator !== 'undefined' && 'usb' in navigator
 
   const { data: me } = useGetMeQuery(undefined, { skip: !open })
-  const { data: settings } = useGetSettingsQuery(undefined, { skip: !open })
+  const { data: settings } = useGetSettingsQuery(undefined, {
+    skip: !open,
+    refetchOnMountOrArgChange: true,
+  })
   const [updateSettings, { isLoading: saving }] = useUpdateSettingsMutation()
 
-  const { register, handleSubmit, reset, setValue, control } =
+  const pendingSecretRef = useRef<string | null>(null)
+  const [isGeneratingSecret, setIsGeneratingSecret] = useState(false)
+
+  const { register, handleSubmit, reset, setValue, getValues, control } =
     useForm<SettingsFormValues>({
       resolver: yupResolver(schema),
       defaultValues: {
@@ -161,6 +167,7 @@ export function SettingsDialog({ open, onClose }: Props) {
     })
 
   const jobSearchPlan = useWatch({ control, name: 'jobSearchPlan' })
+  const agentSecretValue = useWatch({ control, name: 'agentSecret' })
 
   // Plan builder local state (not persisted — just used to generate the plan)
   const [planStartDate, setPlanStartDate] = useState('')
@@ -195,7 +202,7 @@ export function SettingsDialog({ open, onClose }: Props) {
     if (settings) {
       reset({
         anthropicApiKey: '',
-        agentSecret: '',
+        agentSecret: pendingSecretRef.current ?? '',
         careerProfile: settings.careerProfile ?? '',
         resume: settings.resume ?? '',
         jobSearchPlan: settings.jobSearchPlan ?? '',
@@ -209,6 +216,7 @@ export function SettingsDialog({ open, onClose }: Props) {
     if (!open) {
       setTab(0)
       setEditingPlan(false)
+      pendingSecretRef.current = null
     }
   }, [open])
 
@@ -311,6 +319,7 @@ export function SettingsDialog({ open, onClose }: Props) {
   async function onSubmit(values: SettingsFormValues) {
     try {
       await updateSettings({ ...values, profileLinks }).unwrap()
+      pendingSecretRef.current = null
       enqueueSnackbar('Settings saved.', { variant: 'success' })
       onClose()
     } catch {
@@ -480,28 +489,40 @@ export function SettingsDialog({ open, onClose }: Props) {
         {tab === 1 && (
           <Stack spacing={3}>
             <Box>
-              <Typography
-                variant='overline'
-                color='text.secondary'
-                fontWeight={600}
-              >
-                AI Integration
-              </Typography>
+              <Stack direction='row' spacing={1} alignItems='center'>
+                <Typography
+                  variant='overline'
+                  color='text.secondary'
+                  fontWeight={600}
+                >
+                  AI Integration
+                </Typography>
+                {settings?.hasApiKey && (
+                  <Chip
+                    icon={<CheckCircleOutlineIcon />}
+                    label='Configured'
+                    color='success'
+                    size='small'
+                    variant='outlined'
+                  />
+                )}
+              </Stack>
               <Stack spacing={2} mt={1.5}>
                 {settings?.hasApiKey && (
-                  <Typography variant='body2' color='text.secondary'>
-                    Key is set:{' '}
-                    <Box
-                      component='span'
-                      sx={{ fontFamily: 'monospace', color: 'text.primary' }}
-                    >
-                      {settings.apiKeyHint}
-                    </Box>
-                  </Typography>
+                  <Box
+                    component='span'
+                    sx={{
+                      fontFamily: 'monospace',
+                      fontSize: '0.8rem',
+                      color: 'text.secondary',
+                    }}
+                  >
+                    {settings.apiKeyHint}
+                  </Box>
                 )}
                 <TextField
                   label='Anthropic API Key'
-                  type={showKey ? 'text' : 'password'}
+                  type='password'
                   placeholder={
                     settings?.hasApiKey
                       ? 'Leave blank to keep existing key'
@@ -510,22 +531,6 @@ export function SettingsDialog({ open, onClose }: Props) {
                   helperText='Required to use AI coaching features.'
                   slotProps={{
                     inputLabel: { shrink: true },
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position='end'>
-                          <IconButton
-                            size='small'
-                            onClick={() => setShowKey((s) => !s)}
-                          >
-                            {showKey ? (
-                              <VisibilityOffIcon fontSize='small' />
-                            ) : (
-                              <VisibilityIcon fontSize='small' />
-                            )}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    },
                   }}
                   {...register('anthropicApiKey')}
                 />
@@ -1011,13 +1016,24 @@ export function SettingsDialog({ open, onClose }: Props) {
             </Box>
 
             <Box>
-              <Typography
-                variant='overline'
-                color='text.secondary'
-                fontWeight={600}
-              >
-                Desktop Agent Secret
-              </Typography>
+              <Stack direction='row' spacing={1} alignItems='center'>
+                <Typography
+                  variant='overline'
+                  color='text.secondary'
+                  fontWeight={600}
+                >
+                  Desktop Agent Secret
+                </Typography>
+                {settings?.hasAgentSecret && (
+                  <Chip
+                    icon={<CheckCircleOutlineIcon />}
+                    label='Configured'
+                    color='success'
+                    size='small'
+                    variant='outlined'
+                  />
+                )}
+              </Stack>
               <Typography
                 variant='body2'
                 color='text.secondary'
@@ -1028,15 +1044,15 @@ export function SettingsDialog({ open, onClose }: Props) {
                 WebSocket connection. Set the same value in the desktop agent
                 config.
               </Typography>
-              {settings?.hasAgentSecret && (
-                <Typography variant='body2' color='text.secondary' mb={1.5}>
-                  Secret is set. Use Generate to replace it.
-                </Typography>
-              )}
               <TextField
                 label='Agent Secret'
-                type={showAgentSecret ? 'text' : 'password'}
+                type='text'
                 fullWidth
+                placeholder={
+                  settings?.hasAgentSecret
+                    ? 'Leave blank to keep existing secret'
+                    : 'Click generate to create a secret'
+                }
                 helperText='Set the same value in the desktop agent config to allow it to connect.'
                 slotProps={{
                   inputLabel: { shrink: true },
@@ -1044,33 +1060,63 @@ export function SettingsDialog({ open, onClose }: Props) {
                     readOnly: true,
                     endAdornment: (
                       <InputAdornment position='end'>
+                        {agentSecretValue && (
+                          <Tooltip title='Copy secret'>
+                            <IconButton
+                              size='small'
+                              onClick={() => {
+                                navigator.clipboard.writeText(agentSecretValue)
+                                enqueueSnackbar('Secret copied to clipboard.', {
+                                  variant: 'success',
+                                })
+                              }}
+                              sx={{ '&:hover': { color: 'primary.main' } }}
+                            >
+                              <ContentCopyIcon fontSize='small' />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                         <Tooltip title='Generate new secret'>
                           <IconButton
                             size='small'
-                            onClick={() => {
-                              setValue('agentSecret', crypto.randomUUID())
-                              setShowAgentSecret(true)
+                            disabled={isGeneratingSecret}
+                            onClick={async () => {
+                              const newSecret = crypto.randomUUID()
+                              pendingSecretRef.current = newSecret
+                              setValue('agentSecret', newSecret)
+                              setIsGeneratingSecret(true)
+                              try {
+                                await updateSettings({
+                                  ...getValues(),
+                                  agentSecret: newSecret,
+                                  profileLinks,
+                                }).unwrap()
+                              } catch {
+                                pendingSecretRef.current = null
+                                setValue('agentSecret', '')
+                                enqueueSnackbar(
+                                  'Failed to save agent secret.',
+                                  { variant: 'error' },
+                                )
+                              } finally {
+                                setIsGeneratingSecret(false)
+                              }
                             }}
                           >
                             <RefreshIcon fontSize='small' />
                           </IconButton>
                         </Tooltip>
-                        <IconButton
-                          size='small'
-                          onClick={() => setShowAgentSecret((s) => !s)}
-                        >
-                          {showAgentSecret ? (
-                            <VisibilityOffIcon fontSize='small' />
-                          ) : (
-                            <VisibilityIcon fontSize='small' />
-                          )}
-                        </IconButton>
                       </InputAdornment>
                     ),
                   },
                 }}
                 {...register('agentSecret')}
               />
+              {agentSecretValue && (
+                <Alert severity='warning' sx={{ mt: 1 }}>
+                  Copy this secret now — it won't be visible again.
+                </Alert>
+              )}
             </Box>
 
             <Box>

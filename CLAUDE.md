@@ -235,6 +235,7 @@ model AgentCalendarEvent {
 - **Short async actions** (save, delete, password change, etc.) — disable the triggering button and show a text state change (e.g. "Saving…", "Deleting…") or a small `<CircularProgress size={14}>` in the `startIcon`
 - **Data fetching** (RTK Query `isLoading`) — use `<Skeleton>` in place of the content that is loading
 - After any async action completes, always show a `useSnackbar()` confirmation (success) or error message so the user knows it worked
+- **Clipboard copy buttons**: always confirm the copy with a `useSnackbar()` success snackbar (e.g. `'Copied to clipboard.'`); add a `sx={{ '&:hover': { color: 'primary.main' } }}` hover state on the `IconButton` so it feels interactive
 
 ### Icon hover colors (header / toolbar icons)
 - Default state: inherit (no explicit color set)

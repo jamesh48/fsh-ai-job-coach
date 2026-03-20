@@ -17,7 +17,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ authorized: false })
   }
 
-  const storedSecret = decrypt(settings.agentSecret)
+  let storedSecret: string
+  try {
+    storedSecret = decrypt(settings.agentSecret)
+  } catch (err) {
+    console.error('[validate-secret] failed to decrypt agent secret:', err)
+    return NextResponse.json({ authorized: false })
+  }
+
   if (storedSecret !== secret) {
     return NextResponse.json({ authorized: false })
   }
