@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { decrypt } from '@/lib/crypto'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request: Request) {
@@ -9,10 +10,15 @@ export async function POST(request: Request) {
   }
 
   const settings = await prisma.settings.findFirst({
-    where: { agentSecret: secret },
+    select: { agentSecret: true, userId: true },
   })
 
-  if (!settings) {
+  if (!settings?.agentSecret) {
+    return NextResponse.json({ authorized: false })
+  }
+
+  const storedSecret = decrypt(settings.agentSecret)
+  if (storedSecret !== secret) {
     return NextResponse.json({ authorized: false })
   }
 

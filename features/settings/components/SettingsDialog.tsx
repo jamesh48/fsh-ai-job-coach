@@ -194,8 +194,8 @@ export function SettingsDialog({ open, onClose }: Props) {
   useEffect(() => {
     if (settings) {
       reset({
-        anthropicApiKey: settings.anthropicApiKey ?? '',
-        agentSecret: settings.agentSecret ?? '',
+        anthropicApiKey: '',
+        agentSecret: '',
         careerProfile: settings.careerProfile ?? '',
         resume: settings.resume ?? '',
         jobSearchPlan: settings.jobSearchPlan ?? '',
@@ -488,10 +488,25 @@ export function SettingsDialog({ open, onClose }: Props) {
                 AI Integration
               </Typography>
               <Stack spacing={2} mt={1.5}>
+                {settings?.hasApiKey && (
+                  <Typography variant='body2' color='text.secondary'>
+                    Key is set:{' '}
+                    <Box
+                      component='span'
+                      sx={{ fontFamily: 'monospace', color: 'text.primary' }}
+                    >
+                      {settings.apiKeyHint}
+                    </Box>
+                  </Typography>
+                )}
                 <TextField
                   label='Anthropic API Key'
                   type={showKey ? 'text' : 'password'}
-                  placeholder='sk-ant-...'
+                  placeholder={
+                    settings?.hasApiKey
+                      ? 'Leave blank to keep existing key'
+                      : 'sk-ant-...'
+                  }
                   helperText='Required to use AI coaching features.'
                   slotProps={{
                     inputLabel: { shrink: true },
@@ -1013,6 +1028,11 @@ export function SettingsDialog({ open, onClose }: Props) {
                 WebSocket connection. Set the same value in the desktop agent
                 config.
               </Typography>
+              {settings?.hasAgentSecret && (
+                <Typography variant='body2' color='text.secondary' mb={1.5}>
+                  Secret is set. Use Generate to replace it.
+                </Typography>
+              )}
               <TextField
                 label='Agent Secret'
                 type={showAgentSecret ? 'text' : 'password'}

@@ -6,6 +6,7 @@ import type {
 } from '@/features/ai/types'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { getDecryptedSettings } from '@/lib/settings'
 
 export async function GET(): Promise<
   NextResponse<StoredRecommendationResponse>
@@ -43,27 +44,24 @@ export async function POST(
   }
 
   const { date } = await request.json().catch(() => ({}))
-  const settings = await prisma.settings.findUnique({
-    where: { userId: session.userId },
-  })
-  const apiKey = settings?.anthropicApiKey
-  const careerProfile = settings?.careerProfile
-  const resume = settings?.resume ?? null
-  const jobSearchPlan = settings?.jobSearchPlan ?? null
-  const profileLinks: { label: string; url: string }[] = settings?.profileLinks
+  const result = await getDecryptedSettings(session.userId)
+  if (!result) {
+    return NextResponse.json(
+      { error: 'Anthropic API key is not configured. Add it in Settings.' },
+      { status: 503 },
+    )
+  }
+  const { apiKey, settings } = result
+  const careerProfile = settings.careerProfile
+  const resume = settings.resume ?? null
+  const jobSearchPlan = settings.jobSearchPlan ?? null
+  const profileLinks: { label: string; url: string }[] = settings.profileLinks
     ? JSON.parse(settings.profileLinks)
     : []
   const linksContext =
     profileLinks.length > 0
       ? `\nCandidate links:\n${profileLinks.map((l) => `- ${l.label}: ${l.url}`).join('\n')}\n`
       : ''
-
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'Anthropic API key is not configured. Add it in Settings.' },
-      { status: 503 },
-    )
-  }
 
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - 30)

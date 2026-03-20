@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { getDecryptedSettings } from '@/lib/settings'
 
 export async function POST(
   request: Request,
@@ -21,23 +22,21 @@ export async function POST(
     )
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { userId: session.userId },
-  })
-  const apiKey = settings?.anthropicApiKey
-  if (!apiKey) {
+  const result = await getDecryptedSettings(session.userId)
+  if (!result) {
     return NextResponse.json(
       { error: 'Anthropic API key not configured. Add it in Settings.' },
       { status: 503 },
     )
   }
+  const { apiKey, settings } = result
 
   const context = [
     startDate && `Start date: ${startDate}`,
     durationWeeks && `Duration: ${durationWeeks} weeks`,
     priorities && `Top priorities / focus areas:\n${priorities}`,
     additionalContext && `Additional context:\n${additionalContext}`,
-    settings.careerProfile && `Candidate profile:\n${settings.careerProfile}`,
+    settings?.careerProfile && `Candidate profile:\n${settings.careerProfile}`,
   ]
     .filter(Boolean)
     .join('\n\n')

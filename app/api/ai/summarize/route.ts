@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { getDecryptedSettings } from '@/lib/settings'
 
 export async function POST(
   request: Request,
@@ -19,16 +19,14 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { userId: session.userId },
-  })
-  const apiKey = settings?.anthropicApiKey
-  if (!apiKey) {
+  const result = await getDecryptedSettings(session.userId)
+  if (!result) {
     return NextResponse.json(
       { error: 'Anthropic API key not configured. Add it in Settings.' },
       { status: 503 },
     )
   }
+  const { apiKey } = result
 
   try {
     const client = new Anthropic({ apiKey })

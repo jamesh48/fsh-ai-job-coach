@@ -111,6 +111,8 @@ lib/
   agentSocketContext.tsx      # AgentSocketProvider + useAgentSocket(); manages /ws/client WebSocket with exponential backoff reconnect
   agentNotificationHandler.tsx  # Renderless component; fires browser Notification for relevant email_detected events
   utils.ts                    # cn() class merge utility
+  crypto.ts                   # AES-256-GCM encrypt/decrypt/keyHint/isEncrypted — key derived from SESSION_SECRET
+  settings.ts                 # getDecryptedSettings(userId) — shared helper used by all AI routes
   generated/prisma/           # Prisma-generated client (gitignored)
 middleware.ts                 # Protects all routes; /api/agent/email and /api/agent/calendar are public (use x-agent-secret instead)
 server.ts                     # Custom Node.js HTTP server wrapping Next.js; hosts /ws/agent and /ws/client WebSocket endpoints
@@ -201,6 +203,9 @@ model AgentCalendarEvent {
 - Form validation via Yup schemas passed through `yupResolver`
 - Always add `noValidate` to `<form>` elements that use RHF — MUI TextField's `required` prop silently adds the HTML `required` attribute, which causes the browser to intercept submit before RHF/Yup can run
 - Biome enforces single quotes and semicolons only as needed
+- **Node.js built-in imports**: always use the `node:` protocol (e.g. `import crypto from 'node:crypto'`, `import { Buffer } from 'node:buffer'`) — Biome enforces this
+- **Required env vars**: use an explicit guard instead of the `!` non-null assertion — `if (!process.env.FOO) throw new Error('FOO is not set')` — fails fast with a clear message
+- **String interpolation**: always use template literals instead of string concatenation (e.g. `` `${foo}bar` `` not `foo + 'bar'`) — Biome enforces this
 - Do NOT add `* { box-sizing: border-box }` to globals.css — MUI CssBaseline owns box-sizing via the `inherit` pattern and a duplicate rule breaks width calculations
 
 ### Destructive Actions
@@ -269,6 +274,30 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 - `AiRecommendation.tsx` — collapsible panel (75vh expanded / 49px collapsed); auto-prints if USB printer connected and auto-print setting enabled
 - `AiAssistDialog.tsx` — prompt input + markdown response preview; PDF download (jsPDF manual renderer); save output as named document to job application via `onSaveDocument` callback
 - Recommendation timestamp stored as `DateTime` (`lastRecommendationAt`), displayed as `MM-DD-YYYY hh:mm:ss`
+
+### AI Route Pattern
+All AI routes share the same settings + API key lookup via `lib/settings.ts`:
+```ts
+import { getDecryptedSettings } from '@/lib/settings'
+
+const result = await getDecryptedSettings(session.userId)
+if (!result) {
+  return NextResponse.json(
+    { error: 'Anthropic API key not configured. Add it in Settings.' },
+    { status: 503 },
+  )
+}
+const { apiKey, settings } = result  // settings available for careerProfile, resume, etc.
+```
+Never inline the `prisma.settings.findUnique` + `decrypt()` pattern in individual routes — always use `getDecryptedSettings`.
+
+## Sensitive Field Encryption
+- `lib/crypto.ts` — AES-256-GCM encryption using a 32-byte key derived from `SESSION_SECRET` via SHA-256
+- Encrypted format: `enc:<iv_hex>:<authTag_hex>:<ciphertext_hex>`
+- `decrypt()` transparently handles legacy plain-text values (no `enc:` prefix → returned as-is), so existing unencrypted DB rows work immediately after deploy with no migration script
+- The GET `/api/settings` handler re-encrypts any plain-text values it finds, providing transparent migration on first access
+- **Write-only pattern** (like GitHub Secrets): the API never returns sensitive values — only `hasApiKey: boolean`, `apiKeyHint: string | null`, `hasAgentSecret: boolean`. The frontend always starts fields empty; a non-empty submission replaces the stored value.
+- `app/api/agent/validate-secret/route.ts` — fetches the settings row and compares `decrypt(storedSecret) === providedSecret` (handles both encrypted and plain-text stored values)
 
 ## Desktop Agent Integration
 - `server.ts` — custom Node.js HTTP server wrapping Next.js (`app.prepare().then(...)`). Runs as the dev and production entry point (`yarn dev` / `yarn tsx server.ts`).

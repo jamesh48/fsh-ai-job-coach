@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { getDecryptedSettings } from '@/lib/settings'
 
 interface FillResult {
   jobTitle?: string
@@ -94,19 +94,17 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { userId: session.userId },
-  })
-  const apiKey = settings?.anthropicApiKey
-  const careerProfile = settings?.careerProfile ?? null
-  const resume = settings?.resume ?? null
-  const hasFitContext = !!(careerProfile?.trim() || resume?.trim())
-  if (!apiKey) {
+  const result = await getDecryptedSettings(session.userId)
+  if (!result) {
     return NextResponse.json(
       { error: 'Anthropic API key not configured. Add it in Settings.' },
       { status: 503 },
     )
   }
+  const { apiKey, settings } = result
+  const careerProfile = settings.careerProfile ?? null
+  const resume = settings.resume ?? null
+  const hasFitContext = !!(careerProfile?.trim() || resume?.trim())
 
   let html: string
   try {

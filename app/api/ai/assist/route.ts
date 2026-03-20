@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { getDecryptedSettings } from '@/lib/settings'
 
 export async function POST(
   request: Request,
@@ -19,18 +19,16 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { userId: session.userId },
-  })
-  const apiKey = settings?.anthropicApiKey
-  if (!apiKey) {
+  const result = await getDecryptedSettings(session.userId)
+  if (!result) {
     return NextResponse.json(
       { error: 'Anthropic API key not configured. Add it in Settings.' },
       { status: 503 },
     )
   }
+  const { apiKey, settings } = result
 
-  const profileLinks: { label: string; url: string }[] = settings.profileLinks
+  const profileLinks: { label: string; url: string }[] = settings?.profileLinks
     ? JSON.parse(settings.profileLinks)
     : []
   const linksContext =
@@ -46,9 +44,9 @@ Warm regards,
 [Candidate Name]
 
 [link1] | [link2] When the user explicitly asks you to write or draft a document (cover letter, email, message, bio, etc.), output ONLY the document itself — no intro sentence, no closing remarks, no follow-up questions. For all other requests (feedback, advice, brainstorming, explanation), respond naturally. Do NOT assume, invent, or infer specific tools, technologies, workflows, or preferences that are not explicitly stated in the candidate profile or resume. Only reference what is directly provided.`,
-    settings.careerProfile &&
+    settings?.careerProfile &&
       `Candidate profile (use this to personalize all responses):\n${settings.careerProfile}`,
-    settings.resume &&
+    settings?.resume &&
       `Candidate resume (use this as the source of truth for experience, skills, and accomplishments):\n${settings.resume}`,
     linksContext,
   ].filter(Boolean)

@@ -2,8 +2,10 @@ export type ProfileLink = { label: string; url: string }
 
 export type AppSettings = {
   id: string
-  anthropicApiKey: string | null
-  agentSecret: string | null
+  // Sensitive fields are never returned — only status + hint
+  hasApiKey: boolean
+  apiKeyHint: string | null
+  hasAgentSecret: boolean
   careerProfile: string | null
   resume: string | null
   jobSearchPlan: string | null
@@ -12,8 +14,8 @@ export type AppSettings = {
 }
 
 export type SettingsFormValues = {
-  anthropicApiKey: string
-  agentSecret: string
+  anthropicApiKey: string // empty = keep existing; non-empty = replace
+  agentSecret: string // empty = keep existing; non-empty = replace
   careerProfile: string
   resume: string
   jobSearchPlan: string
