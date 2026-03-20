@@ -255,18 +255,14 @@ export function AiAssistDialog({
 
   async function handleSubmit() {
     if (!prompt.trim()) return
-    const result = await aiAssist({ prompt, jobContext })
-    if (!('error' in result) && result.data) {
-      setResponse(result.data.response)
-      setFilename(result.data.filename)
-    } else {
+    try {
+      const data = await aiAssist({ prompt, jobContext }).unwrap()
+      setResponse(data.response)
+      setFilename(data.filename)
+    } catch (err) {
       enqueueSnackbar(
-        'error' in result
-          ? String(
-              (result.error as { data?: { error?: string } }).data?.error ??
-                'Failed to get a response.',
-            )
-          : 'Failed to get a response.',
+        (err as { data?: { error?: string } }).data?.error ??
+          'Failed to get a response.',
         { variant: 'error' },
       )
     }

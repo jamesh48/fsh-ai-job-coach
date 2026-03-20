@@ -71,31 +71,26 @@ export function LogList({ onSearch }: { onSearch?: () => void }) {
   }
 
   async function handleSubmit(values: LogFormValues) {
-    const result = editing
-      ? await update({ ...editing, ...values })
-      : await add(values)
-
-    if ('error' in result) {
-      enqueueSnackbar(
-        editing ? 'Failed to update entry.' : 'Failed to save entry.',
-        {
-          variant: 'error',
-        },
-      )
-    } else {
+    try {
+      await (editing ? update({ ...editing, ...values }) : add(values)).unwrap()
       enqueueSnackbar(editing ? 'Entry updated.' : 'Entry saved.', {
         variant: 'success',
       })
       setOpen(false)
+    } catch {
+      enqueueSnackbar(
+        editing ? 'Failed to update entry.' : 'Failed to save entry.',
+        { variant: 'error' },
+      )
     }
   }
 
   async function handleDelete(id: string) {
-    const result = await remove(id)
-    if ('error' in result) {
-      enqueueSnackbar('Failed to delete entry.', { variant: 'error' })
-    } else {
+    try {
+      await remove(id).unwrap()
       enqueueSnackbar('Entry deleted.', { variant: 'success' })
+    } catch {
+      enqueueSnackbar('Failed to delete entry.', { variant: 'error' })
     }
   }
 

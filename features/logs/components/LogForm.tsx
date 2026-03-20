@@ -222,10 +222,10 @@ export function LogForm({
     if (!description?.trim()) return
     setSummarizingIndex(index)
     try {
-      const result = await summarizeJob({ description })
-      if (!('error' in result) && result.data) {
-        setValue(`applications.${index}.roleDescription`, result.data.summary)
-      }
+      const data = await summarizeJob({ description }).unwrap()
+      setValue(`applications.${index}.roleDescription`, data.summary)
+    } catch {
+      // silently ignore — field stays unchanged
     } finally {
       setSummarizingIndex(null)
     }
@@ -235,15 +235,15 @@ export function LogForm({
     const app = getValues(`applications.${index}`)
     setImpressionIndex(index)
     try {
-      const result = await draftImpression({
+      const data = await draftImpression({
         impression: app.impression,
         jobTitle: app.jobTitle,
         company: app.company,
         roleDescription: app.roleDescription,
-      })
-      if (!('error' in result) && result.data) {
-        setValue(`applications.${index}.impression`, result.data.impression)
-      }
+      }).unwrap()
+      setValue(`applications.${index}.impression`, data.impression)
+    } catch {
+      // silently ignore — field stays unchanged
     } finally {
       setImpressionIndex(null)
     }
@@ -254,35 +254,34 @@ export function LogForm({
     if (!url?.trim()) return
     setFillingFromUrlIndex(index)
     try {
-      const result = await fillFromUrl({ url })
-      if (!('error' in result) && result.data) {
-        const {
-          jobTitle,
-          company,
-          roleDescription,
-          workArrangement,
-          compensation,
-          source,
-          isEasyApply,
-        } = result.data
-        if (jobTitle) setValue(`applications.${index}.jobTitle`, jobTitle)
-        if (company) setValue(`applications.${index}.company`, company)
-        if (roleDescription)
-          setValue(`applications.${index}.roleDescription`, roleDescription)
-        if (workArrangement)
-          setValue(`applications.${index}.workArrangement`, workArrangement)
-        if (compensation)
-          setValue(`applications.${index}.compensation`, compensation)
-        if (source) {
-          setValue(`applications.${index}.source`, source)
-          if (isEasyApply) {
-            setValue(`applications.${index}.priority`, 'quick_apply')
-            setValue(`applications.${index}.status`, 'applied')
-          } else {
-            setValue(`applications.${index}.priority`, 'standard')
-          }
+      const {
+        jobTitle,
+        company,
+        roleDescription,
+        workArrangement,
+        compensation,
+        source,
+        isEasyApply,
+      } = await fillFromUrl({ url }).unwrap()
+      if (jobTitle) setValue(`applications.${index}.jobTitle`, jobTitle)
+      if (company) setValue(`applications.${index}.company`, company)
+      if (roleDescription)
+        setValue(`applications.${index}.roleDescription`, roleDescription)
+      if (workArrangement)
+        setValue(`applications.${index}.workArrangement`, workArrangement)
+      if (compensation)
+        setValue(`applications.${index}.compensation`, compensation)
+      if (source) {
+        setValue(`applications.${index}.source`, source)
+        if (isEasyApply) {
+          setValue(`applications.${index}.priority`, 'quick_apply')
+          setValue(`applications.${index}.status`, 'applied')
+        } else {
+          setValue(`applications.${index}.priority`, 'standard')
         }
       }
+    } catch {
+      // silently ignore — fields stay unchanged
     } finally {
       setFillingFromUrlIndex(null)
     }
@@ -293,10 +292,10 @@ export function LogForm({
     if (!notes?.trim()) return
     setSummarizingNotes(true)
     try {
-      const result = await summarizeNotes({ notes })
-      if (!('error' in result) && result.data) {
-        setValue('notes', result.data.summary)
-      }
+      const data = await summarizeNotes({ notes }).unwrap()
+      setValue('notes', data.summary)
+    } catch {
+      // silently ignore — field stays unchanged
     } finally {
       setSummarizingNotes(false)
     }

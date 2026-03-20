@@ -196,7 +196,7 @@ model AgentCalendarEvent {
 ## Key Conventions
 - All components that use hooks or browser APIs are `'use client'`
 - API routes live under `app/api/` and use Next.js 16 async params: `{ params }: { params: Promise<{ id: string }> }`
-- RTK Query mutations return results — always check `'error' in result` before showing success
+- RTK Query mutations: use `.unwrap()` so errors throw naturally into the surrounding `try/catch`. Do **not** use the `'error' in result` check pattern — it's redundant when the call site already has a try/catch and requires manual re-throwing
 - Snackbars via `useSnackbar()` from notistack for all user-facing feedback
 - Form validation via Yup schemas passed through `yupResolver`
 - Always add `noValidate` to `<form>` elements that use RHF — MUI TextField's `required` prop silently adds the HTML `required` attribute, which causes the browser to intercept submit before RHF/Yup can run
@@ -223,6 +223,13 @@ model AgentCalendarEvent {
     </IconButton>
   </DialogTitle>
   ```
+
+### Loading & Async Feedback
+- Always provide visual feedback during loading and async operations — never leave the UI silently unresponsive
+- **AI actions** (any call to Claude) are long-running; replace or overlay the relevant content area with a `<Skeleton>` that approximates the shape of the expected output (e.g. several lines of varying width for text, a structured block for a resume). Do not use a spinner alone for these.
+- **Short async actions** (save, delete, password change, etc.) — disable the triggering button and show a text state change (e.g. "Saving…", "Deleting…") or a small `<CircularProgress size={14}>` in the `startIcon`
+- **Data fetching** (RTK Query `isLoading`) — use `<Skeleton>` in place of the content that is loading
+- After any async action completes, always show a `useSnackbar()` confirmation (success) or error message so the user knows it worked
 
 ### Icon hover colors (header / toolbar icons)
 - Default state: inherit (no explicit color set)

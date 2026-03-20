@@ -125,10 +125,10 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
     if (!description?.trim()) return
     setSummarizing(true)
     try {
-      const result = await summarizeJob({ description })
-      if (!('error' in result) && result.data) {
-        setValue('roleDescription', result.data.summary)
-      }
+      const data = await summarizeJob({ description }).unwrap()
+      setValue('roleDescription', data.summary)
+    } catch {
+      // silently ignore — field stays unchanged
     } finally {
       setSummarizing(false)
     }
@@ -139,47 +139,40 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
     if (!url?.trim()) return
     setFillingFromUrl(true)
     try {
-      const result = await fillFromUrl({ url })
-      if (!('error' in result) && result.data) {
-        const {
-          jobTitle,
-          company,
-          roleDescription,
-          workArrangement,
-          compensation,
-          fitScore: score,
-          fitRationale: rationale,
-          source,
-          isEasyApply,
-        } = result.data
-        if (jobTitle) setValue('jobTitle', jobTitle)
-        if (company) setValue('company', company)
-        if (roleDescription) setValue('roleDescription', roleDescription)
-        if (workArrangement) setValue('workArrangement', workArrangement)
-        if (compensation) setValue('compensation', compensation)
-        if (score) setValue('fitScore', score)
-        if (rationale) setValue('fitRationale', rationale)
-        if (source) {
-          setValue('source', source)
-          if (isEasyApply) {
-            setValue('priority', 'quick_apply')
-            setValue('status', 'applied')
-          } else {
-            setValue('priority', 'standard')
-          }
+      const {
+        jobTitle,
+        company,
+        roleDescription,
+        workArrangement,
+        compensation,
+        fitScore: score,
+        fitRationale: rationale,
+        source,
+        isEasyApply,
+      } = await fillFromUrl({ url }).unwrap()
+      if (jobTitle) setValue('jobTitle', jobTitle)
+      if (company) setValue('company', company)
+      if (roleDescription) setValue('roleDescription', roleDescription)
+      if (workArrangement) setValue('workArrangement', workArrangement)
+      if (compensation) setValue('compensation', compensation)
+      if (score) setValue('fitScore', score)
+      if (rationale) setValue('fitRationale', rationale)
+      if (source) {
+        setValue('source', source)
+        if (isEasyApply) {
+          setValue('priority', 'quick_apply')
+          setValue('status', 'applied')
+        } else {
+          setValue('priority', 'standard')
         }
-        enqueueSnackbar('Fields filled from URL.', { variant: 'success' })
-      } else {
-        enqueueSnackbar(
-          'error' in result
-            ? String(
-                (result.error as { data?: { error?: string } }).data?.error ??
-                  'Failed to fill from URL.',
-              )
-            : 'Failed to fill from URL.',
-          { variant: 'error' },
-        )
       }
+      enqueueSnackbar('Fields filled from URL.', { variant: 'success' })
+    } catch (err) {
+      enqueueSnackbar(
+        (err as { data?: { error?: string } }).data?.error ??
+          'Failed to fill from URL.',
+        { variant: 'error' },
+      )
     } finally {
       setFillingFromUrl(false)
     }
@@ -189,15 +182,15 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
     const app = getValues()
     setDraftingImpression(true)
     try {
-      const result = await draftImpression({
+      const data = await draftImpression({
         impression: app.impression,
         jobTitle: app.jobTitle,
         company: app.company,
         roleDescription: app.roleDescription,
-      })
-      if (!('error' in result) && result.data) {
-        setValue('impression', result.data.impression)
-      }
+      }).unwrap()
+      setValue('impression', data.impression)
+    } catch {
+      // silently ignore — field stays unchanged
     } finally {
       setDraftingImpression(false)
     }
@@ -212,11 +205,10 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
           ? { ...a, documents: [...(a.documents ?? []), doc] }
           : a,
       )
-      const result = await updateLog({
+      await updateLog({
         ...log,
         content: serializeToContent({ notes, applications: updatedApps }),
-      })
-      if ('error' in result) throw new Error('Failed to save')
+      }).unwrap()
     } else {
       // New app — append to the in-progress form's documents field
       const current = getValues('documents') ?? []
@@ -242,14 +234,14 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         ? applications.map((a, i) => (i === editing.index ? withActivities : a))
         : [...applications, withActivities]
     const updated = serializeToContent({ notes, applications: updatedApps })
-    const result = await updateLog({ ...log, content: updated })
-    if ('error' in result) {
-      enqueueSnackbar('Failed to save application.', { variant: 'error' })
-    } else {
+    try {
+      await updateLog({ ...log, content: updated }).unwrap()
       enqueueSnackbar(editing ? 'Application updated.' : 'Application added.', {
         variant: 'success',
       })
       onClose()
+    } catch {
+      enqueueSnackbar('Failed to save application.', { variant: 'error' })
     }
   }
 

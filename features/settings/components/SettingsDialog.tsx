@@ -13,6 +13,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import SecurityIcon from '@mui/icons-material/Security'
 import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness'
 import TuneIcon from '@mui/icons-material/Tune'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import {
@@ -46,7 +47,7 @@ import {
 } from '@mui/material'
 import { MagicWandIcon, SparkleIcon } from '@phosphor-icons/react'
 import { useSnackbar } from 'notistack'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import ReactMarkdown from 'react-markdown'
 import * as yup from 'yup'
@@ -133,6 +134,8 @@ export function SettingsDialog({ open, onClose }: Props) {
   const { enqueueSnackbar } = useSnackbar()
   const [tab, setTab] = useState(0)
   const [showKey, setShowKey] = useState(false)
+  const [parsingResume, setParsing] = useState(false)
+  const resumeFileRef = useRef<HTMLInputElement>(null)
   const [showAgentSecret, setShowAgentSecret] = useState(false)
   const { preference: themePreference, setPreference: setThemePreference } =
     useThemeMode()
@@ -233,27 +236,53 @@ export function SettingsDialog({ open, onClose }: Props) {
   }
 
   async function handleGeneratePlan() {
-    const result = await generatePlan({
-      startDate: planStartDate || undefined,
-      durationWeeks: planDuration ? Number(planDuration) : undefined,
-      priorities:
-        planPriorities.length > 0
-          ? planPriorities.map((p, i) => `${i + 1}. ${p}`).join('\n')
-          : undefined,
-    })
-    if (!('error' in result) && result.data) {
-      setValue('jobSearchPlan', result.data.plan)
+    try {
+      const data = await generatePlan({
+        startDate: planStartDate || undefined,
+        durationWeeks: planDuration ? Number(planDuration) : undefined,
+        priorities:
+          planPriorities.length > 0
+            ? planPriorities.map((p, i) => `${i + 1}. ${p}`).join('\n')
+            : undefined,
+      }).unwrap()
+      setValue('jobSearchPlan', data.plan)
       setEditingPlan(false)
-    } else {
+    } catch (err) {
       enqueueSnackbar(
-        'error' in result
-          ? String(
-              (result.error as { data?: { error?: string } }).data?.error ??
-                'Failed to generate plan.',
-            )
-          : 'Failed to generate plan.',
+        (err as { data?: { error?: string } }).data?.error ??
+          'Failed to generate plan.',
         { variant: 'error' },
       )
+    }
+  }
+
+  async function handleResumeUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setParsing(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/ai/parse-resume', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        enqueueSnackbar(data.error ?? 'Failed to parse resume.', {
+          variant: 'error',
+        })
+        return
+      }
+      setValue('resume', data.text, { shouldDirty: true })
+      enqueueSnackbar('Resume extracted. Review the text and save.', {
+        variant: 'success',
+      })
+    } catch {
+      enqueueSnackbar('Failed to parse resume.', { variant: 'error' })
+    } finally {
+      setParsing(false)
     }
   }
 
@@ -280,12 +309,12 @@ export function SettingsDialog({ open, onClose }: Props) {
   }
 
   async function onSubmit(values: SettingsFormValues) {
-    const result = await updateSettings({ ...values, profileLinks })
-    if ('error' in result) {
-      enqueueSnackbar('Failed to save settings.', { variant: 'error' })
-    } else {
+    try {
+      await updateSettings({ ...values, profileLinks }).unwrap()
       enqueueSnackbar('Settings saved.', { variant: 'success' })
       onClose()
+    } catch {
+      enqueueSnackbar('Failed to save settings.', { variant: 'error' })
     }
   }
 
@@ -526,25 +555,80 @@ export function SettingsDialog({ open, onClose }: Props) {
               >
                 Resume
               </Typography>
-              <Typography
-                variant='body2'
-                color='text.secondary'
+              <Box
+                display='flex'
+                alignItems='flex-start'
+                justifyContent='space-between'
                 mt={0.5}
                 mb={1.5}
               >
-                Paste your resume as plain text. Claude uses it as the source of
-                truth for your experience and skills when writing cover letters
-                and other documents.
-              </Typography>
-              <TextField
-                label='Resume'
-                multiline
-                rows={16}
-                fullWidth
-                placeholder='Paste your resume here as plain text...'
-                slotProps={{ inputLabel: { shrink: true } }}
-                {...register('resume')}
-              />
+                <Typography variant='body2' color='text.secondary'>
+                  Paste your resume as plain text, or upload a PDF to extract it
+                  automatically. Claude uses it as the source of truth for your
+                  experience and skills when writing cover letters and other
+                  documents.
+                </Typography>
+                <input
+                  ref={resumeFileRef}
+                  type='file'
+                  accept='application/pdf'
+                  style={{ display: 'none' }}
+                  onChange={handleResumeUpload}
+                />
+                <Tooltip title='Import resume from a PDF file'>
+                  <span>
+                    <Button
+                      size='small'
+                      variant='outlined'
+                      startIcon={<UploadFileIcon fontSize='small' />}
+                      disabled={parsingResume}
+                      onClick={() => resumeFileRef.current?.click()}
+                      sx={{ ml: 2, flexShrink: 0 }}
+                    >
+                      Import from PDF
+                    </Button>
+                  </span>
+                </Tooltip>
+              </Box>
+              {parsingResume ? (
+                <Box
+                  sx={{
+                    border: 1,
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    px: 1.75,
+                    py: 1.5,
+                    minHeight: 352,
+                  }}
+                >
+                  <Skeleton width='45%' height={14} sx={{ mb: 1.5 }} />
+                  <Skeleton height={12} />
+                  <Skeleton height={12} />
+                  <Skeleton width='85%' height={12} sx={{ mb: 1.5 }} />
+                  <Skeleton width='30%' height={14} sx={{ mb: 1 }} />
+                  <Skeleton height={12} />
+                  <Skeleton width='90%' height={12} />
+                  <Skeleton height={12} sx={{ mb: 1.5 }} />
+                  <Skeleton width='30%' height={14} sx={{ mb: 1 }} />
+                  <Skeleton height={12} />
+                  <Skeleton width='75%' height={12} />
+                  <Skeleton height={12} sx={{ mb: 1.5 }} />
+                  <Skeleton width='35%' height={14} sx={{ mb: 1 }} />
+                  <Skeleton height={12} />
+                  <Skeleton width='80%' height={12} />
+                  <Skeleton height={12} />
+                </Box>
+              ) : (
+                <TextField
+                  label='Resume'
+                  multiline
+                  rows={16}
+                  fullWidth
+                  placeholder='Paste your resume here as plain text...'
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  {...register('resume')}
+                />
+              )}
             </Box>
 
             <Box>

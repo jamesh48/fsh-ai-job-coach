@@ -177,11 +177,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
         ? { ...a, documents: [...(a.documents ?? []), doc] }
         : a,
     )
-    const result = await updateLog({
+    await updateLog({
       ...log,
       content: serializeToContent({ notes, applications: updatedApps }),
-    })
-    if ('error' in result) throw new Error('Failed to save')
+    }).unwrap()
   }
 
   const handleUpdateDocumentFromAssist = async (doc: AppDocument) => {
@@ -197,11 +196,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
           }
         : a,
     )
-    const result = await updateLog({
+    await updateLog({
       ...log,
       content: serializeToContent({ notes, applications: updatedApps }),
-    })
-    if ('error' in result) throw new Error('Failed to update')
+    }).unwrap()
   }
 
   const handleDeleteDocumentFromAssist = async (docId: string) => {
@@ -212,11 +210,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
         ? { ...a, documents: (a.documents ?? []).filter((d) => d.id !== docId) }
         : a,
     )
-    const result = await updateLog({
+    await updateLog({
       ...log,
       content: serializeToContent({ notes, applications: updatedApps }),
-    })
-    if ('error' in result) throw new Error('Failed to delete')
+    }).unwrap()
   }
 
   function closeDocViewer() {
@@ -240,11 +237,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
             }
           : a,
       )
-      const result = await updateLog({
+      await updateLog({
         ...log,
         content: serializeToContent({ notes, applications: updatedApps }),
-      })
-      if ('error' in result) throw new Error()
+      }).unwrap()
       setViewingDoc(updatedDoc)
       setDocEditContent(null)
     } catch {
@@ -268,11 +264,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
             }
           : a,
       )
-      const result = await updateLog({
+      await updateLog({
         ...log,
         content: serializeToContent({ notes, applications: updatedApps }),
-      })
-      if ('error' in result) throw new Error()
+      }).unwrap()
       setConfirmDeleteDoc(null)
       setViewingDoc(null)
     } catch {

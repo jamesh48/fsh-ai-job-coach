@@ -80,13 +80,15 @@ export function ApplicationActivitiesDrawer({
     const updatedApps = applications.map((a, i) =>
       i === appIndex ? { ...a, activities: updated } : a,
     )
-    const result = await updateLog({
-      ...log,
-      content: serializeToContent({ notes, applications: updatedApps }),
-    })
-    setSaving(false)
-    if ('error' in result) {
+    try {
+      await updateLog({
+        ...log,
+        content: serializeToContent({ notes, applications: updatedApps }),
+      }).unwrap()
+    } catch {
       enqueueSnackbar('Failed to save activity.', { variant: 'error' })
+    } finally {
+      setSaving(false)
     }
   }
 
