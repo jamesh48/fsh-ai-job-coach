@@ -12,6 +12,7 @@ import TimelineIcon from '@mui/icons-material/Timeline'
 import WorkIcon from '@mui/icons-material/Work'
 import {
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
@@ -27,10 +28,12 @@ import {
   MenuList,
   Popover,
   Stack,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
 import { SparkleIcon } from '@phosphor-icons/react'
+import { useSnackbar } from 'notistack'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { AiAssistDialog } from '@/features/ai/components/AiAssistDialog'
@@ -134,11 +137,18 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
     apps: JobApplicationEntry[]
   } | null>(null)
   const [viewingDoc, setViewingDoc] = useState<AppDocument | null>(null)
+  const [viewingDocAppIndex, setViewingDocAppIndex] = useState(-1)
+  const [docEditContent, setDocEditContent] = useState<string | null>(null)
+  const [savingDocEdit, setSavingDocEdit] = useState(false)
+  const [confirmDeleteDoc, setConfirmDeleteDoc] = useState<AppDocument | null>(
+    null,
+  )
   const [assistApp, setAssistApp] = useState<{
     app: JobApplicationEntry
     index: number
   } | null>(null)
   const [updateLog] = useUpdateLogMutation()
+  const { enqueueSnackbar } = useSnackbar()
 
   const handleDeleteDocument = async (
     appOriginalIndex: number,
@@ -172,6 +182,102 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
       content: serializeToContent({ notes, applications: updatedApps }),
     })
     if ('error' in result) throw new Error('Failed to save')
+  }
+
+  const handleUpdateDocumentFromAssist = async (doc: AppDocument) => {
+    if (!assistApp) return
+    const { notes, applications: all } = parseContent(log.content)
+    const updatedApps = all.map((a, i) =>
+      i === assistApp.index
+        ? {
+            ...a,
+            documents: (a.documents ?? []).map((d) =>
+              d.id === doc.id ? doc : d,
+            ),
+          }
+        : a,
+    )
+    const result = await updateLog({
+      ...log,
+      content: serializeToContent({ notes, applications: updatedApps }),
+    })
+    if ('error' in result) throw new Error('Failed to update')
+  }
+
+  const handleDeleteDocumentFromAssist = async (docId: string) => {
+    if (!assistApp) return
+    const { notes, applications: all } = parseContent(log.content)
+    const updatedApps = all.map((a, i) =>
+      i === assistApp.index
+        ? { ...a, documents: (a.documents ?? []).filter((d) => d.id !== docId) }
+        : a,
+    )
+    const result = await updateLog({
+      ...log,
+      content: serializeToContent({ notes, applications: updatedApps }),
+    })
+    if ('error' in result) throw new Error('Failed to delete')
+  }
+
+  function closeDocViewer() {
+    setViewingDoc(null)
+    setDocEditContent(null)
+  }
+
+  async function handleSaveDocEdit() {
+    if (viewingDocAppIndex < 0 || !viewingDoc || docEditContent === null) return
+    setSavingDocEdit(true)
+    try {
+      const { notes, applications: all } = parseContent(log.content)
+      const updatedDoc = { ...viewingDoc, content: docEditContent }
+      const updatedApps = all.map((a, i) =>
+        i === viewingDocAppIndex
+          ? {
+              ...a,
+              documents: (a.documents ?? []).map((d) =>
+                d.id === viewingDoc.id ? updatedDoc : d,
+              ),
+            }
+          : a,
+      )
+      const result = await updateLog({
+        ...log,
+        content: serializeToContent({ notes, applications: updatedApps }),
+      })
+      if ('error' in result) throw new Error()
+      setViewingDoc(updatedDoc)
+      setDocEditContent(null)
+    } catch {
+      enqueueSnackbar('Failed to save document.', { variant: 'error' })
+    } finally {
+      setSavingDocEdit(false)
+    }
+  }
+
+  async function handleConfirmDeleteDoc() {
+    if (viewingDocAppIndex < 0 || !confirmDeleteDoc) return
+    try {
+      const { notes, applications: all } = parseContent(log.content)
+      const updatedApps = all.map((a, i) =>
+        i === viewingDocAppIndex
+          ? {
+              ...a,
+              documents: (a.documents ?? []).filter(
+                (d) => d.id !== confirmDeleteDoc.id,
+              ),
+            }
+          : a,
+      )
+      const result = await updateLog({
+        ...log,
+        content: serializeToContent({ notes, applications: updatedApps }),
+      })
+      if ('error' in result) throw new Error()
+      setConfirmDeleteDoc(null)
+      setViewingDoc(null)
+    } catch {
+      enqueueSnackbar('Failed to delete document.', { variant: 'error' })
+    }
   }
 
   return (
@@ -336,7 +442,7 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
             {applications.length > 0 && (
               <Collapse in={expanded} unmountOnExit>
                 <Stack spacing={2} pt={1.5}>
-                  {applications.map((app) => {
+                  {applications.map((app, appIndex) => {
                     const { label, color } = PRIORITY_DISPLAY[app.priority]
                     const meta = [app.source, app.workArrangement]
                       .filter(Boolean)
@@ -611,7 +717,10 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                                       display='flex'
                                       alignItems='center'
                                       gap={1}
-                                      onClick={() => setViewingDoc(doc)}
+                                      onClick={() => {
+                                        setViewingDoc(doc)
+                                        setViewingDocAppIndex(appIndex)
+                                      }}
                                       sx={{
                                         cursor: 'pointer',
                                         flex: 1,
@@ -749,49 +858,83 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
               }
             : undefined
         }
+        documents={assistApp?.app.documents}
         onSaveDocument={handleSaveDocumentFromAssist}
+        onUpdateDocument={handleUpdateDocumentFromAssist}
+        onDeleteDocument={handleDeleteDocumentFromAssist}
       />
 
       <Dialog
         open={!!viewingDoc}
-        onClose={() => setViewingDoc(null)}
+        onClose={closeDocViewer}
         fullWidth
         maxWidth='md'
         slotProps={{ paper: { sx: { minHeight: '60vh' } } }}
       >
         <DialogTitle sx={{ pr: 6 }}>
           {viewingDoc?.label}
+          {docEditContent === null && (
+            <Tooltip title='Edit'>
+              <IconButton
+                size='small'
+                onClick={() => setDocEditContent(viewingDoc?.content ?? '')}
+                sx={{ position: 'absolute', top: 12, right: 44 }}
+              >
+                <EditOutlinedIcon fontSize='small' />
+              </IconButton>
+            </Tooltip>
+          )}
           <IconButton
             size='small'
-            onClick={() => setViewingDoc(null)}
+            onClick={closeDocViewer}
             sx={{ position: 'absolute', top: 12, right: 12 }}
           >
             <CloseIcon fontSize='small' />
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          <Box
-            sx={{
-              fontSize: '0.875rem',
-              lineHeight: 1.6,
-              '& p': { mt: 0, mb: 1.5 },
-              '& p:last-child': { mb: 0 },
-              '& h1': { fontSize: '1.25rem', fontWeight: 700, mt: 2, mb: 1 },
-              '& h2': { fontSize: '1.1rem', fontWeight: 700, mt: 2, mb: 0.75 },
-              '& h3': {
-                fontSize: '0.95rem',
-                fontWeight: 700,
-                mt: 1.5,
-                mb: 0.5,
-              },
-              '& ul, & ol': { pl: 2.5, mt: 0, mb: 1.5 },
-              '& li': { mb: 0.5 },
-              '& strong': { fontWeight: 700 },
-              '& em': { fontStyle: 'italic' },
-            }}
-          >
-            <ReactMarkdown>{viewingDoc?.content ?? ''}</ReactMarkdown>
-          </Box>
+          {docEditContent !== null ? (
+            <TextField
+              multiline
+              fullWidth
+              minRows={12}
+              value={docEditContent}
+              onChange={(e) => setDocEditContent(e.target.value)}
+              slotProps={{
+                input: { sx: { fontFamily: 'monospace', fontSize: '0.85rem' } },
+              }}
+            />
+          ) : (
+            <Box
+              onClick={() => setDocEditContent(viewingDoc?.content ?? '')}
+              sx={{
+                fontSize: '0.875rem',
+                lineHeight: 1.6,
+                cursor: 'text',
+                '& p': { mt: 0, mb: 1.5 },
+                '& p:last-child': { mb: 0 },
+                '& h1': { fontSize: '1.25rem', fontWeight: 700, mt: 2, mb: 1 },
+                '& h2': {
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  mt: 2,
+                  mb: 0.75,
+                },
+                '& h3': {
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  mt: 1.5,
+                  mb: 0.5,
+                },
+                '& ul, & ol': { pl: 2.5, mt: 0, mb: 1.5 },
+                '& li': { mb: 0.5 },
+                '& strong': { fontWeight: 700 },
+                '& em': { fontStyle: 'italic' },
+              }}
+            >
+              <ReactMarkdown>{viewingDoc?.content ?? ''}</ReactMarkdown>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Typography
@@ -806,17 +949,77 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                 year: 'numeric',
               })}
           </Typography>
-          <Tooltip title='Copy to clipboard'>
-            <IconButton
-              size='small'
-              onClick={() => {
-                if (viewingDoc)
-                  navigator.clipboard.writeText(viewingDoc.content)
-              }}
-            >
-              <ContentCopyIcon fontSize='small' />
-            </IconButton>
-          </Tooltip>
+          {docEditContent === null ? (
+            <>
+              <Tooltip title='Copy to clipboard'>
+                <IconButton
+                  size='small'
+                  onClick={() => {
+                    if (viewingDoc)
+                      navigator.clipboard.writeText(viewingDoc.content)
+                  }}
+                >
+                  <ContentCopyIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title='Delete'>
+                <IconButton
+                  size='small'
+                  onClick={() => setConfirmDeleteDoc(viewingDoc)}
+                  sx={{ '&:hover': { color: 'error.main' } }}
+                >
+                  <DeleteOutlineIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={() => setDocEditContent(null)}
+                color='inherit'
+                variant='outlined'
+              >
+                Cancel
+              </Button>
+              <Button
+                variant='contained'
+                disabled={savingDocEdit}
+                onClick={handleSaveDocEdit}
+              >
+                {savingDocEdit ? 'Saving…' : 'Save'}
+              </Button>
+            </>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={!!confirmDeleteDoc}
+        onClose={() => setConfirmDeleteDoc(null)}
+        maxWidth='xs'
+        fullWidth
+      >
+        <DialogTitle>Delete document?</DialogTitle>
+        <DialogContent>
+          <Typography variant='body2'>
+            "{confirmDeleteDoc?.label}" will be permanently deleted.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setConfirmDeleteDoc(null)}
+            color='inherit'
+            variant='outlined'
+          >
+            Cancel
+          </Button>
+          <Button
+            variant='contained'
+            color='error'
+            onClick={handleConfirmDeleteDoc}
+          >
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
     </>

@@ -1,9 +1,12 @@
 'use client'
 
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined'
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd'
 import CloseIcon from '@mui/icons-material/Close'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import DownloadIcon from '@mui/icons-material/Download'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import {
   Autocomplete,
   Box,
@@ -14,6 +17,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   IconButton,
   Skeleton,
   Stack,
@@ -155,14 +159,20 @@ interface Props {
   open: boolean
   onClose: () => void
   jobContext?: JobContext
+  documents?: AppDocument[]
   onSaveDocument?: (doc: AppDocument) => Promise<void>
+  onUpdateDocument?: (doc: AppDocument) => Promise<void>
+  onDeleteDocument?: (docId: string) => Promise<void>
 }
 
 export function AiAssistDialog({
   open,
   onClose,
   jobContext,
+  documents,
   onSaveDocument,
+  onUpdateDocument,
+  onDeleteDocument,
 }: Props) {
   const { enqueueSnackbar } = useSnackbar()
   const [prompt, setPrompt] = useState('')
@@ -170,6 +180,13 @@ export function AiAssistDialog({
   const [filename, setFilename] = useState('ai-response')
   const [saveLabel, setSaveLabel] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [viewingDoc, setViewingDoc] = useState<AppDocument | null>(null)
+  const [editContent, setEditContent] = useState<string | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [confirmDeleteDoc, setConfirmDeleteDoc] = useState<AppDocument | null>(
+    null,
+  )
   const [aiAssist, { isLoading }] = useAiAssistMutation()
 
   useEffect(() => {
@@ -178,8 +195,44 @@ export function AiAssistDialog({
       setResponse('')
       setFilename('ai-response')
       setSaveLabel('')
+      setViewingDoc(null)
+      setEditContent(null)
+      setConfirmDeleteDoc(null)
     }
   }, [open])
+
+  function closeViewer() {
+    setViewingDoc(null)
+    setEditContent(null)
+  }
+
+  async function handleSaveEdit() {
+    if (!onUpdateDocument || !viewingDoc || editContent === null) return
+    setSavingEdit(true)
+    try {
+      const updated = { ...viewingDoc, content: editContent }
+      await onUpdateDocument(updated)
+      setViewingDoc(updated)
+      setEditContent(null)
+    } catch {
+      enqueueSnackbar('Failed to save document.', { variant: 'error' })
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!onDeleteDocument || !confirmDeleteDoc) return
+    setDeletingId(confirmDeleteDoc.id)
+    setConfirmDeleteDoc(null)
+    try {
+      await onDeleteDocument(confirmDeleteDoc.id)
+    } catch {
+      enqueueSnackbar('Failed to delete document.', { variant: 'error' })
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   async function handleSave() {
     if (!onSaveDocument || !saveLabel.trim()) return
@@ -418,7 +471,189 @@ export function AiAssistDialog({
             )}
           </Box>
         )}
+
+        {hasJobContext && !!documents?.length && (
+          <Box mt={2}>
+            <Divider sx={{ mb: 1.5 }} />
+            <Typography
+              variant='caption'
+              color='text.secondary'
+              sx={{ mb: 1, display: 'block' }}
+            >
+              Saved Documents
+            </Typography>
+            <Stack spacing={0.5}>
+              {documents.map((doc) => (
+                <Box
+                  key={doc.id}
+                  display='flex'
+                  alignItems='center'
+                  gap={1}
+                  sx={{
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                    '&:hover': { bgcolor: 'action.hover' },
+                  }}
+                >
+                  <ArticleOutlinedIcon
+                    sx={{
+                      fontSize: 16,
+                      color: 'text.secondary',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Typography
+                    variant='body2'
+                    sx={{
+                      flex: 1,
+                      cursor: 'pointer',
+                      '&:hover': { color: 'primary.main' },
+                    }}
+                    onClick={() => setViewingDoc(doc)}
+                  >
+                    {doc.label}
+                  </Typography>
+                  {onDeleteDocument && (
+                    <Tooltip title='Delete'>
+                      <IconButton
+                        size='small'
+                        disabled={deletingId === doc.id}
+                        onClick={() => setConfirmDeleteDoc(doc)}
+                        sx={{ '&:hover': { color: 'error.main' } }}
+                      >
+                        <DeleteOutlineIcon fontSize='small' />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        )}
       </DialogContent>
+
+      <Dialog
+        open={!!viewingDoc}
+        onClose={closeViewer}
+        fullWidth
+        maxWidth='md'
+        slotProps={{ paper: { sx: { minHeight: '60vh' } } }}
+      >
+        <DialogTitle sx={{ pr: 6 }}>
+          {viewingDoc?.label}
+          {editContent === null && (
+            <Tooltip title='Edit'>
+              <IconButton
+                size='small'
+                onClick={() => setEditContent(viewingDoc?.content ?? '')}
+                sx={{ position: 'absolute', top: 12, right: 44 }}
+              >
+                <EditOutlinedIcon fontSize='small' />
+              </IconButton>
+            </Tooltip>
+          )}
+          <IconButton
+            size='small'
+            onClick={closeViewer}
+            sx={{ position: 'absolute', top: 12, right: 12 }}
+          >
+            <CloseIcon fontSize='small' />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          {editContent !== null ? (
+            <TextField
+              multiline
+              fullWidth
+              minRows={12}
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              slotProps={{
+                input: { sx: { fontFamily: 'monospace', fontSize: '0.85rem' } },
+              }}
+            />
+          ) : (
+            <Box
+              onClick={() => setEditContent(viewingDoc?.content ?? '')}
+              sx={{
+                fontSize: '0.875rem',
+                lineHeight: 1.6,
+                cursor: 'text',
+                '& p': { mt: 0, mb: 1.5 },
+                '& p:last-child': { mb: 0 },
+                '& h1': { fontSize: '1.25rem', fontWeight: 700, mt: 2, mb: 1 },
+                '& h2': {
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  mt: 2,
+                  mb: 0.75,
+                },
+                '& h3': {
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  mt: 1.5,
+                  mb: 0.5,
+                },
+                '& ul, & ol': { pl: 2.5, mt: 0, mb: 1.5 },
+                '& li': { mb: 0.5 },
+                '& strong': { fontWeight: 700 },
+                '& em': { fontStyle: 'italic' },
+              }}
+            >
+              <ReactMarkdown>{viewingDoc?.content ?? ''}</ReactMarkdown>
+            </Box>
+          )}
+        </DialogContent>
+        {editContent !== null && (
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button
+              onClick={() => setEditContent(null)}
+              color='inherit'
+              variant='outlined'
+            >
+              Cancel
+            </Button>
+            <Button
+              variant='contained'
+              disabled={savingEdit}
+              onClick={handleSaveEdit}
+            >
+              {savingEdit ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogActions>
+        )}
+      </Dialog>
+
+      <Dialog
+        open={!!confirmDeleteDoc}
+        onClose={() => setConfirmDeleteDoc(null)}
+        maxWidth='xs'
+        fullWidth
+      >
+        <DialogTitle>Delete document?</DialogTitle>
+        <DialogContent>
+          <Typography variant='body2'>
+            "{confirmDeleteDoc?.label}" will be permanently deleted.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setConfirmDeleteDoc(null)}
+            color='inherit'
+            variant='outlined'
+          >
+            Cancel
+          </Button>
+          <Button
+            variant='contained'
+            color='error'
+            onClick={handleConfirmDelete}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} color='inherit' variant='outlined'>

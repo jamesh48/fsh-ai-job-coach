@@ -203,6 +203,11 @@ model AgentCalendarEvent {
 - Biome enforces single quotes and semicolons only as needed
 - Do NOT add `* { box-sizing: border-box }` to globals.css — MUI CssBaseline owns box-sizing via the `inherit` pattern and a duplicate rule breaks width calculations
 
+### Destructive Actions
+- **Always show a confirmation dialog before any destructive action** (delete, clear, remove) — no exceptions
+- Use a small `maxWidth='xs'` Dialog with a plain-English title ("Delete document?"), a one-sentence description of what will be lost, and Cancel + red `color='error'` confirm button
+- Gate the actual mutation behind the confirm handler; never fire it directly from the delete icon click
+
 ### Dialogs
 - Every MUI Dialog must have a close `IconButton` in the upper-right corner of `DialogTitle`
 - Pattern: add `sx={{ pr: 6 }}` to `<DialogTitle>`, then render an absolutely-positioned `IconButton` inside it:
