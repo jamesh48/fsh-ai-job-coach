@@ -115,6 +115,10 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   const fitScore = useWatch({ control, name: 'fitScore' }) as FitScore | null
   const fitRationale = useWatch({ control, name: 'fitRationale' })
   const impressionValue = useWatch({ control, name: 'impression' })
+  const formDocuments = useWatch({
+    control,
+    name: 'documents',
+  }) as AppDocument[]
 
   useEffect(() => {
     if (open) reset(editing ? { ...editing.app } : { ...EMPTY_APPLICATION })
@@ -213,6 +217,56 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
       // New app — append to the in-progress form's documents field
       const current = getValues('documents') ?? []
       setValue('documents', [...current, doc])
+    }
+  }
+
+  const handleUpdateDocument = async (doc: AppDocument) => {
+    if (editing !== undefined) {
+      const { notes, applications } = parseContent(log.content)
+      const updatedApps = applications.map((a, i) =>
+        i === editing.index
+          ? {
+              ...a,
+              documents: (a.documents ?? []).map((d) =>
+                d.id === doc.id ? doc : d,
+              ),
+            }
+          : a,
+      )
+      await updateLog({
+        ...log,
+        content: serializeToContent({ notes, applications: updatedApps }),
+      }).unwrap()
+    } else {
+      const current = getValues('documents') ?? []
+      setValue(
+        'documents',
+        current.map((d) => (d.id === doc.id ? doc : d)),
+      )
+    }
+  }
+
+  const handleDeleteDocument = async (docId: string) => {
+    if (editing !== undefined) {
+      const { notes, applications } = parseContent(log.content)
+      const updatedApps = applications.map((a, i) =>
+        i === editing.index
+          ? {
+              ...a,
+              documents: (a.documents ?? []).filter((d) => d.id !== docId),
+            }
+          : a,
+      )
+      await updateLog({
+        ...log,
+        content: serializeToContent({ notes, applications: updatedApps }),
+      }).unwrap()
+    } else {
+      const current = getValues('documents') ?? []
+      setValue(
+        'documents',
+        current.filter((d) => d.id !== docId),
+      )
     }
   }
 
@@ -612,7 +666,17 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
           company: getValues('company'),
           roleDescription: getValues('roleDescription'),
         }}
+        documents={
+          editing !== undefined
+            ? (parseContent(log.content).applications[editing.index]
+                ?.documents ??
+              editing.app.documents ??
+              [])
+            : (formDocuments ?? [])
+        }
         onSaveDocument={handleSaveDocument}
+        onUpdateDocument={handleUpdateDocument}
+        onDeleteDocument={handleDeleteDocument}
       />
     </Dialog>
   )
