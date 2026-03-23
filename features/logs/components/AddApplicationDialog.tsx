@@ -300,7 +300,15 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth='md'>
+    <Dialog
+      open={open}
+      onClose={(_, reason) => {
+        if (reason === 'backdropClick') return
+        onClose()
+      }}
+      fullWidth
+      maxWidth='md'
+    >
       <DialogTitle sx={{ pr: 6 }}>
         {editing ? 'Edit Job Application' : 'Add Job Application'}
         <IconButton
