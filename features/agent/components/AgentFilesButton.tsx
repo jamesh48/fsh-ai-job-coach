@@ -229,6 +229,13 @@ export function AgentFilesButton() {
 
   return (
     <>
+      <input
+        ref={uploadRef}
+        type='file'
+        style={{ display: 'none' }}
+        onChange={handleUpload}
+      />
+
       <Tooltip title='Agent files'>
         <IconButton
           size='small'
@@ -271,12 +278,6 @@ export function AgentFilesButton() {
             Agent Files
           </Typography>
           <Box display='flex' alignItems='center'>
-            <input
-              ref={uploadRef}
-              type='file'
-              style={{ display: 'none' }}
-              onChange={handleUpload}
-            />
             <Tooltip title='Upload file to agent'>
               <span>
                 <IconButton
