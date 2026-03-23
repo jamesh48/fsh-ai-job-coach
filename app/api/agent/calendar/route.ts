@@ -12,6 +12,7 @@ async function classifyCalendarEvent(
   apiKey: string,
   summary: string,
   description: string,
+  organizer: string,
 ): Promise<CalendarClassification | null> {
   try {
     const client = new Anthropic({ apiKey })
@@ -57,6 +58,7 @@ Return relevant: true ONLY for events that represent job search activity: interv
 Return relevant: false for everything else: personal events, internal team meetings, dentist appointments, social events, generic "busy" blocks, etc.
 
 Event title: ${summary}
+Organizer: ${organizer}
 Description: ${description}`,
         },
       ],
@@ -97,6 +99,7 @@ export async function POST(request: Request) {
     apiKey,
     body.summary ?? '',
     body.description ?? '',
+    body.organizer ?? '',
   )
 
   // Classification failed — fail open
