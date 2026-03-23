@@ -26,8 +26,13 @@ import {
 import { useSnackbar } from 'notistack'
 import { useEffect, useRef, useState } from 'react'
 import type { AgentFile } from '@/features/ai/types'
+import { useAppDispatch } from '@/hooks/redux'
 import { useAgentSocket } from '@/lib/agentSocketContext'
-import { useDeleteAgentFileMutation, useGetAgentFilesQuery } from '@/lib/api'
+import {
+  api,
+  useDeleteAgentFileMutation,
+  useGetAgentFilesQuery,
+} from '@/lib/api'
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -177,18 +182,15 @@ function FileItem({ file }: { file: AgentFile }) {
 
 export function AgentFilesButton() {
   const anchorRef = useRef<HTMLButtonElement>(null)
-  const uploadRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [pendingFilename, setPendingFilename] = useState<string | null>(null)
-  const { data: files = [], refetch } = useGetAgentFilesQuery()
+  const dispatch = useAppDispatch()
+  const { data: files = [] } = useGetAgentFilesQuery()
   const { lastEvent, status } = useAgentSocket()
   const { enqueueSnackbar } = useSnackbar()
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
+  async function handleFileSelected(file: File) {
     setUploading(true)
     setPendingFilename(file.name)
     try {
@@ -213,29 +215,37 @@ export function AgentFilesButton() {
     }
   }
 
+  function openFilePicker() {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.style.position = 'fixed'
+    input.style.top = '0'
+    input.style.left = '0'
+    input.style.opacity = '0'
+    input.style.zIndex = '99999'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) handleFileSelected(file)
+    }
+    input.click()
+  }
+
   useEffect(() => {
     if (lastEvent?.type === 'file_updated') {
       setPendingFilename(null)
-      refetch()
+      dispatch(api.util.invalidateTags(['AgentFile']))
     }
     if (lastEvent?.type === 'file_removed') {
-      refetch()
+      dispatch(api.util.invalidateTags(['AgentFile']))
     }
-  }, [lastEvent, refetch])
+  }, [lastEvent, dispatch])
 
   useEffect(() => {
-    if (status === 'connected') refetch()
-  }, [status, refetch])
+    if (status === 'connected') dispatch(api.util.invalidateTags(['AgentFile']))
+  }, [status, dispatch])
 
   return (
     <>
-      <input
-        ref={uploadRef}
-        type='file'
-        style={{ display: 'none' }}
-        onChange={handleUpload}
-      />
-
       <Tooltip title='Agent files'>
         <IconButton
           size='small'
@@ -251,6 +261,7 @@ export function AgentFilesButton() {
         open={open}
         anchorEl={anchorRef.current}
         onClose={() => setOpen(false)}
+        disableEnforceFocus
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{
@@ -282,8 +293,8 @@ export function AgentFilesButton() {
               <span>
                 <IconButton
                   size='small'
-                  onClick={() => uploadRef.current?.click()}
                   disabled={uploading}
+                  onClick={openFilePicker}
                 >
                   {uploading ? (
                     <CircularProgress size={14} />

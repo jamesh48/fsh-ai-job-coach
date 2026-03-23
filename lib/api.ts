@@ -141,6 +141,7 @@ export const api = createApi({
     }),
     deleteAgentFile: builder.mutation<void, string>({
       query: (id) => ({ url: `/agent/files/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['AgentFile'],
     }),
     getMe: builder.query<{ username: string }, void>({
       query: () => '/auth/me',

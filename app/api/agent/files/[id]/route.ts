@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getFile, requestFileContent, sendToAgent } from '@/lib/agentFiles'
+import {
+  deleteFile,
+  getFile,
+  requestFileContent,
+  sendToAgent,
+} from '@/lib/agentFiles'
 import { getSession } from '@/lib/session'
 
 export async function GET(
@@ -62,5 +67,6 @@ export async function DELETE(
     )
   }
 
+  deleteFile(session.userId, id)
   return NextResponse.json({ ok: true })
 }
