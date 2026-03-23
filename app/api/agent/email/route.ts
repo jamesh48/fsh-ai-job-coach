@@ -55,9 +55,17 @@ async function classifyEmail(
 
 IMPORTANT: Only classify as relevant emails that were RECEIVED by the job seeker — i.e. emails sent to them by a recruiter, hiring manager, or employer. If the sender appears to be the job seeker themselves (e.g. the email is in their Sent folder, or the sender address matches a personal name rather than a company/recruiter), return relevant: false.
 
-Return relevant: true ONLY for emails representing real human interaction or next steps: recruiter intros, interview requests or confirmations, hiring manager outreach, requests for availability, offer details, rejection letters from humans.
+Return relevant: true for any of the following:
+- Recruiter or hiring manager outreach, intros, or follow-ups
+- Interview requests, confirmations, or emails containing meeting links/dial-in details (even if the email body includes automated Teams/Zoom/calendar content — what matters is that a human recruiter sent it)
+- Requests for availability or scheduling
+- Application confirmations or status updates from a staffing agency, recruiter, or employer (e.g. "we received your application and are reviewing it") — these confirm the application is being actively handled
+- Offer details or next steps
+- Rejection letters
 
-Return relevant: false for: automated emails (application confirmations, "your application was received", job alert digests, LinkedIn notifications, automated status updates), AND emails sent by the job seeker themselves.
+Return relevant: false for: purely automated mass emails (generic job alert digests, LinkedIn job recommendation emails, automated "we received your online application" from large ATS systems with no personal address), AND emails sent by the job seeker themselves.
+
+When in doubt, err on the side of relevant: true.
 
 From: ${sender}
 Subject: ${subject}
