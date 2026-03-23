@@ -22,6 +22,7 @@ import { MagicWandIcon } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useSnackbar } from 'notistack'
 import { useState } from 'react'
+import { AgentFilesButton } from '@/features/agent/components/AgentFilesButton'
 import { NotificationBell } from '@/features/agent/components/NotificationBell'
 import { AgentDialog } from '@/features/ai/components/AgentDialog'
 import { AiAssistDialog } from '@/features/ai/components/AiAssistDialog'
@@ -144,6 +145,7 @@ export function LogList({ onSearch }: { onSearch?: () => void }) {
             </IconButton>
           </Tooltip>
           <NotificationBell />
+          <AgentFilesButton />
           <Tooltip title='AI Writing Assistant'>
             <IconButton
               size='small'

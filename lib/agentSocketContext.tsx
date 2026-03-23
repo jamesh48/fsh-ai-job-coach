@@ -81,6 +81,15 @@ export interface NewPdfPayload {
   size: number
 }
 
+export interface FileUpdatedPayload {
+  id: string
+  filename: string
+  path: string
+  size: number
+  mimeType: string
+  updatedAt: string
+}
+
 export type AgentEvent =
   | { type: 'agent_status'; payload: AgentStatusPayload; timestamp: string }
   | {
@@ -97,6 +106,8 @@ export type AgentEvent =
   | { type: 'calendar_event'; payload: CalendarEventPayload; timestamp: string }
   | { type: 'job_captured'; payload: JobCapturedPayload; timestamp: string }
   | { type: 'new_pdf'; payload: NewPdfPayload; timestamp: string }
+  | { type: 'file_updated'; payload: FileUpdatedPayload; timestamp: string }
+  | { type: 'file_removed'; payload: { path: string }; timestamp: string }
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
 

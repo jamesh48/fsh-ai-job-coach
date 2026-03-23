@@ -14,6 +14,7 @@ An AI-powered job search coaching app built for the modern job hunt. Log your da
 - **Fit score** — AI rates how well a job matches your career profile and resume (Strong / Good / Partial / Weak)
 - **Desktop agent integration** — connects to an Electron companion app via WebSocket; AI-filters incoming emails and calendar events and surfaces relevant ones as in-app notifications
 - **Email notifications** — relevant job search emails (recruiter intros, interview requests, offers, etc.) appear as in-app notifications with dismiss and clear-all; auto-expire after 90 days
+- **Agent file sync** — browse, download, upload, and delete files in the agent's watched folder directly from the webapp; changes sync in real time via WebSocket
 - **ESC/POS printing** — print your daily coaching report to a receipt printer (Chrome/Edge + HTTPS)
 - **Dark mode** — because you'll be using this a lot
 

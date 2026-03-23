@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type {
   AgentCalendarEvent,
   AgentEmail,
+  AgentFile,
   AiRecommendationResponse,
   StoredRecommendationResponse,
 } from '@/features/ai/types'
@@ -17,6 +18,7 @@ export const api = createApi({
     'AiRecommendation',
     'AgentEmail',
     'AgentCalendarEvent',
+    'AgentFile',
   ],
   endpoints: (builder) => ({
     getLogs: builder.query<DailyLog[], void>({
@@ -133,6 +135,13 @@ export const api = createApi({
       query: () => ({ url: '/agent/calendar-events', method: 'DELETE' }),
       invalidatesTags: ['AgentCalendarEvent'],
     }),
+    getAgentFiles: builder.query<AgentFile[], void>({
+      query: () => '/agent/files',
+      providesTags: ['AgentFile'],
+    }),
+    deleteAgentFile: builder.mutation<void, string>({
+      query: (id) => ({ url: `/agent/files/${id}`, method: 'DELETE' }),
+    }),
     getMe: builder.query<{ username: string }, void>({
       query: () => '/auth/me',
     }),
@@ -166,6 +175,8 @@ export const {
   useGetAgentCalendarEventsQuery,
   useDeleteAgentCalendarEventMutation,
   useClearAgentCalendarEventsMutation,
+  useGetAgentFilesQuery,
+  useDeleteAgentFileMutation,
   useGetMeQuery,
   useGetSettingsQuery,
   useUpdateSettingsMutation,

@@ -63,16 +63,17 @@ model AgentCalendarEvent {
 }
 
 model Settings {
-  id                     String    @id @default(cuid())
-  userId                 String    @unique
-  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  anthropicApiKey        String?
-  agentSecret            String?
-  lastRecommendation     String?
-  lastRecommendationAt   DateTime?
-  careerProfile          String?
-  resume                 String?
-  jobSearchPlan          String?
-  profileLinks           String?
-  updatedAt              DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anthropicApiKey      String?
+  agentSecret          String?
+  lastRecommendation   String?
+  lastRecommendationAt DateTime?
+  careerProfile        String?
+  resume               String?
+  jobSearchPlan        String?
+  profileLinks         String?
+  updatedAt            DateTime  @updatedAt
 }
+

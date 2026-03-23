@@ -9,6 +9,12 @@ import { parse } from 'node:url'
 import { jwtVerify } from 'jose'
 import next from 'next'
 import { type RawData, type WebSocket, WebSocketServer } from 'ws'
+import {
+  deleteFileByPath,
+  resolveFileContent,
+  setAgentSend,
+  upsertFile,
+} from './lib/agentFiles'
 
 // In-process secret for server.ts → Next.js API route authentication.
 // Generated fresh on each startup; both sides share the same process so
@@ -205,6 +211,10 @@ app.prepare().then(() => {
       agentSocket.terminate()
     }
     agentSocket = ws
+    setAgentSend((msg) => ws.send(JSON.stringify(msg)))
+
+    // Request files from the agent over the same connection
+    ws.send(JSON.stringify({ type: 'list_files' }))
 
     if (agentUserId) {
       broadcastJSONToUser(agentUserId, {
@@ -223,6 +233,47 @@ app.prepare().then(() => {
       } catch {
         console.log('[ws] agent message unparseable — forwarding as-is')
         broadcastToUser(agentUserId, data)
+        return
+      }
+
+      if (parsed.type === 'file_removed') {
+        const removedPath = (parsed.payload as { path?: string }).path
+        if (removedPath) {
+          deleteFileByPath(agentUserId, removedPath)
+          broadcastJSONToUser(agentUserId, {
+            type: 'file_removed',
+            payload: { path: removedPath },
+            timestamp: new Date().toISOString(),
+          })
+          console.log(`[ws] file removed: ${removedPath}`)
+        }
+        return
+      }
+
+      if (parsed.type === 'file_content') {
+        const { requestId, base64, mimeType } = parsed.payload as {
+          requestId: string
+          base64: string
+          mimeType: string
+        }
+        resolveFileContent(requestId, base64, mimeType)
+        return
+      }
+
+      if (parsed.type === 'file_added') {
+        const filePayload = parsed.payload as {
+          filename: string
+          path: string
+          size: number
+          mimeType: string
+        }
+        const meta = upsertFile(agentUserId, filePayload)
+        broadcastJSONToUser(agentUserId, {
+          type: 'file_updated',
+          payload: meta,
+          timestamp: new Date().toISOString(),
+        })
+        console.log(`[ws] file synced: ${filePayload.filename}`)
         return
       }
 
@@ -268,6 +319,7 @@ app.prepare().then(() => {
         }
         agentSocket = null
         agentUserId = null
+        setAgentSend(null)
       }
     })
 

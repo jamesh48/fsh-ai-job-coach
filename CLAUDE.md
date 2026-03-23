@@ -51,6 +51,9 @@ app/                          # Next.js App Router — routes, layouts, API rout
   api/agent/emails/[id]/route.ts    # DELETE — dismiss single email
   api/agent/calendar-events/route.ts     # GET — list stored calendar events (auto-expires >90 days); DELETE — clear all
   api/agent/calendar-events/[id]/route.ts  # DELETE — dismiss single calendar event
+  api/agent/files/route.ts          # GET — list in-memory file metadata (no base64); DELETE — clear all
+  api/agent/files/[id]/route.ts     # GET — single file with base64; DELETE — sends delete_file to agent (disk is source of truth)
+  api/agent/files/upload/route.ts   # POST multipart — sends save_file to agent via /ws/agent
   api/settings/route.ts       # GET/PUT settings singleton
   api/auth/login/route.ts     # POST — verify password, create session
   api/auth/logout/route.ts    # POST — destroy session
@@ -85,7 +88,8 @@ features/                     # Feature modules (co-located components, hooks, t
     index.ts
   agent/
     components/
-      NotificationBell.tsx    # Bell icon with unread badge; popover list + detail dialog; dismiss/clear all
+      NotificationBell.tsx    # Bell icon with unread badge; tabbed popover (Emails / Calendar); dismiss/clear all
+      AgentFilesButton.tsx    # Folder icon + popover; browse/download/upload/delete synced files; skeleton on upload; refetches on file_updated / file_removed WebSocket events
   auth/
     components/
       LoginForm.tsx           # Detects first-time setup vs login; handles both flows
@@ -110,6 +114,7 @@ lib/
   useAutoPrint.ts             # useAutoPrint hook; auto-print preference in localStorage
   agentSocketContext.tsx      # AgentSocketProvider + useAgentSocket(); manages /ws/client WebSocket with exponential backoff reconnect
   agentNotificationHandler.tsx  # Renderless component; fires browser Notification for relevant email_detected events
+  agentFiles.ts               # In-memory file store (globalThis.__agentFiles Map); shared across server.ts and API routes via globalThis to survive Next.js HMR module isolation
   utils.ts                    # cn() class merge utility
   crypto.ts                   # AES-256-GCM encrypt/decrypt/keyHint/isEncrypted — key derived from SESSION_SECRET
   settings.ts                 # getDecryptedSettings(userId) — shared helper used by all AI routes
@@ -315,6 +320,20 @@ Never inline the `prisma.settings.findUnique` + `decrypt()` pattern in individua
 - `lib/agentSocketContext.tsx` — React context managing `/ws/client` WebSocket with exponential backoff reconnect (2s → 30s cap). Exposes `{ status, lastEvent, events, send }` via `useAgentSocket()`. Tracks last 50 events.
 - `lib/agentNotificationHandler.tsx` — renderless `'use client'` component mounted in `Providers`; fires `new Notification(...)` for relevant `email_detected` events; dedupes via ref Set.
 - `features/agent/components/NotificationBell.tsx` — bell icon with unread badge in the header; tabbed popover (Emails / Calendar) lists stored items from DB; detail dialogs (Gmail deep-link for emails, start/end/organizer for calendar); dismiss individual or clear all per tab; auto-expires items >90 days old on each fetch.
+- `features/agent/components/AgentFilesButton.tsx` — folder icon + popover; lists files from in-memory store; upload (POST multipart → agent saves to disk), download (on-demand fetch via `get_file`/`file_content` over WebSocket), delete (DELETE → agent removes from disk); skeleton pending row shown while upload propagates; refetches on `file_updated` and `file_removed` WebSocket events.
+
+### Agent File Sync
+All file communication flows through the single authenticated `/ws/agent` WebSocket connection — no separate port or secondary connection.
+
+- **Agent → webapp** (`file_added`): chokidar detects add/change → agent sends metadata only (filename, path, size, mimeType — **no base64**) → `server.ts` calls `upsertFile(userId, payload)` → broadcasts `file_updated` to browser clients → `AgentFilesButton` refetches
+- **Agent → webapp** (`file_removed`): chokidar detects `unlink` → agent sends `file_removed` with path → `server.ts` calls `deleteFileByPath(userId, path)` → broadcasts `file_removed` → `AgentFilesButton` refetches
+- **Webapp → agent** (`list_files`): sent automatically when agent connects; agent responds with one metadata-only `file_added` per file in the watch folder
+- **Webapp → agent** (`save_file`): upload route sends `{ type: 'save_file', payload: { filename, base64 } }` → agent writes to disk → watcher fires `file_added` (metadata only)
+- **Webapp → agent** (`delete_file`): delete route looks up path in memory, sends `{ type: 'delete_file', payload: { path } }` → agent calls `unlinkSync` → watcher fires `file_removed`
+- **Webapp → agent** (`get_file`): download route sends `{ type: 'get_file', payload: { requestId, path } }` → agent reads file from disk → sends `file_content` back with matching `requestId`; 15s timeout
+- **Agent → webapp** (`file_content`): handled in `server.ts` only (never forwarded to browser); resolves the pending `requestId` promise in `requestFileContent()`
+- **In-memory store** (`lib/agentFiles.ts`): keyed by `userId → filePath`. Stores metadata only — no base64. Uses `globalThis.__agentFiles` so `server.ts` and Next.js API routes share the same Map across HMR module boundaries. Not persisted — repopulated on each agent connection via `list_files`.
+- **Pending request registry** (`globalThis.__agentPendingFiles`): `Map<requestId, resolver>` for correlating `get_file` requests with `file_content` responses across the module boundary. Each entry has a 15s timeout that resolves `null` on expiry.
 
 ## Job Application Fit Score
 - Generated by `fill-from-url` when `careerProfile` or `resume` are set in Settings

@@ -48,6 +48,19 @@ export type AgentEmail = {
   receivedAt: string
 }
 
+export type AgentFile = {
+  id: string
+  filename: string
+  path: string
+  size: number
+  mimeType: string
+  updatedAt: string
+}
+
+export type AgentFileWithContent = AgentFile & {
+  base64: string
+}
+
 export type AiRecommendationResponse = {
   recommendation: string
 }
