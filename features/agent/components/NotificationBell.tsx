@@ -631,6 +631,8 @@ export function NotificationBell() {
 
   function handleOpen() {
     setOpen(true)
+    refetchEmails()
+    refetchCalEvents()
     const now = new Date().toISOString()
     localStorage.setItem(LS_KEY, now)
     setLastSeen(now)
