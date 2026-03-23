@@ -61,7 +61,7 @@ Return relevant: true for any of the following:
 - Requests for availability or scheduling
 - Application confirmations or status updates from a staffing agency, recruiter, or employer (e.g. "we received your application and are reviewing it") — these confirm the application is being actively handled
 - Offer details or next steps
-- Rejection letters
+- Rejection letters — ALWAYS mark relevant: true for any rejection, even automated ones from an ATS
 
 Return relevant: false for: purely automated mass emails (generic job alert digests, LinkedIn job recommendation emails, automated "we received your online application" from large ATS systems with no personal address), AND emails sent by the job seeker themselves.
 
