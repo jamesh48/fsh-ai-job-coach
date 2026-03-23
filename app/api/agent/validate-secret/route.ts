@@ -9,25 +9,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ authorized: false })
   }
 
-  const settings = await prisma.settings.findFirst({
+  const allSettings = await prisma.settings.findMany({
     select: { agentSecret: true, userId: true },
+    where: { agentSecret: { not: null } },
   })
 
-  if (!settings?.agentSecret) {
-    return NextResponse.json({ authorized: false })
+  for (const row of allSettings) {
+    if (!row.agentSecret) continue
+    try {
+      const storedSecret = decrypt(row.agentSecret)
+      if (storedSecret === secret) {
+        return NextResponse.json({ authorized: true, userId: row.userId })
+      }
+    } catch {
+      // skip rows that fail to decrypt
+    }
   }
 
-  let storedSecret: string
-  try {
-    storedSecret = decrypt(settings.agentSecret)
-  } catch (err) {
-    console.error('[validate-secret] failed to decrypt agent secret:', err)
-    return NextResponse.json({ authorized: false })
-  }
-
-  if (storedSecret !== secret) {
-    return NextResponse.json({ authorized: false })
-  }
-
-  return NextResponse.json({ authorized: true, userId: settings.userId })
+  return NextResponse.json({ authorized: false })
 }
