@@ -355,7 +355,10 @@ export function LogForm({
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={(_, reason) => {
+        if (reason === 'backdropClick') return
+        onClose()
+      }}
       fullWidth
       maxWidth='md'
       PaperProps={{ sx: { minHeight: '80vh' } }}
