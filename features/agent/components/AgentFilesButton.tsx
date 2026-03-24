@@ -6,6 +6,7 @@ import DownloadingIcon from '@mui/icons-material/Downloading'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import {
   Box,
   Button,
@@ -17,6 +18,7 @@ import {
   DialogTitle,
   Divider,
   IconButton,
+  Paper,
   Popover,
   Skeleton,
   Stack,
@@ -25,6 +27,7 @@ import {
 } from '@mui/material'
 import { useSnackbar } from 'notistack'
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import type { AgentFile } from '@/features/ai/types'
 import { useAppDispatch } from '@/hooks/redux'
 import { useAgentSocket } from '@/lib/agentSocketContext'
@@ -56,9 +59,198 @@ function mimeLabel(mimeType: string): string {
   return map[mimeType] ?? mimeType.split('/')[1]?.toUpperCase() ?? 'FILE'
 }
 
+type FileContent = {
+  base64: string
+  mimeType: string
+  filename: string
+}
+
+function isViewable(mimeType: string): boolean {
+  return (
+    mimeType.startsWith('text/') ||
+    mimeType === 'application/json' ||
+    mimeType.startsWith('image/') ||
+    mimeType === 'application/pdf'
+  )
+}
+
+function FileViewerDialog({
+  file,
+  open,
+  onClose,
+}: {
+  file: AgentFile
+  open: boolean
+  onClose: () => void
+}) {
+  const [content, setContent] = useState<FileContent | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) {
+      setContent(null)
+      setError(null)
+      return
+    }
+    setLoading(true)
+    fetch(`/api/agent/files/${file.id}`)
+      .then((res) => res.json() as Promise<FileContent>)
+      .then((data) => {
+        setContent(data)
+      })
+      .catch(() => setError('Failed to load file content.'))
+      .finally(() => setLoading(false))
+  }, [open, file.id])
+
+  function renderPreview() {
+    if (loading) {
+      return (
+        <Box>
+          <Skeleton variant='text' width='80%' />
+          <Skeleton variant='text' width='60%' />
+          <Skeleton variant='text' width='70%' />
+          <Skeleton variant='text' width='50%' />
+          <Skeleton variant='text' width='65%' />
+        </Box>
+      )
+    }
+    if (error) {
+      return (
+        <Typography color='error' variant='body2'>
+          {error}
+        </Typography>
+      )
+    }
+    if (!content) return null
+
+    const { base64, mimeType } = content
+    const dataUrl = `data:${mimeType};base64,${base64}`
+
+    if (mimeType.startsWith('image/')) {
+      return (
+        <Box display='flex' justifyContent='center'>
+          {/* biome-ignore lint/performance/noImgElement: viewer needs native img for data URL */}
+          <img
+            src={dataUrl}
+            alt={file.filename}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '70vh',
+              objectFit: 'contain',
+            }}
+          />
+        </Box>
+      )
+    }
+
+    if (mimeType === 'application/pdf') {
+      return (
+        <Box sx={{ height: '70vh' }}>
+          <embed
+            src={dataUrl}
+            type='application/pdf'
+            width='100%'
+            height='100%'
+          />
+        </Box>
+      )
+    }
+
+    const text = atob(base64)
+
+    if (mimeType === 'text/markdown') {
+      return (
+        <Paper
+          variant='outlined'
+          sx={{
+            p: 2,
+            maxHeight: '70vh',
+            overflowY: 'auto',
+            '& h1,& h2,& h3': { mt: 2, mb: 0.5 },
+            '& p': { mt: 0, mb: 1 },
+            '& ul,& ol': { pl: 3, mb: 1 },
+          }}
+        >
+          <ReactMarkdown>{text}</ReactMarkdown>
+        </Paper>
+      )
+    }
+
+    if (mimeType === 'application/json') {
+      let formatted = text
+      try {
+        formatted = JSON.stringify(JSON.parse(text), null, 2)
+      } catch {
+        // use raw text if parse fails
+      }
+      return (
+        <Box
+          component='pre'
+          sx={{
+            m: 0,
+            p: 2,
+            maxHeight: '70vh',
+            overflowY: 'auto',
+            fontFamily: 'monospace',
+            fontSize: '0.8rem',
+            bgcolor: 'action.hover',
+            borderRadius: 1,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+          }}
+        >
+          {formatted}
+        </Box>
+      )
+    }
+
+    // plain text / csv / other text/*
+    return (
+      <Box
+        component='pre'
+        sx={{
+          m: 0,
+          p: 2,
+          maxHeight: '70vh',
+          overflowY: 'auto',
+          fontFamily: 'monospace',
+          fontSize: '0.8rem',
+          bgcolor: 'action.hover',
+          borderRadius: 1,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+        }}
+      >
+        {text}
+      </Box>
+    )
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
+      <DialogTitle sx={{ pr: 6 }}>
+        {file.filename}
+        <IconButton
+          size='small'
+          onClick={onClose}
+          sx={{ position: 'absolute', top: 12, right: 12 }}
+        >
+          <CloseIcon fontSize='small' />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>{renderPreview()}</DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
 function FileItem({ file }: { file: AgentFile }) {
   const [downloading, setDownloading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [viewerOpen, setViewerOpen] = useState(false)
   const [deleteFile, { isLoading: deleting }] = useDeleteAgentFileMutation()
   const { enqueueSnackbar } = useSnackbar()
 
@@ -101,7 +293,19 @@ function FileItem({ file }: { file: AgentFile }) {
           sx={{ color: 'text.secondary', flexShrink: 0 }}
         />
         <Box minWidth={0} flex={1}>
-          <Typography variant='body2' fontWeight={500} noWrap>
+          <Typography
+            variant='body2'
+            fontWeight={500}
+            noWrap
+            onClick={
+              isViewable(file.mimeType) ? () => setViewerOpen(true) : undefined
+            }
+            sx={
+              isViewable(file.mimeType)
+                ? { cursor: 'pointer', '&:hover': { color: 'primary.main' } }
+                : undefined
+            }
+          >
             {file.filename}
           </Typography>
           <Box display='flex' alignItems='center' gap={0.75} mt={0.25}>
@@ -115,6 +319,13 @@ function FileItem({ file }: { file: AgentFile }) {
             </Typography>
           </Box>
         </Box>
+        {isViewable(file.mimeType) && (
+          <Tooltip title='View'>
+            <IconButton size='small' onClick={() => setViewerOpen(true)}>
+              <VisibilityOutlinedIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        )}
         <Tooltip title='Download'>
           <span>
             <IconButton
@@ -146,6 +357,12 @@ function FileItem({ file }: { file: AgentFile }) {
           </span>
         </Tooltip>
       </Box>
+
+      <FileViewerDialog
+        file={file}
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+      />
 
       <Dialog
         open={confirmOpen}
