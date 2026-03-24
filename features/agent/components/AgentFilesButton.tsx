@@ -122,6 +122,16 @@ function FileViewerDialog({
 
   function renderPreview() {
     if (loading) {
+      if (file.mimeType.startsWith('image/')) {
+        return (
+          <Box display='flex' justifyContent='center'>
+            <Skeleton
+              variant='rectangular'
+              sx={{ width: '100%', height: 320, borderRadius: 1 }}
+            />
+          </Box>
+        )
+      }
       return (
         <Box>
           <Skeleton variant='text' width='80%' />

@@ -166,8 +166,6 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         if (isEasyApply) {
           setValue('priority', 'quick_apply')
           setValue('status', 'applied')
-        } else {
-          setValue('priority', 'standard')
         }
       }
       enqueueSnackbar('Fields filled from URL.', { variant: 'success' })
@@ -418,51 +416,85 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
             </Stack>
 
             {/* Priority toggle */}
-            <Controller
-              name='priority'
-              control={control}
-              render={({ field }) => (
-                <ToggleButtonGroup
-                  exclusive
-                  fullWidth
-                  size='small'
-                  value={field.value}
-                  onChange={(_, val) => val && field.onChange(val)}
-                >
-                  <ToggleButton value='quick_apply'>
-                    ⚡ Quick Apply
-                  </ToggleButton>
-                  <ToggleButton value='standard'>📋 Standard</ToggleButton>
-                  <ToggleButton value='strong_interest'>
-                    ⭐ Strong Interest
-                  </ToggleButton>
-                  <ToggleButton value='hot_lead'>🔥 Hot Lead</ToggleButton>
-                </ToggleButtonGroup>
-              )}
-            />
-
-            {/* Status */}
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
+            <Box sx={{ position: 'relative' }}>
               <Controller
-                name='status'
+                name='priority'
                 control={control}
                 render={({ field }) => (
-                  <Select label='Status' {...field}>
-                    {(
-                      Object.entries(STATUS_LABELS) as [
-                        JobApplicationEntry['status'],
-                        string,
-                      ][]
-                    ).map(([value, label]) => (
-                      <MenuItem key={value} value={value}>
-                        {label}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                  <ToggleButtonGroup
+                    exclusive
+                    fullWidth
+                    size='small'
+                    value={field.value}
+                    onChange={(_, val) => val && field.onChange(val)}
+                    sx={{ visibility: fillingFromUrl ? 'hidden' : 'visible' }}
+                  >
+                    <ToggleButton value='quick_apply'>
+                      ⚡ Quick Apply
+                    </ToggleButton>
+                    <ToggleButton value='standard'>📋 Standard</ToggleButton>
+                    <ToggleButton value='strong_interest'>
+                      ⭐ Strong Interest
+                    </ToggleButton>
+                    <ToggleButton value='hot_lead'>🔥 Hot Lead</ToggleButton>
+                  </ToggleButtonGroup>
                 )}
               />
-            </FormControl>
+              {fillingFromUrl && (
+                <Skeleton
+                  variant='rectangular'
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: 1,
+                  }}
+                />
+              )}
+            </Box>
+
+            {/* Status */}
+            <Box sx={{ position: 'relative' }}>
+              <FormControl
+                fullWidth
+                sx={{ visibility: fillingFromUrl ? 'hidden' : 'visible' }}
+              >
+                <InputLabel>Status</InputLabel>
+                <Controller
+                  name='status'
+                  control={control}
+                  render={({ field }) => (
+                    <Select label='Status' {...field}>
+                      {(
+                        Object.entries(STATUS_LABELS) as [
+                          JobApplicationEntry['status'],
+                          string,
+                        ][]
+                      ).map(([value, label]) => (
+                        <MenuItem key={value} value={value}>
+                          {label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  )}
+                />
+              </FormControl>
+              {fillingFromUrl && (
+                <Skeleton
+                  variant='rectangular'
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: 1,
+                  }}
+                />
+              )}
+            </Box>
 
             {/* Source */}
             <Controller
