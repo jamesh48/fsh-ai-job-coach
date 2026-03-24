@@ -11,7 +11,6 @@ import {
   Autocomplete,
   Box,
   Button,
-  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
@@ -23,6 +22,7 @@ import {
   IconButton,
   Skeleton,
   Stack,
+  Switch,
   TextField,
   Tooltip,
   Typography,
@@ -681,7 +681,7 @@ export function AiAssistDialog({
         {!!onSaveDocument && (
           <FormControlLabel
             control={
-              <Checkbox
+              <Switch
                 size='small'
                 checked={autoSave}
                 onChange={(e) => setAutoSave(e.target.checked)}
