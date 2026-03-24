@@ -11,6 +11,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
@@ -18,6 +19,7 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControlLabel,
   IconButton,
   Skeleton,
   Stack,
@@ -179,6 +181,7 @@ export function AiAssistDialog({
   const [response, setResponse] = useState('')
   const [filename, setFilename] = useState('ai-response')
   const [saveLabel, setSaveLabel] = useState('')
+  const [autoSave, setAutoSave] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewingDoc, setViewingDoc] = useState<AppDocument | null>(null)
@@ -195,6 +198,7 @@ export function AiAssistDialog({
       setResponse('')
       setFilename('ai-response')
       setSaveLabel('')
+      setAutoSave(true)
       setViewingDoc(null)
       setEditContent(null)
       setConfirmDeleteDoc(null)
@@ -253,12 +257,28 @@ export function AiAssistDialog({
     }
   }
 
+  function filenameToLabel(name: string): string {
+    return name
+      .split('-')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ')
+  }
+
   async function handleSubmit() {
     if (!prompt.trim()) return
     try {
       const data = await aiAssist({ prompt, jobContext }).unwrap()
       setResponse(data.response)
       setFilename(data.filename)
+      if (autoSave && onSaveDocument) {
+        await onSaveDocument({
+          id: crypto.randomUUID(),
+          label: filenameToLabel(data.filename),
+          content: data.response,
+          createdAt: new Date().toISOString(),
+        })
+        enqueueSnackbar('Saved to application.', { variant: 'success' })
+      }
     } catch (err) {
       enqueueSnackbar(
         (err as { data?: { error?: string } }).data?.error ??
@@ -437,7 +457,7 @@ export function AiAssistDialog({
               <ReactMarkdown>{response}</ReactMarkdown>
             </Box>
 
-            {!!onSaveDocument && (
+            {!!onSaveDocument && !autoSave && (
               <Stack direction='row' spacing={1} alignItems='center' mt={2}>
                 <Autocomplete
                   freeSolo
@@ -468,7 +488,7 @@ export function AiAssistDialog({
           </Box>
         )}
 
-        {hasJobContext && !!documents?.length && (
+        {hasJobContext && (
           <Box mt={2}>
             <Divider sx={{ mb: 1.5 }} />
             <Typography
@@ -478,53 +498,59 @@ export function AiAssistDialog({
             >
               Saved Documents
             </Typography>
-            <Stack spacing={0.5}>
-              {documents.map((doc) => (
-                <Box
-                  key={doc.id}
-                  display='flex'
-                  alignItems='center'
-                  gap={1}
-                  sx={{
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: 1,
-                    '&:hover': { bgcolor: 'action.hover' },
-                  }}
-                >
-                  <ArticleOutlinedIcon
+            {!documents?.length ? (
+              <Typography variant='caption' color='text.secondary'>
+                No documents saved yet.
+              </Typography>
+            ) : (
+              <Stack spacing={0.5}>
+                {documents.map((doc) => (
+                  <Box
+                    key={doc.id}
+                    display='flex'
+                    alignItems='center'
+                    gap={1}
                     sx={{
-                      fontSize: 16,
-                      color: 'text.secondary',
-                      flexShrink: 0,
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      '&:hover': { bgcolor: 'action.hover' },
                     }}
-                  />
-                  <Typography
-                    variant='body2'
-                    sx={{
-                      flex: 1,
-                      cursor: 'pointer',
-                      '&:hover': { color: 'primary.main' },
-                    }}
-                    onClick={() => setViewingDoc(doc)}
                   >
-                    {doc.label}
-                  </Typography>
-                  {onDeleteDocument && (
-                    <Tooltip title='Delete'>
-                      <IconButton
-                        size='small'
-                        disabled={deletingId === doc.id}
-                        onClick={() => setConfirmDeleteDoc(doc)}
-                        sx={{ '&:hover': { color: 'error.main' } }}
-                      >
-                        <DeleteOutlineIcon fontSize='small' />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Box>
-              ))}
-            </Stack>
+                    <ArticleOutlinedIcon
+                      sx={{
+                        fontSize: 16,
+                        color: 'text.secondary',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography
+                      variant='body2'
+                      sx={{
+                        flex: 1,
+                        cursor: 'pointer',
+                        '&:hover': { color: 'primary.main' },
+                      }}
+                      onClick={() => setViewingDoc(doc)}
+                    >
+                      {doc.label}
+                    </Typography>
+                    {onDeleteDocument && (
+                      <Tooltip title='Delete'>
+                        <IconButton
+                          size='small'
+                          disabled={deletingId === doc.id}
+                          onClick={() => setConfirmDeleteDoc(doc)}
+                          sx={{ '&:hover': { color: 'error.main' } }}
+                        >
+                          <DeleteOutlineIcon fontSize='small' />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            )}
           </Box>
         )}
       </DialogContent>
@@ -652,6 +678,23 @@ export function AiAssistDialog({
       </Dialog>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
+        {!!onSaveDocument && (
+          <FormControlLabel
+            control={
+              <Checkbox
+                size='small'
+                checked={autoSave}
+                onChange={(e) => setAutoSave(e.target.checked)}
+              />
+            }
+            label={
+              <Typography variant='caption'>
+                Auto-save to application
+              </Typography>
+            }
+            sx={{ mr: 'auto' }}
+          />
+        )}
         <Button onClick={onClose} color='inherit' variant='outlined'>
           Close
         </Button>
