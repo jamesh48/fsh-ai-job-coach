@@ -84,6 +84,7 @@ function FileViewerDialog({
   onClose: () => void
 }) {
   const [content, setContent] = useState<FileContent | null>(null)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -95,13 +96,29 @@ function FileViewerDialog({
     }
     setLoading(true)
     fetch(`/api/agent/files/${file.id}`)
-      .then((res) => res.json() as Promise<FileContent>)
-      .then((data) => {
-        setContent(data)
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok) {
+          setError((data as { error?: string }).error ?? 'Failed to load file.')
+          return
+        }
+        setContent(data as FileContent)
       })
       .catch(() => setError('Failed to load file content.'))
       .finally(() => setLoading(false))
   }, [open, file.id])
+
+  useEffect(() => {
+    if (!content?.mimeType.startsWith('image/')) {
+      setBlobUrl(null)
+      return
+    }
+    const bytes = Uint8Array.from(atob(content.base64), (c) => c.charCodeAt(0))
+    const blob = new Blob([bytes], { type: content.mimeType })
+    const url = URL.createObjectURL(blob)
+    setBlobUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [content])
 
   function renderPreview() {
     if (loading) {
@@ -130,9 +147,9 @@ function FileViewerDialog({
     if (mimeType.startsWith('image/')) {
       return (
         <Box display='flex' justifyContent='center'>
-          {/* biome-ignore lint/performance/noImgElement: viewer needs native img for data URL */}
+          {/* biome-ignore lint/performance/noImgElement: viewer uses object URL for memory efficiency */}
           <img
-            src={dataUrl}
+            src={blobUrl ?? dataUrl}
             alt={file.filename}
             style={{
               maxWidth: '100%',

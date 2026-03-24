@@ -22,7 +22,7 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  const content = await requestFileContent(file.path)
+  const content = await requestFileContent(file.path, 45000)
   if (!content) {
     return NextResponse.json(
       {
