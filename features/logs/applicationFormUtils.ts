@@ -48,10 +48,10 @@ export const FIT_SCORE_DISPLAY: Record<
   FitScore,
   { label: string; color: 'success' | 'primary' | 'warning' | 'default' }
 > = {
-  4: { label: 'Strong Fit', color: 'success' },
-  3: { label: 'Good Fit', color: 'primary' },
-  2: { label: 'Partial Fit', color: 'warning' },
-  1: { label: 'Weak Fit', color: 'default' },
+  4: { label: '💪 Strong Fit', color: 'success' },
+  3: { label: '👍 Good Fit', color: 'primary' },
+  2: { label: '🤔 Partial Fit', color: 'warning' },
+  1: { label: '👎 Weak Fit', color: 'default' },
 }
 
 export interface JobApplicationEntry {
