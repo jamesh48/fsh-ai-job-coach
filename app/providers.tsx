@@ -5,6 +5,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { SnackbarProvider } from 'notistack'
 import { useMemo } from 'react'
 import { Provider } from 'react-redux'
+import { ErrorSnackbar } from '@/components/ui/ErrorSnackbar'
 import { AgentNotificationHandler } from '@/lib/agentNotificationHandler'
 import { AgentSocketProvider } from '@/lib/agentSocketContext'
 import { store } from '@/lib/store'
@@ -147,6 +148,7 @@ function ThemedApp({ children }: { children: React.ReactNode }) {
         maxSnack={3}
         autoHideDuration={3000}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        Components={{ error: ErrorSnackbar }}
       >
         {children}
       </SnackbarProvider>
