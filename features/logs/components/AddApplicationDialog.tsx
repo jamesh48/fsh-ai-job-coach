@@ -711,14 +711,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
           company: getValues('company'),
           roleDescription: getValues('roleDescription'),
         }}
-        documents={
-          editing !== undefined
-            ? (parseContent(log.content).applications[editing.index]
-                ?.documents ??
-              editing.app.documents ??
-              [])
-            : (formDocuments ?? [])
-        }
+        documents={formDocuments ?? []}
         onSaveDocument={handleSaveDocument}
         onUpdateDocument={handleUpdateDocument}
         onDeleteDocument={handleDeleteDocument}
