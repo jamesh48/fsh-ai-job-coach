@@ -201,7 +201,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   const handleSaveDocument = async (doc: AppDocument) => {
     const { notes, applications } = parseContent(log.content)
     if (editing !== undefined) {
-      // Existing app — append directly to it in the log
+      // Existing app — persist immediately and keep form state in sync
       const updatedApps = applications.map((a, i) =>
         i === editing.index
           ? { ...a, documents: [...(a.documents ?? []), doc] }
@@ -211,6 +211,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         ...log,
         content: serializeToContent({ notes, applications: updatedApps }),
       }).unwrap()
+      setValue('documents', [...(getValues('documents') ?? []), doc])
     } else {
       // New app — append to the in-progress form's documents field
       const current = getValues('documents') ?? []
@@ -235,6 +236,10 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         ...log,
         content: serializeToContent({ notes, applications: updatedApps }),
       }).unwrap()
+      setValue(
+        'documents',
+        (getValues('documents') ?? []).map((d) => (d.id === doc.id ? doc : d)),
+      )
     } else {
       const current = getValues('documents') ?? []
       setValue(
@@ -259,6 +264,10 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         ...log,
         content: serializeToContent({ notes, applications: updatedApps }),
       }).unwrap()
+      setValue(
+        'documents',
+        (getValues('documents') ?? []).filter((d) => d.id !== docId),
+      )
     } else {
       const current = getValues('documents') ?? []
       setValue(
@@ -271,15 +280,11 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   const onSubmit = async (app: JobApplicationEntry) => {
     const { notes, applications } = parseContent(log.content)
     // Preserve activities — they're managed by the activities drawer, not this form
-    // For editing: merge original documents with any newly queued ones (app.documents)
+    // Documents are kept in sync via handleSaveDocument/Update/Delete, so use form state
     const withActivities: JobApplicationEntry = {
       ...app,
       activities: editing ? (editing.app.activities ?? []) : [],
-      documents: editing
-        ? (parseContent(log.content).applications[editing.index]?.documents ??
-          editing.app.documents ??
-          [])
-        : (app.documents ?? []),
+      documents: app.documents ?? [],
     }
     const updatedApps =
       editing !== undefined
