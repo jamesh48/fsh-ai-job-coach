@@ -2,8 +2,9 @@ import bcrypt from 'bcryptjs'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { withRoute } from '@/lib/withRoute'
 
-export async function PUT(request: Request) {
+export const PUT = withRoute('auth/password', async (request: Request) => {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -38,4 +39,4 @@ export async function PUT(request: Request) {
   })
 
   return NextResponse.json({ ok: true })
-}
+})

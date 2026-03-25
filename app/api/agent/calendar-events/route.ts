@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { withRoute } from '@/lib/withRoute'
 
 const EXPIRY_DAYS = 90
 
-export async function GET() {
+export const GET = withRoute('agent/calendar-events', async () => {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -23,9 +24,9 @@ export async function GET() {
     take: 50,
   })
   return NextResponse.json(events)
-}
+})
 
-export async function DELETE() {
+export const DELETE = withRoute('agent/calendar-events', async () => {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -35,4 +36,4 @@ export async function DELETE() {
     where: { userId: session.userId },
   })
   return NextResponse.json({ ok: true })
-}
+})

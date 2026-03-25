@@ -2,8 +2,9 @@ import bcrypt from 'bcryptjs'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createSession } from '@/lib/session'
+import { withRoute } from '@/lib/withRoute'
 
-export async function POST(request: Request) {
+export const POST = withRoute('auth/login', async (request: Request) => {
   const { username, password } = await request.json()
 
   if (!username || typeof username !== 'string' || username.trim().length < 2) {
@@ -43,4 +44,4 @@ export async function POST(request: Request) {
 
   await createSession(existing.id)
   return NextResponse.json({ ok: true })
-}
+})

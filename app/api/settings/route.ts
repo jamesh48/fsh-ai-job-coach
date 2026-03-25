@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { encrypt, isEncrypted, keyHint } from '@/lib/crypto'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { withRoute } from '@/lib/withRoute'
 
-export async function GET() {
+export const GET = withRoute('settings', async () => {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -59,9 +60,9 @@ export async function GET() {
       : [],
     updatedAt: settings.updatedAt,
   })
-}
+})
 
-export async function PUT(request: Request) {
+export const PUT = withRoute('settings', async (request: Request) => {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -115,4 +116,4 @@ export async function PUT(request: Request) {
       : [],
     updatedAt: settings.updatedAt,
   })
-}
+})

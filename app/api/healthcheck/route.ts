@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
+import { withRoute } from '@/lib/withRoute'
 
-export async function GET() {
+export const GET = withRoute('healthcheck', async () => {
   return NextResponse.json({ ok: true })
-}
+})

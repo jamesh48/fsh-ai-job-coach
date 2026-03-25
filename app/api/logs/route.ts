@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { withRoute } from '@/lib/withRoute'
 
-export async function GET() {
+export const GET = withRoute('logs', async () => {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -14,9 +15,9 @@ export async function GET() {
     orderBy: { date: 'desc' },
   })
   return NextResponse.json(logs)
-}
+})
 
-export async function POST(request: Request) {
+export const POST = withRoute('logs', async (request: Request) => {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -40,4 +41,4 @@ export async function POST(request: Request) {
     }
     throw e
   }
-}
+})

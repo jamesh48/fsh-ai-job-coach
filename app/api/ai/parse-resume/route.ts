@@ -3,50 +3,52 @@ import type { DocumentBlockParam } from '@anthropic-ai/sdk/resources/messages'
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
+import { withAiRoute } from '@/lib/withAiRoute'
 
-export async function POST(
-  request: Request,
-): Promise<NextResponse<{ text: string } | { error: string }>> {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export const POST = withAiRoute(
+  'parse-resume',
+  async (
+    request: Request,
+  ): Promise<NextResponse<{ text: string } | { error: string }>> => {
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const result = await getDecryptedSettings(session.userId)
-  if (!result) {
-    return NextResponse.json(
-      { error: 'Anthropic API key not configured. Add it in Settings.' },
-      { status: 503 },
-    )
-  }
-  const { apiKey } = result
-
-  let pdfBase64: string
-  try {
-    const formData = await request.formData()
-    const file = formData.get('file')
-    if (!file || !(file instanceof Blob)) {
+    const result = await getDecryptedSettings(session.userId)
+    if (!result) {
       return NextResponse.json(
-        { error: 'No PDF file provided.' },
+        { error: 'Anthropic API key not configured. Add it in Settings.' },
+        { status: 503 },
+      )
+    }
+    const { apiKey } = result
+
+    let pdfBase64: string
+    try {
+      const formData = await request.formData()
+      const file = formData.get('file')
+      if (!file || !(file instanceof Blob)) {
+        return NextResponse.json(
+          { error: 'No PDF file provided.' },
+          { status: 400 },
+        )
+      }
+      if (file.type !== 'application/pdf') {
+        return NextResponse.json(
+          { error: 'File must be a PDF.' },
+          { status: 400 },
+        )
+      }
+      const buffer = await file.arrayBuffer()
+      pdfBase64 = Buffer.from(buffer).toString('base64')
+    } catch {
+      return NextResponse.json(
+        { error: 'Failed to read uploaded file.' },
         { status: 400 },
       )
     }
-    if (file.type !== 'application/pdf') {
-      return NextResponse.json(
-        { error: 'File must be a PDF.' },
-        { status: 400 },
-      )
-    }
-    const buffer = await file.arrayBuffer()
-    pdfBase64 = Buffer.from(buffer).toString('base64')
-  } catch {
-    return NextResponse.json(
-      { error: 'Failed to read uploaded file.' },
-      { status: 400 },
-    )
-  }
 
-  try {
     const client = new Anthropic({ apiKey })
 
     const doc: DocumentBlockParam = {
@@ -82,16 +84,5 @@ export async function POST(
       .trim()
 
     return NextResponse.json({ text })
-  } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) {
-      return NextResponse.json(
-        { error: 'Invalid Anthropic API key. Check your key in Settings.' },
-        { status: 401 },
-      )
-    }
-    return NextResponse.json(
-      { error: 'Failed to parse resume. Please try again.' },
-      { status: 502 },
-    )
-  }
-}
+  },
+)

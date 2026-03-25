@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { withRoute } from '@/lib/withRoute'
 
 type CalendarClassification = {
   relevant: boolean
@@ -72,7 +73,7 @@ Description: ${description}`,
   }
 }
 
-export async function POST(request: Request) {
+export const POST = withRoute('agent/calendar', async (request: Request) => {
   const secret = request.headers.get('x-internal-secret')
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -131,4 +132,4 @@ export async function POST(request: Request) {
   })
 
   return NextResponse.json({ relevant: true, classification })
-}
+})

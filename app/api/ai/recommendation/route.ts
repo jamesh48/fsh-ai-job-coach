@@ -7,6 +7,7 @@ import type {
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
+import { withAiRoute } from '@/lib/withAiRoute'
 
 export async function GET(): Promise<
   NextResponse<StoredRecommendationResponse>
@@ -35,99 +36,102 @@ function buildPlanContext(plan: string | null): string {
   return `\nJob search plan:\n${plan.trim()}\n`
 }
 
-export async function POST(
-  request: Request,
-): Promise<NextResponse<AiRecommendationResponse | { error: string }>> {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export const POST = withAiRoute(
+  'recommendation',
+  async (
+    request: Request,
+  ): Promise<NextResponse<AiRecommendationResponse | { error: string }>> => {
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const { date } = await request.json().catch(() => ({}))
-  const result = await getDecryptedSettings(session.userId)
-  if (!result) {
-    return NextResponse.json(
-      { error: 'Anthropic API key is not configured. Add it in Settings.' },
-      { status: 503 },
-    )
-  }
-  const { apiKey, settings } = result
-  const careerProfile = settings.careerProfile
-  const resume = settings.resume ?? null
-  const jobSearchPlan = settings.jobSearchPlan ?? null
-  const profileLinks: { label: string; url: string }[] = settings.profileLinks
-    ? JSON.parse(settings.profileLinks)
-    : []
-  const linksContext =
-    profileLinks.length > 0
-      ? `\nCandidate links:\n${profileLinks.map((l) => `- ${l.label}: ${l.url}`).join('\n')}\n`
-      : ''
+    const { date } = await request.json().catch(() => ({}))
+    const result = await getDecryptedSettings(session.userId)
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Anthropic API key is not configured. Add it in Settings.' },
+        { status: 503 },
+      )
+    }
+    const { apiKey, settings } = result
+    const careerProfile = settings.careerProfile
+    const resume = settings.resume ?? null
+    const jobSearchPlan = settings.jobSearchPlan ?? null
+    const profileLinks: { label: string; url: string }[] = settings.profileLinks
+      ? JSON.parse(settings.profileLinks)
+      : []
+    const linksContext =
+      profileLinks.length > 0
+        ? `\nCandidate links:\n${profileLinks.map((l) => `- ${l.label}: ${l.url}`).join('\n')}\n`
+        : ''
 
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - 30)
-  const cutoffStr = cutoff.toISOString().slice(0, 10)
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 30)
+    const cutoffStr = cutoff.toISOString().slice(0, 10)
 
-  const [recentLogs, oldPriorityLogs, recentEmails] = await Promise.all([
-    prisma.dailyLog.findMany({
-      where: { userId: session.userId, date: { gte: cutoffStr } },
-      orderBy: { date: 'asc' },
-    }),
-    prisma.dailyLog.findMany({
-      where: {
-        userId: session.userId,
-        date: { lt: cutoffStr },
-        OR: [
-          { content: { contains: 'Priority: Hot Lead' } },
-          { content: { contains: 'Priority: Strong Interest' } },
-        ],
-      },
-      orderBy: { date: 'asc' },
-    }),
-    prisma.agentEmail.findMany({
-      where: { userId: session.userId, receivedAt: { gte: cutoff } },
-      orderBy: { receivedAt: 'asc' },
-    }),
-  ])
+    const [recentLogs, oldPriorityLogs, recentEmails] = await Promise.all([
+      prisma.dailyLog.findMany({
+        where: { userId: session.userId, date: { gte: cutoffStr } },
+        orderBy: { date: 'asc' },
+      }),
+      prisma.dailyLog.findMany({
+        where: {
+          userId: session.userId,
+          date: { lt: cutoffStr },
+          OR: [
+            { content: { contains: 'Priority: Hot Lead' } },
+            { content: { contains: 'Priority: Strong Interest' } },
+          ],
+        },
+        orderBy: { date: 'asc' },
+      }),
+      prisma.agentEmail.findMany({
+        where: { userId: session.userId, receivedAt: { gte: cutoff } },
+        orderBy: { receivedAt: 'asc' },
+      }),
+    ])
 
-  const seen = new Set<string>()
-  const logs = [...oldPriorityLogs, ...recentLogs].filter((l) => {
-    if (seen.has(l.id)) return false
-    seen.add(l.id)
-    return true
-  })
-
-  if (logs.length === 0) {
-    return NextResponse.json({
-      recommendation:
-        'No activity logged yet. Start by adding your first daily entry — even a small step counts.',
+    const seen = new Set<string>()
+    const logs = [...oldPriorityLogs, ...recentLogs].filter((l) => {
+      if (seen.has(l.id)) return false
+      seen.add(l.id)
+      return true
     })
-  }
 
-  const logText = logs.map((log) => `${log.date}:\n${log.content}`).join('\n\n')
-  const today = date ?? new Date().toISOString().slice(0, 10)
-  const planContext = buildPlanContext(jobSearchPlan)
+    if (logs.length === 0) {
+      return NextResponse.json({
+        recommendation:
+          'No activity logged yet. Start by adding your first daily entry — even a small step counts.',
+      })
+    }
 
-  const emailContext =
-    recentEmails.length > 0
-      ? `\nRecent notable emails (auto-detected, AI-filtered):\n${recentEmails
-          .map(
-            (e: {
-              subject: string
-              sender: string
-              date: string
-              classification: unknown
-            }) => {
-              const c = e.classification as {
-                type: string
-                reason: string
-              } | null
-              return `- "${e.subject}" from ${e.sender} (${e.date})${c ? ` [${c.type}]: ${c.reason}` : ''}`
-            },
-          )
-          .join('\n')}\n`
-      : ''
+    const logText = logs
+      .map((log) => `${log.date}:\n${log.content}`)
+      .join('\n\n')
+    const today = date ?? new Date().toISOString().slice(0, 10)
+    const planContext = buildPlanContext(jobSearchPlan)
 
-  try {
+    const emailContext =
+      recentEmails.length > 0
+        ? `\nRecent notable emails (auto-detected, AI-filtered):\n${recentEmails
+            .map(
+              (e: {
+                subject: string
+                sender: string
+                date: string
+                classification: unknown
+              }) => {
+                const c = e.classification as {
+                  type: string
+                  reason: string
+                } | null
+                return `- "${e.subject}" from ${e.sender} (${e.date})${c ? ` [${c.type}]: ${c.reason}` : ''}`
+              },
+            )
+            .join('\n')}\n`
+        : ''
+
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
@@ -178,25 +182,5 @@ Be direct and concrete. No preamble. Use markdown formatting (bold headers, shor
     })
 
     return NextResponse.json({ recommendation })
-  } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) {
-      return NextResponse.json(
-        { error: 'Invalid Anthropic API key. Check your key in Settings' },
-        { status: 401 },
-      )
-    }
-    if (e instanceof Anthropic.RateLimitError) {
-      return NextResponse.json(
-        {
-          error:
-            'Anthropic rate limit reached. Please wait a moment and try again.',
-        },
-        { status: 429 },
-      )
-    }
-    return NextResponse.json(
-      { error: 'Failed to reach the AI service. Please try again.' },
-      { status: 502 },
-    )
-  }
-}
+  },
+)

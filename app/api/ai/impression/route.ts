@@ -2,48 +2,53 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
+import { withAiRoute } from '@/lib/withAiRoute'
 
-export async function POST(
-  request: Request,
-): Promise<NextResponse<{ impression: string } | { error: string }>> {
-  const { impression, jobTitle, company, roleDescription } = await request
-    .json()
-    .catch(() => ({}))
+export const POST = withAiRoute(
+  'impression',
+  async (
+    request: Request,
+  ): Promise<NextResponse<{ impression: string } | { error: string }>> => {
+    const {
+      impression: rawImpression,
+      jobTitle,
+      company,
+      roleDescription,
+    } = await request.json().catch(() => ({}))
 
-  if (!impression?.trim()) {
-    return NextResponse.json(
-      {
-        error:
-          'Write your initial thoughts first, then use this to clean them up.',
-      },
-      { status: 400 },
-    )
-  }
+    if (!rawImpression?.trim()) {
+      return NextResponse.json(
+        {
+          error:
+            'Write your initial thoughts first, then use this to clean them up.',
+        },
+        { status: 400 },
+      )
+    }
 
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const result = await getDecryptedSettings(session.userId)
-  if (!result) {
-    return NextResponse.json(
-      { error: 'Anthropic API key not configured. Add it in Settings.' },
-      { status: 503 },
-    )
-  }
-  const { apiKey } = result
+    const result = await getDecryptedSettings(session.userId)
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Anthropic API key not configured. Add it in Settings.' },
+        { status: 503 },
+      )
+    }
+    const { apiKey } = result
 
-  const context = [
-    `My thoughts: ${impression}`,
-    jobTitle && `Role: ${jobTitle}`,
-    company && `Company: ${company}`,
-    roleDescription && `Role description: ${roleDescription}`,
-  ]
-    .filter(Boolean)
-    .join('\n')
+    const context = [
+      `My thoughts: ${rawImpression}`,
+      jobTitle && `Role: ${jobTitle}`,
+      company && `Company: ${company}`,
+      roleDescription && `Role description: ${roleDescription}`,
+    ]
+      .filter(Boolean)
+      .join('\n')
 
-  try {
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
@@ -57,16 +62,5 @@ export async function POST(
       .map((b) => b.text)
       .join('')
     return NextResponse.json({ impression })
-  } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) {
-      return NextResponse.json(
-        { error: 'Invalid Anthropic API key. Check your key in Settings.' },
-        { status: 401 },
-      )
-    }
-    return NextResponse.json(
-      { error: 'Failed to draft impression. Please try again.' },
-      { status: 502 },
-    )
-  }
-}
+  },
+)

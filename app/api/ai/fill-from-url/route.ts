@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
+import { withAiRoute } from '@/lib/withAiRoute'
 
 interface FillResult {
   jobTitle?: string
@@ -81,69 +82,70 @@ function extractMeta(html: string): { title: string; company: string } {
   return { title: raw, company: '' }
 }
 
-export async function POST(
-  request: Request,
-): Promise<NextResponse<FillResult | { error: string }>> {
-  const { url } = await request.json().catch(() => ({}))
-  if (!url?.trim()) {
-    return NextResponse.json({ error: 'URL is required.' }, { status: 400 })
-  }
+export const POST = withAiRoute(
+  'fill-from-url',
+  async (
+    request: Request,
+  ): Promise<NextResponse<FillResult | { error: string }>> => {
+    const { url } = await request.json().catch(() => ({}))
+    if (!url?.trim()) {
+      return NextResponse.json({ error: 'URL is required.' }, { status: 400 })
+    }
 
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const result = await getDecryptedSettings(session.userId)
-  if (!result) {
-    return NextResponse.json(
-      { error: 'Anthropic API key not configured. Add it in Settings.' },
-      { status: 503 },
-    )
-  }
-  const { apiKey, settings } = result
-  const careerProfile = settings.careerProfile ?? null
-  const resume = settings.resume ?? null
-  const hasFitContext = !!(careerProfile?.trim() || resume?.trim())
-
-  let html: string
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept: 'text/html',
-      },
-      signal: AbortSignal.timeout(10000),
-    })
-    if (!res.ok) {
+    const result = await getDecryptedSettings(session.userId)
+    if (!result) {
       return NextResponse.json(
-        { error: `Could not fetch URL (${res.status}).` },
+        { error: 'Anthropic API key not configured. Add it in Settings.' },
+        { status: 503 },
+      )
+    }
+    const { apiKey, settings } = result
+    const careerProfile = settings.careerProfile ?? null
+    const resume = settings.resume ?? null
+    const hasFitContext = !!(careerProfile?.trim() || resume?.trim())
+
+    let html: string
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'text/html',
+        },
+        signal: AbortSignal.timeout(10000),
+      })
+      if (!res.ok) {
+        return NextResponse.json(
+          { error: `Could not fetch URL (${res.status}).` },
+          { status: 422 },
+        )
+      }
+      html = await res.text()
+    } catch {
+      return NextResponse.json(
+        { error: 'Could not reach that URL. Check it and try again.' },
         { status: 422 },
       )
     }
-    html = await res.text()
-  } catch {
-    return NextResponse.json(
-      { error: 'Could not reach that URL. Check it and try again.' },
-      { status: 422 },
-    )
-  }
 
-  const { title: metaTitle, company: metaCompany } = extractMeta(html)
-  const bodyText = extractPageText(html)
+    const { title: metaTitle, company: metaCompany } = extractMeta(html)
+    const bodyText = extractPageText(html)
 
-  const fitScoringFields = hasFitContext
-    ? `- fitScore: 1 | 2 | 3 | 4 (how well this role matches the candidate below: 4=Strong Fit, 3=Good Fit, 2=Partial Fit, 1=Weak Fit)
+    const fitScoringFields = hasFitContext
+      ? `- fitScore: 1 | 2 | 3 | 4 (how well this role matches the candidate below: 4=Strong Fit, 3=Good Fit, 2=Partial Fit, 1=Weak Fit)
 - fitRationale: string (1-2 sentences explaining the score — name specific matches or gaps)`
-    : ''
+      : ''
 
-  const candidateContext = hasFitContext
-    ? `\nCandidate context for fit scoring:\n${careerProfile ? `Profile: ${careerProfile}\n` : ''}${resume ? `Resume:\n${resume}\n` : ''}`
-    : ''
+    const candidateContext = hasFitContext
+      ? `\nCandidate context for fit scoring:\n${careerProfile ? `Profile: ${careerProfile}\n` : ''}${resume ? `Resume:\n${resume}\n` : ''}`
+      : ''
 
-  const client = new Anthropic({ apiKey })
-  try {
+    const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
@@ -196,13 +198,5 @@ ${bodyText}`,
     }
 
     return NextResponse.json(parsed)
-  } catch {
-    return NextResponse.json(
-      {
-        error:
-          'Failed to parse job posting. Try pasting the description manually.',
-      },
-      { status: 502 },
-    )
-  }
-}
+  },
+)

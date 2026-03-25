@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
+import { withRoute } from '@/lib/withRoute'
 
 const EXPIRY_DAYS = 90
 
-export async function GET() {
+export const GET = withRoute('agent/emails', async () => {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -24,9 +25,9 @@ export async function GET() {
     take: 50,
   })
   return NextResponse.json(emails)
-}
+})
 
-export async function DELETE() {
+export const DELETE = withRoute('agent/emails', async () => {
   const session = await getSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -34,4 +35,4 @@ export async function DELETE() {
 
   await prisma.agentEmail.deleteMany({ where: { userId: session.userId } })
   return NextResponse.json({ ok: true })
-}
+})

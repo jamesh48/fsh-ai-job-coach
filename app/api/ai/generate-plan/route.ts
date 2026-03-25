@@ -3,45 +3,48 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
+import { withAiRoute } from '@/lib/withAiRoute'
 
-export async function POST(
-  request: Request,
-): Promise<NextResponse<{ plan: string } | { error: string }>> {
-  const { startDate, durationWeeks, priorities, additionalContext } =
-    await request.json().catch(() => ({}))
+export const POST = withAiRoute(
+  'generate-plan',
+  async (
+    request: Request,
+  ): Promise<NextResponse<{ plan: string } | { error: string }>> => {
+    const { startDate, durationWeeks, priorities, additionalContext } =
+      await request.json().catch(() => ({}))
 
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  if (!startDate && !durationWeeks && !priorities) {
-    return NextResponse.json(
-      { error: 'Fill in at least a start date, duration, or priorities.' },
-      { status: 400 },
-    )
-  }
+    if (!startDate && !durationWeeks && !priorities) {
+      return NextResponse.json(
+        { error: 'Fill in at least a start date, duration, or priorities.' },
+        { status: 400 },
+      )
+    }
 
-  const result = await getDecryptedSettings(session.userId)
-  if (!result) {
-    return NextResponse.json(
-      { error: 'Anthropic API key not configured. Add it in Settings.' },
-      { status: 503 },
-    )
-  }
-  const { apiKey, settings } = result
+    const result = await getDecryptedSettings(session.userId)
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Anthropic API key not configured. Add it in Settings.' },
+        { status: 503 },
+      )
+    }
+    const { apiKey, settings } = result
 
-  const context = [
-    startDate && `Start date: ${startDate}`,
-    durationWeeks && `Duration: ${durationWeeks} weeks`,
-    priorities && `Top priorities / focus areas:\n${priorities}`,
-    additionalContext && `Additional context:\n${additionalContext}`,
-    settings?.careerProfile && `Candidate profile:\n${settings.careerProfile}`,
-  ]
-    .filter(Boolean)
-    .join('\n\n')
+    const context = [
+      startDate && `Start date: ${startDate}`,
+      durationWeeks && `Duration: ${durationWeeks} weeks`,
+      priorities && `Top priorities / focus areas:\n${priorities}`,
+      additionalContext && `Additional context:\n${additionalContext}`,
+      settings?.careerProfile &&
+        `Candidate profile:\n${settings.careerProfile}`,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
 
-  try {
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
@@ -71,16 +74,5 @@ Keep the total response under 900 words. Prioritize structure and specificity ov
     })
 
     return NextResponse.json({ plan })
-  } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) {
-      return NextResponse.json(
-        { error: 'Invalid Anthropic API key. Check your key in Settings.' },
-        { status: 401 },
-      )
-    }
-    return NextResponse.json(
-      { error: 'Failed to generate plan. Please try again.' },
-      { status: 502 },
-    )
-  }
-}
+  },
+)

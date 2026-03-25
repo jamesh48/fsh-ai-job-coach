@@ -2,30 +2,32 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
+import { withAiRoute } from '@/lib/withAiRoute'
 
-export async function POST(
-  request: Request,
-): Promise<NextResponse<{ summary: string } | { error: string }>> {
-  const { notes } = await request.json().catch(() => ({}))
-  if (!notes?.trim()) {
-    return NextResponse.json({ error: 'No notes provided.' }, { status: 400 })
-  }
+export const POST = withAiRoute(
+  'summarize-notes',
+  async (
+    request: Request,
+  ): Promise<NextResponse<{ summary: string } | { error: string }>> => {
+    const { notes } = await request.json().catch(() => ({}))
+    if (!notes?.trim()) {
+      return NextResponse.json({ error: 'No notes provided.' }, { status: 400 })
+    }
 
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const result = await getDecryptedSettings(session.userId)
-  if (!result) {
-    return NextResponse.json(
-      { error: 'Anthropic API key not configured. Add it in Settings.' },
-      { status: 503 },
-    )
-  }
-  const { apiKey } = result
+    const result = await getDecryptedSettings(session.userId)
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Anthropic API key not configured. Add it in Settings.' },
+        { status: 503 },
+      )
+    }
+    const { apiKey } = result
 
-  try {
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
@@ -39,16 +41,5 @@ export async function POST(
       .map((b) => b.text)
       .join('')
     return NextResponse.json({ summary })
-  } catch (e) {
-    if (e instanceof Anthropic.AuthenticationError) {
-      return NextResponse.json(
-        { error: 'Invalid Anthropic API key. Check your key in Settings.' },
-        { status: 401 },
-      )
-    }
-    return NextResponse.json(
-      { error: 'Failed to summarize notes. Please try again.' },
-      { status: 502 },
-    )
-  }
-}
+  },
+)
