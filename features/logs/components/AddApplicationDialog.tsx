@@ -97,6 +97,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   const [draftingImpression, setDraftingImpression] = useState(false)
   const [fillingFromUrl, setFillingFromUrl] = useState(false)
   const [assistOpen, setAssistOpen] = useState(false)
+  const [localDocs, setLocalDocs] = useState<AppDocument[]>([])
 
   const {
     register,
@@ -115,13 +116,12 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
   const fitScore = useWatch({ control, name: 'fitScore' }) as FitScore | null
   const fitRationale = useWatch({ control, name: 'fitRationale' })
   const impressionValue = useWatch({ control, name: 'impression' })
-  const formDocuments = useWatch({
-    control,
-    name: 'documents',
-  }) as AppDocument[]
 
   useEffect(() => {
-    if (open) reset(editing ? { ...editing.app } : { ...EMPTY_APPLICATION })
+    if (open) {
+      reset(editing ? { ...editing.app } : { ...EMPTY_APPLICATION })
+      setLocalDocs(editing?.app.documents ?? [])
+    }
   }, [open, reset, editing])
 
   const handleSummarize = async () => {
@@ -212,10 +212,12 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         content: serializeToContent({ notes, applications: updatedApps }),
       }).unwrap()
       setValue('documents', [...(getValues('documents') ?? []), doc])
+      setLocalDocs((prev) => [...prev, doc])
     } else {
       // New app — append to the in-progress form's documents field
       const current = getValues('documents') ?? []
       setValue('documents', [...current, doc])
+      setLocalDocs((prev) => [...prev, doc])
     }
   }
 
@@ -240,12 +242,14 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         'documents',
         (getValues('documents') ?? []).map((d) => (d.id === doc.id ? doc : d)),
       )
+      setLocalDocs((prev) => prev.map((d) => (d.id === doc.id ? doc : d)))
     } else {
       const current = getValues('documents') ?? []
       setValue(
         'documents',
         current.map((d) => (d.id === doc.id ? doc : d)),
       )
+      setLocalDocs((prev) => prev.map((d) => (d.id === doc.id ? doc : d)))
     }
   }
 
@@ -268,12 +272,14 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
         'documents',
         (getValues('documents') ?? []).filter((d) => d.id !== docId),
       )
+      setLocalDocs((prev) => prev.filter((d) => d.id !== docId))
     } else {
       const current = getValues('documents') ?? []
       setValue(
         'documents',
         current.filter((d) => d.id !== docId),
       )
+      setLocalDocs((prev) => prev.filter((d) => d.id !== docId))
     }
   }
 
@@ -711,7 +717,7 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
           company: getValues('company'),
           roleDescription: getValues('roleDescription'),
         }}
-        documents={formDocuments ?? []}
+        documents={localDocs}
         onSaveDocument={handleSaveDocument}
         onUpdateDocument={handleUpdateDocument}
         onDeleteDocument={handleDeleteDocument}

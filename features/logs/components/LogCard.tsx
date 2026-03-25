@@ -853,7 +853,11 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
               }
             : undefined
         }
-        documents={assistApp?.app.documents}
+        documents={
+          assistApp
+            ? (allApplications[assistApp.index]?.documents ?? [])
+            : undefined
+        }
         onSaveDocument={handleSaveDocumentFromAssist}
         onUpdateDocument={handleUpdateDocumentFromAssist}
         onDeleteDocument={handleDeleteDocumentFromAssist}
