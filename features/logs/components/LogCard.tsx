@@ -9,6 +9,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ModeEditOutlineIcon from '@mui/icons-material/ModeEditOutline'
 import TimelineIcon from '@mui/icons-material/Timeline'
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import WorkIcon from '@mui/icons-material/Work'
 import {
   Box,
@@ -55,6 +56,7 @@ import {
 import type { DailyLog } from '../types'
 import { AddApplicationDialog } from './AddApplicationDialog'
 import { ApplicationActivitiesDrawer } from './ApplicationActivitiesDrawer'
+import { ApplicationViewDialog } from './ApplicationViewDialog'
 
 type Priority = JobApplicationEntry['priority']
 
@@ -126,6 +128,9 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [addingApp, setAddingApp] = useState(false)
   const [editingApp, setEditingApp] = useState<
+    { app: JobApplicationEntry; index: number } | undefined
+  >(undefined)
+  const [viewingApp, setViewingApp] = useState<
     { app: JobApplicationEntry; index: number } | undefined
   >(undefined)
   const [activitiesAppIndex, setActivitiesAppIndex] = useState<number | null>(
@@ -482,6 +487,20 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
                               <TimelineIcon sx={{ fontSize: 15 }} />
                             </IconButton>
                           </Tooltip>
+                          <Tooltip title='View application'>
+                            <IconButton
+                              size='small'
+                              onClick={() =>
+                                setViewingApp({ app, index: originalIndex })
+                              }
+                              sx={{
+                                color: 'text.secondary',
+                                '&:hover': { color: 'primary.main' },
+                              }}
+                            >
+                              <VisibilityOutlinedIcon sx={{ fontSize: 15 }} />
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title='Edit application'>
                             <IconButton
                               size='small'
@@ -797,6 +816,28 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
         log={log}
         editing={editingApp}
         onClose={() => setEditingApp(undefined)}
+        onSwitchToView={
+          editingApp
+            ? () => {
+                const fresh = parseContent(log.content).applications[
+                  editingApp.index
+                ]
+                setEditingApp(undefined)
+                if (fresh)
+                  setViewingApp({ app: fresh, index: editingApp.index })
+              }
+            : undefined
+        }
+      />
+      <ApplicationViewDialog
+        open={viewingApp !== undefined}
+        app={viewingApp?.app ?? null}
+        onClose={() => setViewingApp(undefined)}
+        onEdit={() => {
+          if (!viewingApp) return
+          setViewingApp(undefined)
+          setEditingApp(viewingApp)
+        }}
       />
       {activitiesAppIndex !== null && (
         <ApplicationActivitiesDrawer

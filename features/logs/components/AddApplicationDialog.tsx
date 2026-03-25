@@ -2,6 +2,7 @@
 
 import { yupResolver } from '@hookform/resolvers/yup'
 import CloseIcon from '@mui/icons-material/Close'
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import {
   Box,
   Button,
@@ -58,6 +59,7 @@ interface Props {
   log: DailyLog
   editing?: { app: JobApplicationEntry; index: number }
   onClose: () => void
+  onSwitchToView?: () => void
 }
 
 const schema = yup.object({
@@ -87,7 +89,13 @@ const schema = yup.object({
   documents: yup.array().default([]),
 })
 
-export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
+export function AddApplicationDialog({
+  open,
+  log,
+  editing,
+  onClose,
+  onSwitchToView,
+}: Props) {
   const { enqueueSnackbar } = useSnackbar()
   const [updateLog] = useUpdateLogMutation()
   const [summarizeJob] = useSummarizeJobMutation()
@@ -318,8 +326,19 @@ export function AddApplicationDialog({ open, log, editing, onClose }: Props) {
       fullWidth
       maxWidth='md'
     >
-      <DialogTitle sx={{ pr: 6 }}>
+      <DialogTitle sx={{ pr: onSwitchToView ? 10 : 6 }}>
         {editing ? 'Edit Job Application' : 'Add Job Application'}
+        {onSwitchToView && (
+          <Tooltip title='View application'>
+            <IconButton
+              size='small'
+              onClick={onSwitchToView}
+              sx={{ position: 'absolute', top: 12, right: 44 }}
+            >
+              <VisibilityOutlinedIcon fontSize='small' />
+            </IconButton>
+          </Tooltip>
+        )}
         <IconButton
           size='small'
           onClick={onClose}
