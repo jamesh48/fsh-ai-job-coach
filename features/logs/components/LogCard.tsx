@@ -819,12 +819,9 @@ export function LogCard({ log, onEdit, onDelete, searchTerm }: Props) {
         onSwitchToView={
           editingApp
             ? () => {
-                const fresh = parseContent(log.content).applications[
-                  editingApp.index
-                ]
+                const captured = editingApp
                 setEditingApp(undefined)
-                if (fresh)
-                  setViewingApp({ app: fresh, index: editingApp.index })
+                setViewingApp(captured)
               }
             : undefined
         }

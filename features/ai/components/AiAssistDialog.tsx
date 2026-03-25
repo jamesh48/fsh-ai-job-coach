@@ -88,7 +88,7 @@ function stripInline(text: string): string {
     .replace(/`(.+?)`/g, '$1')
 }
 
-async function downloadAsPdf(markdown: string, filename: string) {
+export async function downloadAsPdf(markdown: string, filename: string) {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
 
