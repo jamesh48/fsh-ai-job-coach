@@ -26,6 +26,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   FormControlLabel,
   IconButton,
@@ -535,6 +536,18 @@ export function SettingsDialog({ open, onClose }: Props) {
                   {...register('anthropicApiKey')}
                 />
               </Stack>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography variant='subtitle2' fontWeight={700} mb={0.5}>
+                AI Context
+              </Typography>
+              <Typography variant='body2' color='text.secondary'>
+                Claude reads everything below on every request to personalize
+                coaching, cover letters, and recommendations.
+              </Typography>
             </Box>
 
             <Box>
