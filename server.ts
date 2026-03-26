@@ -5,7 +5,6 @@ loadEnvConfig(process.cwd())
 import { randomUUID } from 'node:crypto'
 import type { IncomingMessage } from 'node:http'
 import { createServer } from 'node:http'
-import { parse } from 'node:url'
 import { jwtVerify } from 'jose'
 import next from 'next'
 import { type RawData, type WebSocket, WebSocketServer } from 'ws'
@@ -41,7 +40,7 @@ interface AgentMessage {
  * Returns the userId on success, false on failure.
  */
 async function validateAgentSecret(
-  secret: string | string[] | undefined,
+  secret: string | undefined,
 ): Promise<string | false> {
   try {
     const res = await fetch(
@@ -199,8 +198,7 @@ app.prepare().then(() => {
   const handleUpgrade = app.getUpgradeHandler()
 
   const server = createServer((req, res) => {
-    const parsedUrl = parse(req.url ?? '/', true)
-    handle(req, res, parsedUrl)
+    handle(req, res)
   })
 
   const agentWss = new WebSocketServer({ noServer: true })
@@ -366,10 +364,12 @@ app.prepare().then(() => {
 
   // --- Upgrade routing ---
   server.on('upgrade', (req, socket, head) => {
-    const { pathname, query } = parse(req.url ?? '/', true)
+    const reqUrl = new URL(req.url ?? '/', `http://localhost:${port}`)
+    const pathname = reqUrl.pathname
+    const secret = reqUrl.searchParams.get('secret') ?? undefined
 
     if (pathname === '/ws/agent') {
-      validateAgentSecret(query.secret).then((userId) => {
+      validateAgentSecret(secret).then((userId) => {
         if (!userId) {
           console.log('[ws] agent auth failed — rejecting upgrade')
           socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
