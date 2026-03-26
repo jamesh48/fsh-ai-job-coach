@@ -3,6 +3,7 @@
 import dayjs from 'dayjs'
 import { useCallback, useEffect, useState } from 'react'
 import { getDeviceId, loadSavedPrinterId } from '@/lib/printerPreference'
+import { sanitizeAiText } from '@/lib/utils'
 
 const ESC = 0x1b
 const GS = 0x1d
@@ -42,10 +43,7 @@ function buildEscPosData(recommendation: string, date?: string): Uint8Array {
     ALIGN_LEFT,
   ]
 
-  for (const raw of recommendation
-    .replace(/\u2014/g, '--')
-    .replace(/\u2013/g, '-')
-    .split('\n')) {
+  for (const raw of sanitizeAiText(recommendation).split('\n')) {
     const line = raw.trimEnd()
 
     if (!line.trim()) {

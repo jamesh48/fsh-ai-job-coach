@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { sanitizeAiText } from '@/lib/utils'
 
 type RouteHandler = (req: Request) => Promise<NextResponse>
 
@@ -29,10 +30,23 @@ function isBillingError(e: unknown): boolean {
   )
 }
 
+async function sanitizeResponse(res: NextResponse): Promise<NextResponse> {
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) return res
+  const body: Record<string, unknown> = await res.json()
+  const sanitized = Object.fromEntries(
+    Object.entries(body).map(([k, v]) => [
+      k,
+      typeof v === 'string' ? sanitizeAiText(v) : v,
+    ]),
+  )
+  return NextResponse.json(sanitized, { status: res.status })
+}
+
 export function withAiRoute(name: string, handler: RouteHandler): RouteHandler {
   return async (req: Request) => {
     try {
-      return await handler(req)
+      return await sanitizeResponse(await handler(req))
     } catch (e) {
       const message = deriveMessage(e)
       console.error(`[ai/${name}] ${message}`, e)

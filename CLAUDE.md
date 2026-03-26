@@ -297,6 +297,8 @@ const { apiKey, settings } = result  // settings available for careerProfile, re
 ```
 Never inline the `prisma.settings.findUnique` + `decrypt()` pattern in individual routes — always use `getDecryptedSettings`.
 
+AI route responses must be **flat `{ key: string | number | boolean }` objects** — no nested objects or arrays. `withAiRoute` sanitizes AI typographic characters by doing a single-level pass over string values; nesting would silently skip sanitization.
+
 ## Sensitive Field Encryption
 - `lib/crypto.ts` — AES-256-GCM encryption using a 32-byte key derived from `SESSION_SECRET` via SHA-256
 - Encrypted format: `enc:<iv_hex>:<authTag_hex>:<ciphertext_hex>`

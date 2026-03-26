@@ -92,13 +92,6 @@ Warm regards,
       .map((b) => b.text)
       .join('')
 
-    const response = raw
-      .replace(/\u2014/g, ' - ') // em dash —
-      .replace(/\u2013/g, ' - ') // en dash –
-      .replace(/\u2018|\u2019/g, "'") // curly apostrophes ' '
-      .replace(/\u201C|\u201D/g, '"') // curly quotes " "
-      .replace(/\u2026/g, '...') // ellipsis …
-
     const filename =
       filenameMessage.content
         .filter((b) => b.type === 'text')
@@ -110,6 +103,6 @@ Warm regards,
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '') || 'ai-response'
 
-    return NextResponse.json({ response, filename })
+    return NextResponse.json({ response: raw, filename })
   },
 )

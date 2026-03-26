@@ -7,6 +7,7 @@ import type {
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
+import { sanitizeAiText } from '@/lib/utils'
 import { withAiRoute } from '@/lib/withAiRoute'
 
 export async function GET(): Promise<
@@ -163,10 +164,12 @@ Be direct and concrete. No preamble. Use markdown formatting (bold headers, shor
       ],
     })
 
-    const recommendation = message.content
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('')
+    const recommendation = sanitizeAiText(
+      message.content
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join(''),
+    )
 
     await prisma.settings.upsert({
       where: { userId: session.userId },

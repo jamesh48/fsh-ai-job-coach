@@ -181,16 +181,6 @@ ${bodyText}`,
     const jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
     const parsed: FillResult = JSON.parse(jsonStr)
 
-    // Apply same AI-sniff sanitization as the assist route
-    if (parsed.roleDescription) {
-      parsed.roleDescription = parsed.roleDescription
-        .replace(/\u2014/g, ' - ')
-        .replace(/\u2013/g, ' - ')
-        .replace(/\u2018|\u2019/g, "'")
-        .replace(/\u201C|\u201D/g, '"')
-        .replace(/\u2026/g, '...')
-    }
-
     const sourceInfo = detectSource(url, html)
     if (sourceInfo) {
       parsed.source = sourceInfo.source
