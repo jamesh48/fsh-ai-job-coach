@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getDecryptedSettings } from '@/lib/settings'
 import { withRoute } from '@/lib/withRoute'
 
 type CalendarClassification = {
@@ -85,16 +86,14 @@ export const POST = withRoute('agent/calendar', async (request: Request) => {
     return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
   }
 
-  const settings = await prisma.settings.findUnique({
-    where: { userId },
-  })
-
-  const apiKey = settings?.anthropicApiKey
+  const result = await getDecryptedSettings(userId)
 
   // No API key — fail open
-  if (!apiKey) {
+  if (!result) {
     return NextResponse.json({ relevant: true, classification: null })
   }
+
+  const { apiKey } = result
 
   const classification = await classifyCalendarEvent(
     apiKey,
