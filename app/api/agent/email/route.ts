@@ -79,20 +79,30 @@ Snippet: ${snippet}`,
     const toolUse = response.content.find((b) => b.type === 'tool_use')
     if (!toolUse || toolUse.type !== 'tool_use') return null
     return toolUse.input as EmailClassification
-  } catch {
+  } catch (err) {
+    console.error('[agent/email] classifyEmail error:', err)
     return null
   }
 }
 
 export const POST = withRoute('agent/email', async (request: Request) => {
+  console.log('[agent/email] POST received')
+
   const secret = request.headers.get('x-internal-secret')
   if (!process.env.INTERNAL_SECRET || secret !== process.env.INTERNAL_SECRET) {
+    console.log(
+      '[agent/email] Unauthorized — secret mismatch or INTERNAL_SECRET not set',
+    )
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const { userId, ...body } = await request.json()
+  console.log(
+    `[agent/email] userId=${userId} emailId=${body.id} subject="${body.subject}" from="${body.from}"`,
+  )
 
   if (!userId) {
+    console.log('[agent/email] Missing userId')
     return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
   }
 
@@ -100,6 +110,9 @@ export const POST = withRoute('agent/email', async (request: Request) => {
 
   // No API key — fail open so emails aren't silently dropped
   if (!result) {
+    console.log(
+      '[agent/email] No API key configured — failing open (relevant: true, no classification)',
+    )
     return NextResponse.json({ relevant: true, classification: null })
   }
 
@@ -110,19 +123,36 @@ export const POST = withRoute('agent/email', async (request: Request) => {
     body.subject?.includes(BYPASS_PHRASE) ||
     body.snippet?.includes(BYPASS_PHRASE)
 
+  if (isBypass) {
+    console.log(
+      '[agent/email] Test bypass phrase detected — skipping classification',
+    )
+  } else {
+    console.log('[agent/email] Sending to Claude Haiku for classification...')
+  }
+
   const classification = isBypass
     ? { relevant: true, type: 'other', reason: 'Test bypass' }
     : await classifyEmail(apiKey, body.subject, body.snippet, body.from ?? '')
 
   // Classification failed — fail open (don't store)
   if (!classification) {
+    console.log(
+      '[agent/email] Classification returned null — failing open (relevant: true, no store)',
+    )
     return NextResponse.json({ relevant: true, classification: null })
   }
 
+  console.log(
+    `[agent/email] Classification result: relevant=${classification.relevant} type=${classification.type} reason="${classification.reason}"`,
+  )
+
   if (!classification.relevant) {
+    console.log('[agent/email] Email classified as not relevant — dropping')
     return NextResponse.json({ relevant: false })
   }
 
+  console.log(`[agent/email] Upserting to DB: emailId=${body.id}`)
   await prisma.agentEmail.upsert({
     where: { userId_emailId: { userId, emailId: body.id } },
     create: {
@@ -137,6 +167,7 @@ export const POST = withRoute('agent/email', async (request: Request) => {
     },
     update: {},
   })
+  console.log(`[agent/email] Upsert complete — returning relevant: true`)
 
   return NextResponse.json({ relevant: true, classification })
 })
