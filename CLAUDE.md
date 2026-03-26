@@ -201,6 +201,13 @@ model AgentCalendarEvent {
 - `AgentEmail.emailId` is `@unique` — upsert with `update: {}` prevents duplicate storage if the agent re-sends.
 
 ## Key Conventions
+
+### Reusability & Deduplication
+- Before writing a new React component or hook, scan the codebase for an existing one that already does the same or a very similar thing. Prefer extending it over duplicating it.
+- When the same JSX pattern appears in two or more places (e.g. a confirmation dialog structure, a labeled icon button, a loading skeleton shape), extract it into a shared component under `components/ui/` or the relevant feature's `components/` folder.
+- When the same logic appears in two or more places (e.g. fetching + decrypting settings, formatting a date, serializing a value), extract it into a shared utility or hook.
+- The bar for extraction is **two real usages** — not one usage and one hypothetical. Don't abstract prematurely.
+
 - All components that use hooks or browser APIs are `'use client'`
 - API routes live under `app/api/` and use Next.js 16 async params: `{ params }: { params: Promise<{ id: string }> }`
 - RTK Query mutations: use `.unwrap()` so errors throw naturally into the surrounding `try/catch`. Do **not** use the `'error' in result` check pattern — it's redundant when the call site already has a try/catch and requires manual re-throwing

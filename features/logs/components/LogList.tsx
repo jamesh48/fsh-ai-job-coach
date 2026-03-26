@@ -3,6 +3,7 @@
 import AddIcon from '@mui/icons-material/Add'
 import ClearIcon from '@mui/icons-material/Clear'
 import LogoutIcon from '@mui/icons-material/Logout'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 import SearchIcon from '@mui/icons-material/Search'
 import SettingsIcon from '@mui/icons-material/Settings'
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline'
@@ -11,13 +12,19 @@ import {
   Box,
   Button,
   CircularProgress,
+  Divider,
   IconButton,
   InputAdornment,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
+import Grow from '@mui/material/Grow'
 import { MagicWandIcon } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { useSnackbar } from 'notistack'
@@ -47,6 +54,7 @@ export function LogList({ onSearch }: { onSearch?: () => void }) {
   const [assistOpen, setAssistOpen] = useState(false)
   const [agentOpen, setAgentOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null)
 
   function handleSearch(value: string) {
     setSearch(value)
@@ -118,7 +126,8 @@ export function LogList({ onSearch }: { onSearch?: () => void }) {
             Job Search Log
           </Typography>
         </Box>
-        <Box display='flex' alignItems='center' gap={1}>
+        <Box display='flex' alignItems='center' gap={0.5}>
+          {/* Always visible */}
           <Tooltip
             title={
               agentConnected
@@ -146,35 +155,113 @@ export function LogList({ onSearch }: { onSearch?: () => void }) {
           </Tooltip>
           <NotificationBell />
           <AgentFilesButton />
-          <Tooltip title='AI Writing Assistant'>
+
+          {/* Desktop: inline icons */}
+          <Box
+            sx={{
+              display: { xs: 'none', sm: 'flex' },
+              alignItems: 'center',
+              gap: 0.5,
+            }}
+          >
+            <Tooltip title='AI Writing Assistant'>
+              <IconButton
+                size='small'
+                onClick={() => setAssistOpen(true)}
+                sx={{ '&:hover': { color: 'secondary.main' } }}
+              >
+                <MagicWandIcon size={16} weight='fill' />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Settings'>
+              <IconButton
+                size='small'
+                onClick={() => setSettingsOpen(true)}
+                sx={{ '&:hover': { color: 'primary.main' } }}
+              >
+                <SettingsIcon fontSize='small' />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title='Sign out'>
+              <IconButton
+                size='small'
+                onClick={handleLogout}
+                sx={{ '&:hover': { color: 'error.main' } }}
+              >
+                <LogoutIcon fontSize='small' />
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          {/* Mobile: overflow menu */}
+          <Box sx={{ display: { xs: 'flex', sm: 'none' } }}>
             <IconButton
               size='small'
-              onClick={() => setAssistOpen(true)}
-              sx={{
-                '&:hover': { color: 'secondary.main' },
-              }}
-            >
-              <MagicWandIcon size={16} weight='fill' />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title='Settings'>
-            <IconButton
-              size='small'
-              onClick={() => setSettingsOpen(true)}
+              onClick={(e) => setMoreAnchor(e.currentTarget)}
               sx={{ '&:hover': { color: 'primary.main' } }}
             >
-              <SettingsIcon fontSize='small' />
+              <MoreVertIcon fontSize='small' />
             </IconButton>
-          </Tooltip>
-          <Tooltip title='Sign out'>
-            <IconButton
-              size='small'
-              onClick={handleLogout}
-              sx={{ '&:hover': { color: 'error.main' } }}
+            <Menu
+              anchorEl={moreAnchor}
+              open={Boolean(moreAnchor)}
+              onClose={() => setMoreAnchor(null)}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              slots={{ transition: Grow }}
+              slotProps={{
+                transition: { timeout: { enter: 200, exit: 120 } },
+                paper: {
+                  sx: {
+                    minWidth: 210,
+                    mt: 0.75,
+                    borderRadius: '12px',
+                    backdropFilter: 'blur(12px)',
+                    boxShadow:
+                      '0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08)',
+                    transformOrigin: 'top right !important',
+                    overflow: 'hidden',
+                  },
+                },
+              }}
             >
-              <LogoutIcon fontSize='small' />
-            </IconButton>
-          </Tooltip>
+              <MenuItem
+                onClick={() => {
+                  setAssistOpen(true)
+                  setMoreAnchor(null)
+                }}
+              >
+                <ListItemIcon sx={{ color: 'secondary.main' }}>
+                  <MagicWandIcon size={18} weight='fill' />
+                </ListItemIcon>
+                <ListItemText>AI Writing Assistant</ListItemText>
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setSettingsOpen(true)
+                  setMoreAnchor(null)
+                }}
+              >
+                <ListItemIcon>
+                  <SettingsIcon fontSize='small' />
+                </ListItemIcon>
+                <ListItemText>Settings</ListItemText>
+              </MenuItem>
+              <Divider />
+              <MenuItem
+                onClick={() => {
+                  setMoreAnchor(null)
+                  handleLogout()
+                }}
+                sx={{ color: 'error.main' }}
+              >
+                <ListItemIcon sx={{ color: 'error.main' }}>
+                  <LogoutIcon fontSize='small' />
+                </ListItemIcon>
+                <ListItemText>Sign out</ListItemText>
+              </MenuItem>
+            </Menu>
+          </Box>
         </Box>
       </Box>
 

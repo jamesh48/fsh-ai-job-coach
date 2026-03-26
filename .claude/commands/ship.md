@@ -34,6 +34,12 @@ Evaluate the changes against the following criteria:
 - New MUI Dialogs have a close `IconButton` in the upper-right per the documented pattern
 - No `* { box-sizing: border-box }` in CSS
 
+**Reusability & deduplication**
+- Does any new JSX pattern (dialog structure, icon button with tooltip, loading skeleton, etc.) already exist elsewhere in the codebase and could be a shared component instead?
+- Does any new logic (data fetching, formatting, transformation) duplicate something already in a util, hook, or lib file?
+- Are there now two or more usages of something that was previously a one-off, making extraction worthwhile?
+- If a new component was added, is it scoped to the right folder (`components/ui/` for primitives, feature `components/` for feature-specific)?
+
 **Value / quality**
 - Is there anything obviously missing that would make this feature more useful or robust?
 - Any patterns here that differ from how similar features are built in the rest of the codebase?
@@ -52,7 +58,10 @@ Brief bullets on what is solid.
 Numbered list. For each item: what it is, why it matters, and a short code snippet or suggested fix if applicable. Separate "must fix before commit" from "nice to have."
 
 ### Suggested commit message
-A concise conventional-style commit message (e.g. `feat: add fit score chip to LogCard`) based on what the diff actually does.
+Two parts:
+
+1. **Subject line** — a concise conventional-style one-liner (e.g. `feat: add fit score chip to LogCard`)
+2. **Body** — 2–4 sentences explaining *why* the change was made, any non-obvious decisions, and what problem it solves. Written in plain prose, present tense. Omit if the subject line is fully self-explanatory.
 
 ## 4. Update CLAUDE.md
 
@@ -64,3 +73,15 @@ After the review, scan the diff for anything that should be reflected in CLAUDE.
 - Anything that future-Claude would need to know to work on this codebase effectively
 
 If you find anything, update CLAUDE.md directly. Be concise — add to the right existing section rather than appending a new one unless it's genuinely a new category. Do not duplicate what's already there.
+
+## 5. Commit and push
+
+Ask the user: "Would you like me to commit and push with the message: `<suggested commit message>`?" and show the full subject + body so they can review it before confirming.
+
+If the user confirms:
+1. Stage all changed files with `git add` (specific files, not `-A`)
+2. Commit using the suggested subject line and body, appended with `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`. Pass the full message via a heredoc so multi-line formatting is preserved.
+3. Push to the current branch with `git push`
+4. Report the result
+
+If the user declines or requests a different message, adjust accordingly or stop.

@@ -196,6 +196,8 @@ function setupKeepalive(ws: WebSocket): void {
 }
 
 app.prepare().then(() => {
+  const handleUpgrade = app.getUpgradeHandler()
+
   const server = createServer((req, res) => {
     const parsedUrl = parse(req.url ?? '/', true)
     handle(req, res, parsedUrl)
@@ -384,7 +386,7 @@ app.prepare().then(() => {
         clientWss.emit('connection', ws, req)
       })
     } else {
-      socket.destroy()
+      handleUpgrade(req, socket, head)
     }
   })
 
