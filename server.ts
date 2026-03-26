@@ -236,6 +236,8 @@ app.prepare().then(() => {
         return
       }
 
+      console.log(`[ws] agent message received: type=${parsed.type}`)
+
       if (parsed.type === 'file_removed') {
         const removedPath = (parsed.payload as { path?: string }).path
         if (removedPath) {
@@ -278,15 +280,27 @@ app.prepare().then(() => {
       }
 
       if (parsed.type === 'email_detected') {
+        const emailPayload = parsed.payload as Record<string, unknown>
+        console.log(
+          `[ws] email_detected: id=${emailPayload.id} subject="${emailPayload.subject}" from="${emailPayload.from}"`,
+        )
         const result = await classifyAndStoreEmail(parsed.payload, agentUserId)
         if (result === null) {
+          console.log(
+            '[ws] email classification null — failing open, broadcasting as-is',
+          )
           broadcastToUser(agentUserId, data)
         } else if (result.relevant) {
+          console.log(
+            '[ws] email relevant — broadcasting to client with classification',
+          )
           parsed.payload = {
             ...parsed.payload,
             classification: result.classification,
           }
           broadcastToUser(agentUserId, JSON.stringify(parsed))
+        } else {
+          console.log('[ws] email not relevant — dropped, not broadcast')
         }
         return
       }
