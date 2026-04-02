@@ -1,0 +1,52 @@
+name: Destroy FSH Job Coach
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to confirm teardown'
+        required: true
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'destroy' }}
+    concurrency:
+      group: cdk-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+
+      - name: Install CDK
+        run: yarn global add aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: 'us-east-1'
+
+      - name: Destroy CDK stack
+        run: |
+          cd iac;
+          yarn install --frozen-lockfile;
+          cdk destroy --force;
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ vars.AWS_ACCOUNT_NUMBER }}
+          CDK_DEFAULT_REGION: 'us-east-1'
+          AWS_CLUSTER_ARN: ${{ vars.AWS_CLUSTER_ARN }}
+          AWS_DEFAULT_SG: ${{ vars.AWS_DEFAULT_SG }}
+          AWS_VPC_ID: ${{ vars.AWS_VPC_ID }}
+          ALB_LISTENER_ARN: ${{ vars.ALB_LISTENER_ARN }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+
+      - name: Destroy complete
+        run: echo "Stack destroyed."
