@@ -108,6 +108,16 @@ export const api = createApi({
     >({
       query: (body) => ({ url: '/ai/generate-plan', method: 'POST', body }),
     }),
+    draftProfile: builder.mutation<
+      { profile: string },
+      {
+        resume: string
+        existingProfile?: string
+        profileLinks?: { label: string; url: string }[]
+      }
+    >({
+      query: (body) => ({ url: '/ai/draft-profile', method: 'POST', body }),
+    }),
     getAgentEmails: builder.query<AgentEmail[], void>({
       query: () => '/agent/emails',
       providesTags: ['AgentEmail'],
@@ -170,6 +180,7 @@ export const {
   useFillFromUrlMutation,
   useAiAssistMutation,
   useGeneratePlanMutation,
+  useDraftProfileMutation,
   useGetAgentEmailsQuery,
   useDeleteAgentEmailMutation,
   useClearAgentEmailsMutation,

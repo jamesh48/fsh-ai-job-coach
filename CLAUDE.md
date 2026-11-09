@@ -45,6 +45,7 @@ app/                          # Next.js App Router — routes, layouts, API rout
   api/ai/impression/route.ts  # POST — draft impression with Claude
   api/ai/assist/route.ts      # POST — AI writing assistant (cover letters, emails, etc.)
   api/ai/fill-from-url/route.ts  # POST — scrape job URL and extract structured fields via Claude
+  api/ai/draft-profile/route.ts  # POST — draft Career Profile from (unsaved) resume + links + existing profile
   api/agent/email/route.ts    # POST — classify + store email (internal, called by server.ts)
   api/agent/calendar/route.ts # POST — classify calendar event (internal, called by server.ts)
   api/agent/emails/route.ts         # GET — list stored emails (auto-expires >90 days); DELETE — clear all
@@ -102,7 +103,8 @@ features/                     # Feature modules (co-located components, hooks, t
   interview/                  # Placeholder feature
   jobs/                       # Placeholder feature
 components/
-  ui/                         # Primitive shared UI (empty, ready to fill)
+  ui/                         # Primitive shared UI
+    TextFieldSkeleton.tsx     # Skeleton shaped like a filled multiline TextField (used while AI fills a field)
 hooks/
   redux.ts                    # Typed useAppDispatch / useAppSelector
 lib/
@@ -284,6 +286,8 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 - `app/api/ai/impression/route.ts` — drafts a 2-3 sentence first-person impression
 - `app/api/ai/assist/route.ts` — AI writing assistant; parallel calls: main response (sonnet-4-6) + filename suggestion (haiku); injects career profile, resume, and profile links; system prompt enforces no `---`, no standalone recipient line, correct closing format
 - `app/api/ai/fill-from-url/route.ts` — fetches job URL, extracts `jobTitle`, `company`, `roleDescription`, `workArrangement`, `compensation` via Claude; LinkedIn-aware HTML parser; optionally generates `fitScore` (1–4) + `fitRationale` when career profile or resume are set
+- `app/api/ai/draft-profile/route.ts` — drafts the Career Profile from the resume, profile links, and any existing profile text sent from the (unsaved) Settings form; never invents preferences, emits `[fill in: …]` placeholders instead
+- Settings → AI: Resume comes before Career Profile. Career Profile has "Draft from resume" (API), "Copy prompt for Claude.ai" (clipboard prompt for a claude.ai chat, which can use the user's claude.ai memory; the app never touches claude.ai credentials), and an "Open Claude.ai" link
 - `AiRecommendation.tsx` — collapsible panel (75vh expanded / 49px collapsed); auto-prints if USB printer connected and auto-print setting enabled
 - `AiAssistDialog.tsx` — prompt input + markdown response preview; PDF download (jsPDF manual renderer); save output as named document to job application via `onSaveDocument` callback
 - Recommendation timestamp stored as `DateTime` (`lastRecommendationAt`), displayed as `MM-DD-YYYY hh:mm:ss`

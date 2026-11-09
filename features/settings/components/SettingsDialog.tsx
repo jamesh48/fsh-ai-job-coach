@@ -10,6 +10,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import LightModeIcon from '@mui/icons-material/LightMode'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import PrintIcon from '@mui/icons-material/Print'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -54,7 +55,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import ReactMarkdown from 'react-markdown'
 import * as yup from 'yup'
+import { TextFieldSkeleton } from '@/components/ui/TextFieldSkeleton'
 import {
+  useDraftProfileMutation,
   useGeneratePlanMutation,
   useGetMeQuery,
   useGetSettingsQuery,
@@ -124,6 +127,22 @@ const DURATION_OPTIONS = [
   { value: '12', label: '12 weeks' },
 ]
 
+// Prompt the user pastes into a claude.ai chat, where memory and past
+// conversations can answer the preference questions a resume can't.
+const CLAUDE_AI_PROFILE_PROMPT = `Based on everything you know about me and my job search, write my career profile for an AI job search coach.
+
+Write it in the first person as plain prose paragraphs (no headings or bullet lists), under 300 words. Cover:
+- My current or most recent role, seniority, and years of experience
+- Core skills, technologies, and domains of strength
+- Notable achievements or scope
+- Target roles and seniority
+- Industries or company stages I'm interested in
+- Location and work arrangement preferences (remote / hybrid / on-site)
+- Compensation expectations
+- Dealbreakers
+
+Only include what you actually know about me. For anything you don't know, write [fill in: <what is needed>] instead of guessing. Output only the profile text.`
+
 const passwordSchema = yup.object({
   currentPassword: yup.string().default(''),
   newPassword: yup.string().min(8, 'Minimum 8 characters').required('Required'),
@@ -169,6 +188,10 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   const jobSearchPlan = useWatch({ control, name: 'jobSearchPlan' })
   const agentSecretValue = useWatch({ control, name: 'agentSecret' })
+  const resumeValue = useWatch({ control, name: 'resume' })
+
+  const [draftProfile, { isLoading: draftingProfile }] =
+    useDraftProfileMutation()
 
   // Plan builder local state (not persisted — just used to generate the plan)
   const [planStartDate, setPlanStartDate] = useState('')
@@ -292,6 +315,39 @@ export function SettingsDialog({ open, onClose }: Props) {
       enqueueSnackbar('Failed to parse resume.', { variant: 'error' })
     } finally {
       setParsing(false)
+    }
+  }
+
+  async function handleDraftProfile() {
+    try {
+      const data = await draftProfile({
+        resume: getValues('resume'),
+        existingProfile: getValues('careerProfile') || undefined,
+        profileLinks,
+      }).unwrap()
+      setValue('careerProfile', data.profile, { shouldDirty: true })
+      enqueueSnackbar(
+        'Profile drafted. Fill in any [fill in: …] gaps, then save.',
+        { variant: 'success' },
+      )
+    } catch (err) {
+      enqueueSnackbar(
+        (err as { data?: { error?: string } }).data?.error ??
+          'Failed to draft profile.',
+        { variant: 'error' },
+      )
+    }
+  }
+
+  async function handleCopyClaudeAiPrompt() {
+    try {
+      await navigator.clipboard.writeText(CLAUDE_AI_PROFILE_PROMPT)
+      enqueueSnackbar(
+        'Copied to clipboard. Paste it into a claude.ai chat, then paste the answer here.',
+        { variant: 'success' },
+      )
+    } catch {
+      enqueueSnackbar('Failed to copy to clipboard.', { variant: 'error' })
     }
   }
 
@@ -556,36 +612,6 @@ export function SettingsDialog({ open, onClose }: Props) {
                 color='text.secondary'
                 fontWeight={600}
               >
-                Career Profile
-              </Typography>
-              <Typography
-                variant='body2'
-                color='text.secondary'
-                mt={0.5}
-                mb={1.5}
-              >
-                Describe yourself as a candidate — target roles, years of
-                experience, key skills, what you're looking for, and any
-                dealbreakers. Claude reads this on every coaching request to
-                give personalized advice.
-              </Typography>
-              <TextField
-                label='Your Profile'
-                multiline
-                rows={16}
-                fullWidth
-                placeholder={`Example:\nI'm a senior full-stack engineer with 8 years of experience, primarily in React and Node.js. I'm targeting staff-level IC roles at Series B–D startups. I want remote or hybrid in the US, $180–220k base. I'm excited about developer tools, fintech, and climate tech. I'm not interested in defense, crypto, or pure front-end roles. I have a strong background in system design and have led teams of 3–5 engineers.`}
-                slotProps={{ inputLabel: { shrink: true } }}
-                {...register('careerProfile')}
-              />
-            </Box>
-
-            <Box>
-              <Typography
-                variant='overline'
-                color='text.secondary'
-                fontWeight={600}
-              >
                 Resume
               </Typography>
               <Box
@@ -624,33 +650,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                 </Tooltip>
               </Box>
               {parsingResume ? (
-                <Box
-                  sx={{
-                    border: 1,
-                    borderColor: 'divider',
-                    borderRadius: 1,
-                    px: 1.75,
-                    py: 1.5,
-                    minHeight: 352,
-                  }}
-                >
-                  <Skeleton width='45%' height={14} sx={{ mb: 1.5 }} />
-                  <Skeleton height={12} />
-                  <Skeleton height={12} />
-                  <Skeleton width='85%' height={12} sx={{ mb: 1.5 }} />
-                  <Skeleton width='30%' height={14} sx={{ mb: 1 }} />
-                  <Skeleton height={12} />
-                  <Skeleton width='90%' height={12} />
-                  <Skeleton height={12} sx={{ mb: 1.5 }} />
-                  <Skeleton width='30%' height={14} sx={{ mb: 1 }} />
-                  <Skeleton height={12} />
-                  <Skeleton width='75%' height={12} />
-                  <Skeleton height={12} sx={{ mb: 1.5 }} />
-                  <Skeleton width='35%' height={14} sx={{ mb: 1 }} />
-                  <Skeleton height={12} />
-                  <Skeleton width='80%' height={12} />
-                  <Skeleton height={12} />
-                </Box>
+                <TextFieldSkeleton />
               ) : (
                 <TextField
                   label='Resume'
@@ -660,6 +660,90 @@ export function SettingsDialog({ open, onClose }: Props) {
                   placeholder='Paste your resume here as plain text...'
                   slotProps={{ inputLabel: { shrink: true } }}
                   {...register('resume')}
+                />
+              )}
+            </Box>
+
+            <Box>
+              <Typography
+                variant='overline'
+                color='text.secondary'
+                fontWeight={600}
+              >
+                Career Profile
+              </Typography>
+              <Typography
+                variant='body2'
+                color='text.secondary'
+                mt={0.5}
+                mb={1.5}
+              >
+                Describe yourself as a candidate — target roles, years of
+                experience, key skills, what you're looking for, and any
+                dealbreakers. Claude reads this on every coaching request to
+                give personalized advice. Draft it from your resume above, or
+                copy a prompt into claude.ai, where Claude may already know your
+                preferences from past chats, and paste the answer here.
+              </Typography>
+              <Stack
+                direction='row'
+                spacing={1}
+                mb={1.5}
+                flexWrap='wrap'
+                useFlexGap
+              >
+                <Tooltip
+                  title={
+                    resumeValue?.trim()
+                      ? 'Draft your profile from your resume and links'
+                      : 'Add your resume above first'
+                  }
+                >
+                  <span>
+                    <Button
+                      size='small'
+                      variant='outlined'
+                      color='secondary'
+                      startIcon={<MagicWandIcon size={16} weight='fill' />}
+                      disabled={
+                        draftingProfile || parsingResume || !resumeValue?.trim()
+                      }
+                      onClick={handleDraftProfile}
+                    >
+                      {draftingProfile ? 'Drafting…' : 'Draft from resume'}
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Button
+                  size='small'
+                  variant='outlined'
+                  startIcon={<ContentCopyIcon fontSize='small' />}
+                  onClick={handleCopyClaudeAiPrompt}
+                >
+                  Copy prompt for Claude.ai
+                </Button>
+                <Button
+                  size='small'
+                  component='a'
+                  href='https://claude.ai/new'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  endIcon={<OpenInNewIcon fontSize='small' />}
+                >
+                  Open Claude.ai
+                </Button>
+              </Stack>
+              {draftingProfile ? (
+                <TextFieldSkeleton />
+              ) : (
+                <TextField
+                  label='Your Profile'
+                  multiline
+                  rows={16}
+                  fullWidth
+                  placeholder={`Example:\nI'm a senior full-stack engineer with 8 years of experience, primarily in React and Node.js. I'm targeting staff-level IC roles at Series B–D startups. I want remote or hybrid in the US, $180–220k base. I'm excited about developer tools, fintech, and climate tech. I'm not interested in defense, crypto, or pure front-end roles. I have a strong background in system design and have led teams of 3–5 engineers.`}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  {...register('careerProfile')}
                 />
               )}
             </Box>
@@ -1185,14 +1269,14 @@ export function SettingsDialog({ open, onClose }: Props) {
           onClick={onClose}
           color='inherit'
           variant='outlined'
-          disabled={generatingPlan}
+          disabled={generatingPlan || draftingProfile}
         >
           {tab === 1 || tab === 2 ? 'Cancel' : 'Close'}
         </Button>
         {(tab === 1 || tab === 2) && (
           <Button
             variant='contained'
-            disabled={saving || generatingPlan}
+            disabled={saving || generatingPlan || draftingProfile}
             onClick={handleSubmit(onSubmit)}
           >
             Save
