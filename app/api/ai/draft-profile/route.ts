@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { AI_MODELS, getResponseText } from '@/lib/ai'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
 import { withAiRoute } from '@/lib/withAiRoute'
@@ -74,17 +75,14 @@ export const POST = withAiRoute(
 
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      model: AI_MODELS.main,
+      max_tokens: 4000,
+      output_config: { effort: 'medium' },
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: context }],
     })
 
-    const profile = message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
-      .trim()
+    const profile = getResponseText(message).trim()
 
     return NextResponse.json({ profile })
   },

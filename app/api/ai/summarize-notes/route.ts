@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { AI_MODELS, getResponseText } from '@/lib/ai'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
 import { withAiRoute } from '@/lib/withAiRoute'
@@ -30,16 +31,14 @@ export const POST = withAiRoute(
 
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 300,
+      model: AI_MODELS.main,
+      max_tokens: 2000,
+      output_config: { effort: 'low' },
       system:
         'You are helping a job seeker clean up their daily activity notes. Given a raw brain-dump of job search activities, rewrite it as a clear, concise summary of what was accomplished. Keep the first-person voice. Preserve all meaningful details — outreach, applications, interviews, research, networking. Remove filler words and redundancy. Plain prose only — no bullet points, no headers.',
       messages: [{ role: 'user', content: notes }],
     })
-    const summary = message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
+    const summary = getResponseText(message)
     return NextResponse.json({ summary })
   },
 )

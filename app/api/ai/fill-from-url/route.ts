@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { AI_MODELS, getResponseText } from '@/lib/ai'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
 import { withAiRoute } from '@/lib/withAiRoute'
@@ -147,8 +148,9 @@ export const POST = withAiRoute(
 
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 600,
+      model: AI_MODELS.main,
+      max_tokens: 4000,
+      output_config: { effort: 'medium' },
       system:
         'You extract structured job posting data. Always respond with valid JSON only — no markdown, no explanation.',
       messages: [
@@ -172,11 +174,7 @@ ${bodyText}`,
       ],
     })
 
-    const raw = message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
-      .trim()
+    const raw = getResponseText(message).trim()
 
     const jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
     const parsed: FillResult = JSON.parse(jsonStr)

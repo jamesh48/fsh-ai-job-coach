@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { AI_MODELS } from '@/lib/ai'
 import { prisma } from '@/lib/prisma'
 import { getDecryptedSettings } from '@/lib/settings'
 import { withRoute } from '@/lib/withRoute'
@@ -19,8 +20,8 @@ async function classifyEmail(
   try {
     const client = new Anthropic({ apiKey })
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 150,
+      model: AI_MODELS.fast,
+      max_tokens: 300,
       tools: [
         {
           name: 'classify_email',

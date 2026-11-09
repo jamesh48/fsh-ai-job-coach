@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { AI_MODELS, getResponseText } from '@/lib/ai'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
 import { withAiRoute } from '@/lib/withAiRoute'
@@ -70,14 +71,16 @@ Warm regards,
 
     const [message, filenameMessage] = await Promise.all([
       client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
+        model: AI_MODELS.main,
+        max_tokens: 8000,
+        output_config: { effort: 'medium' },
         system: systemParts.join('\n\n'),
         messages: [{ role: 'user', content: userParts.join('\n\n') }],
       }),
       client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 20,
+        model: AI_MODELS.fast,
+        max_tokens: 1000,
+        output_config: { effort: 'low' },
         messages: [
           {
             role: 'user',
@@ -87,16 +90,16 @@ Warm regards,
       }),
     ])
 
-    const raw = message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
+    const raw = getResponseText(message)
 
+    // The filename is cosmetic: fall back to the default rather than failing
+    // the whole request if this helper call refuses or comes back empty.
+    let filenameText = ''
+    try {
+      filenameText = getResponseText(filenameMessage)
+    } catch {}
     const filename =
-      filenameMessage.content
-        .filter((b) => b.type === 'text')
-        .map((b) => b.text)
-        .join('')
+      filenameText
         .trim()
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, '-')

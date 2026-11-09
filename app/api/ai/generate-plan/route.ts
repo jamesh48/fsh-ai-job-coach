@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { AI_MODELS, getResponseText } from '@/lib/ai'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
@@ -47,8 +48,9 @@ export const POST = withAiRoute(
 
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      model: AI_MODELS.main,
+      max_tokens: 8000,
+      output_config: { effort: 'medium' },
       system: `You are a job search coach generating a structured plan that will be used as context by an AI recommendation engine — not read directly by the user.
 
 Output a compact, information-dense brief:
@@ -62,10 +64,7 @@ Keep the total response under 900 words. Prioritize structure and specificity ov
       messages: [{ role: 'user', content: context }],
     })
 
-    const plan = message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
+    const plan = getResponseText(message)
 
     await prisma.settings.upsert({
       where: { userId: session.userId },

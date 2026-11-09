@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { AI_MODELS, getResponseText } from '@/lib/ai'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
 import { withAiRoute } from '@/lib/withAiRoute'
@@ -51,16 +52,14 @@ export const POST = withAiRoute(
 
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 200,
+      model: AI_MODELS.main,
+      max_tokens: 2000,
+      output_config: { effort: 'low' },
       system:
         'You are helping a job seeker clean up and clarify their own thoughts about a job opportunity. Your job is to polish what they wrote — improving clarity, grammar, and flow — while strictly preserving their ideas, opinions, and voice. Do not add new thoughts, assessments, or enthusiasm they did not express. Keep it first-person, concise (2–3 sentences), and plain prose only.',
       messages: [{ role: 'user', content: context }],
     })
-    const impression = message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
+    const impression = getResponseText(message)
     return NextResponse.json({ impression })
   },
 )

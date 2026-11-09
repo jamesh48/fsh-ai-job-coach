@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { AiRefusalError } from '@/lib/ai'
 import { sanitizeAiText } from '@/lib/utils'
 
 type RouteHandler = (req: Request) => Promise<NextResponse>
@@ -50,6 +51,10 @@ export function withAiRoute(name: string, handler: RouteHandler): RouteHandler {
     } catch (e) {
       const message = deriveMessage(e)
       console.error(`[ai/${name}] ${message}`, e)
+
+      if (e instanceof AiRefusalError) {
+        return NextResponse.json({ error: e.message }, { status: 422 })
+      }
 
       if (e instanceof Anthropic.AuthenticationError) {
         return NextResponse.json(

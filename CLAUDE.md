@@ -24,7 +24,7 @@ An AI-powered job search coaching app. The core MVP is a daily activity log wher
 - **Forms**: React Hook Form + Yup + @hookform/resolvers
 - **Notifications**: notistack (SnackbarProvider)
 - **Database**: PostgreSQL via Prisma 7 (driver adapter: @prisma/adapter-pg)
-- **AI**: Anthropic SDK (`@anthropic-ai/sdk`) — model `claude-sonnet-4-6`
+- **AI**: Anthropic SDK (`@anthropic-ai/sdk`) — models defined once in `lib/ai.ts` (`AI_MODELS.main` = `claude-sonnet-5-5`, `AI_MODELS.fast` = `claude-haiku-5-5`)
 - **Markdown rendering**: react-markdown
 - **Printing**: WebUSB API (browser-side ESC/POS — Chrome/Edge only, requires HTTPS)
 - **Auth**: bcryptjs (password hashing) + jose (JWT session cookie)
@@ -117,6 +117,7 @@ lib/
   agentSocketContext.tsx      # AgentSocketProvider + useAgentSocket(); manages /ws/client WebSocket with exponential backoff reconnect
   agentNotificationHandler.tsx  # Renderless component; fires browser Notification for relevant email_detected events
   agentFiles.ts               # In-memory file store (globalThis.__agentFiles Map); shared across server.ts and API routes via globalThis to survive Next.js HMR module isolation
+  ai.ts                       # AI_MODELS constants + getResponseText() (reads text blocks by type, throws AiRefusalError on refusals)
   utils.ts                    # cn() class merge utility
   crypto.ts                   # AES-256-GCM encrypt/decrypt/keyHint/isEncrypted — key derived from SESSION_SECRET
   settings.ts                 # getDecryptedSettings(userId) — shared helper used by all AI routes
@@ -284,7 +285,7 @@ Content is serialized as structured plain text in `DailyLog.content` via `serial
 - `app/api/ai/recommendation/route.ts` — smart windowing: last 30 days + older hot/strong-interest entries; injects career profile, resume, profile links, job search plan, and recent agent emails as system context; stores result + timestamp in Settings
 - `app/api/ai/summarize/route.ts` — summarizes pasted job description to 4-6 sentences
 - `app/api/ai/impression/route.ts` — drafts a 2-3 sentence first-person impression
-- `app/api/ai/assist/route.ts` — AI writing assistant; parallel calls: main response (sonnet-4-6) + filename suggestion (haiku); injects career profile, resume, and profile links; system prompt enforces no `---`, no standalone recipient line, correct closing format
+- `app/api/ai/assist/route.ts` — AI writing assistant; parallel calls: main response (`AI_MODELS.main`) + filename suggestion (`AI_MODELS.fast`, falls back to `ai-response` on failure); injects career profile, resume, and profile links; system prompt enforces no `---`, no standalone recipient line, correct closing format
 - `app/api/ai/fill-from-url/route.ts` — fetches job URL, extracts `jobTitle`, `company`, `roleDescription`, `workArrangement`, `compensation` via Claude; LinkedIn-aware HTML parser; optionally generates `fitScore` (1–4) + `fitRationale` when career profile or resume are set
 - `app/api/ai/draft-profile/route.ts` — drafts the Career Profile from the resume, profile links, and any existing profile text sent from the (unsaved) Settings form; never invents preferences, emits `[fill in: …]` placeholders instead
 - Settings → AI: Resume comes before Career Profile. Career Profile has "Draft from resume" (API), "Copy prompt for Claude.ai" (clipboard prompt for a claude.ai chat, which can use the user's claude.ai memory; the app never touches claude.ai credentials), and an "Open Claude.ai" link
@@ -308,6 +309,12 @@ const { apiKey, settings } = result  // settings available for careerProfile, re
 ```
 Never inline the `prisma.settings.findUnique` + `decrypt()` pattern in individual routes — always use `getDecryptedSettings`.
 
+Model calls in AI routes:
+- Use `AI_MODELS.main` / `AI_MODELS.fast` from `lib/ai.ts` — never hard-code a model ID.
+- Set `output_config: { effort }` explicitly (`low` for short rewrites/extraction, `medium` for coaching and long-form writing). Current models think by default and thinking counts toward `max_tokens`, so size `max_tokens` generously (≥2000) rather than to the expected answer length.
+- Read the answer with `getResponseText(message)`, never `content[0]`. It throws `AiRefusalError` (mapped to 422 by `withAiRoute`) on `stop_reason: "refusal"`.
+- `claude-sonnet-5-5` rejects forced `tool_choice` (`any` / `tool`); `claude-haiku-5-5` accepts it (the classifiers rely on this).
+
 AI route responses must be **flat `{ key: string | number | boolean }` objects** — no nested objects or arrays. `withAiRoute` sanitizes AI typographic characters by doing a single-level pass over string values; nesting would silently skip sanitization.
 
 ## Sensitive Field Encryption
@@ -325,8 +332,8 @@ AI route responses must be **flat `{ key: string | number | boolean }` objects**
   - `/ws/agent` — for the Electron desktop agent; requires `?secret=AGENT_SECRET` query param; one connection at a time (new connection displaces existing)
   - `/ws/client` — for browser clients; no auth (session cookie covers the page load)
 - Ping/pong keepalive every 30s on both sides; terminates on missed pong.
-- **Email filtering**: `email_detected` events are intercepted, classified via `POST /api/agent/email` (Haiku, forced tool_use). Relevant emails are stored in `AgentEmail` and forwarded with classification attached. Irrelevant emails are dropped silently. Failures fail open.
-- **Calendar filtering**: `calendar_event` events are intercepted, classified via `POST /api/agent/calendar` (Haiku, forced tool_use). Relevant events are stored in `AgentCalendarEvent` and forwarded with classification attached. Irrelevant events are dropped silently. Failures fail open.
+- **Email filtering**: `email_detected` events are intercepted, classified via `POST /api/agent/email` (`AI_MODELS.fast`, forced tool_use). Relevant emails are stored in `AgentEmail` and forwarded with classification attached. Irrelevant emails are dropped silently. Failures fail open.
+- **Calendar filtering**: `calendar_event` events are intercepted, classified via `POST /api/agent/calendar` (`AI_MODELS.fast`, forced tool_use). Relevant events are stored in `AgentCalendarEvent` and forwarded with classification attached. Irrelevant events are dropped silently. Failures fail open.
 - **Internal API routes** (`/api/agent/email`, `/api/agent/calendar`, `/api/agent/validate-secret`) are exempt from session middleware.
 - **Agent WebSocket auth**: on upgrade, `server.ts` async-calls `POST /api/agent/validate-secret` with the `?secret=` query param before completing the WebSocket handshake. The route checks `settings.agentSecret` — if not set or mismatched, the upgrade is rejected. Configurable in Settings → Security. No env var fallback.
 - **Test bypass**: subject or snippet containing `fsh-test` skips Claude classification and forces `relevant: true` (useful for end-to-end testing).

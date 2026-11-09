@@ -4,6 +4,7 @@ import type {
   AiRecommendationResponse,
   StoredRecommendationResponse,
 } from '@/features/ai/types'
+import { AI_MODELS, getResponseText } from '@/lib/ai'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
@@ -135,8 +136,9 @@ export const POST = withAiRoute(
 
     const client = new Anthropic({ apiKey })
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 800,
+      model: AI_MODELS.main,
+      max_tokens: 4000,
+      output_config: { effort: 'medium' },
       system: `You are an expert job search coach. The user shares their daily job search activity log.
 Today's date is ${today}. When referring to dates, always write them in human-readable form (e.g. "March 15" or "March 15, 2026") — never use YYYY-MM-DD format.
 ${careerProfile ? `\nCandidate profile:\n${careerProfile}\n` : ''}${resume ? `\nCandidate resume:\n${resume}\n` : ''}${linksContext}${planContext}${emailContext}
@@ -164,12 +166,7 @@ Be direct and concrete. No preamble. Use markdown formatting (bold headers, shor
       ],
     })
 
-    const recommendation = sanitizeAiText(
-      message.content
-        .filter((block) => block.type === 'text')
-        .map((block) => block.text)
-        .join(''),
-    )
+    const recommendation = sanitizeAiText(getResponseText(message))
 
     await prisma.settings.upsert({
       where: { userId: session.userId },

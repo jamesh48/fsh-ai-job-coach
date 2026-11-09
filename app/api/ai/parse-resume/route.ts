@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { DocumentBlockParam } from '@anthropic-ai/sdk/resources/messages'
 import { NextResponse } from 'next/server'
+import { AI_MODELS, getResponseText } from '@/lib/ai'
 import { getSession } from '@/lib/session'
 import { getDecryptedSettings } from '@/lib/settings'
 import { withAiRoute } from '@/lib/withAiRoute'
@@ -61,8 +62,9 @@ export const POST = withAiRoute(
     }
 
     const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      model: AI_MODELS.main,
+      max_tokens: 16000,
+      output_config: { effort: 'low' },
       messages: [
         {
           role: 'user',
@@ -77,11 +79,7 @@ export const POST = withAiRoute(
       ],
     })
 
-    const text = message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
-      .trim()
+    const text = getResponseText(message).trim()
 
     return NextResponse.json({ text })
   },
