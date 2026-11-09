@@ -371,8 +371,10 @@ All file communication flows through the single authenticated `/ws/agent` WebSoc
 - **Container startup**: `yarn prisma migrate deploy && yarn tsx server.ts`
 - Migrations run automatically on every deploy as part of container startup
 - `DATABASE_URL` constructed in CDK from `POSTGRES_PASSWORD` + CloudFormation-exported Postgres IP
-- **GitHub Secrets**: `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `POSTGRES_PASSWORD`, `SESSION_SECRET`
-- **GitHub Variables**: `AWS_ACCOUNT_NUMBER`, `AWS_CLUSTER_ARN`, `AWS_DEFAULT_SG`, `AWS_VPC_ID`, `ALB_LISTENER_ARN`
+- **AWS auth**: GitHub OIDC — no access keys. Workflows assume `github-actions-cdk-deploy` (`AWS_DEPLOY_ROLE_ARN`), which can only assume the CDK bootstrap roles. The OIDC provider, deploy role, and its trust policy live in the separate `jamesh48/aws-cdk-bootstrap` repo (`GithubOidcStack`) — never create an OIDC provider in this repo's CDK (one per account; `EntityAlreadyExists`).
+- **Shared infra** (owned by `aws-cdk-bootstrap`, looked up at synth, not passed via env): VPC by name `jh-e1-vpc`, ECS cluster `jh-e1-ecs-cluster`, the VPC's `default` SG, and the `jh-alb` HTTPS:443 listener (by CloudFormation tags of `AwsBootstrapCdkStack`). Postgres IP/SG come from `PostgresEc2Stack` CloudFormation exports. Lookups require an explicit stack `env: { account, region }`.
+- **GitHub Secrets**: `AWS_DEPLOY_ROLE_ARN`, `POSTGRES_PASSWORD`, `SESSION_SECRET`
+- **GitHub Variables**: `AWS_REGION` (`us-east-1`), `AWS_ACCOUNT_NUMBER`
 
 ## Setup Commands
 ```bash

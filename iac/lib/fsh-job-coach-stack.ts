@@ -12,12 +12,6 @@ interface FshJobCoachStackProps extends cdk.StackProps {
   databasePassword: string
   sessionSecret: string
   databaseName?: string
-  aws_env: {
-    AWS_CLUSTER_ARN: string
-    AWS_DEFAULT_SG: string
-    AWS_VPC_ID: string
-    ALB_LISTENER_ARN: string
-  }
 }
 
 export class FshJobCoachStack extends cdk.Stack {
@@ -28,8 +22,9 @@ export class FshJobCoachStack extends cdk.Stack {
     const dbName = props.databaseName ?? 'fsh_job_coach'
     const databaseUrl = `postgresql://postgres:${props.databasePassword}@${postgresIp}:5432/${dbName}`
 
+    // Shared infrastructure owned by jamesh48/aws-cdk-bootstrap
     const vpc = ec2.Vpc.fromLookup(this, 'jh-imported-vpc', {
-      vpcId: props.aws_env.AWS_VPC_ID,
+      vpcName: 'jh-e1-vpc',
     })
 
     const cluster = ecs.Cluster.fromClusterAttributes(
@@ -37,12 +32,12 @@ export class FshJobCoachStack extends cdk.Stack {
       'jh-imported-cluster',
       {
         clusterName: 'jh-e1-ecs-cluster',
-        clusterArn: props.aws_env.AWS_CLUSTER_ARN,
         securityGroups: [
-          ec2.SecurityGroup.fromSecurityGroupId(
+          ec2.SecurityGroup.fromLookupByName(
             this,
             'imported-default-sg',
-            props.aws_env.AWS_DEFAULT_SG,
+            'default',
+            vpc,
           ),
         ],
         vpc,
@@ -96,7 +91,12 @@ export class FshJobCoachStack extends cdk.Stack {
       this,
       'imported-listener',
       {
-        listenerArn: props.aws_env.ALB_LISTENER_ARN,
+        loadBalancerTags: {
+          'aws:cloudformation:stack-name': 'AwsBootstrapCdkStack',
+          'aws:cloudformation:logical-id': 'jhalbF96EDEBC',
+        },
+        listenerProtocol: elbv2.ApplicationProtocol.HTTPS,
+        listenerPort: 443,
       },
     )
 

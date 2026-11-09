@@ -1,0 +1,41 @@
+{
+  "vpc-provider:account=471507967541:filter.tag:Name=jh-e1-vpc:region=us-east-1:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-0cfc9ab4141a7edaf",
+    "vpcCidrBlock": "10.0.0.0/16",
+    "ownerAccountId": "471507967541",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "Public",
+        "type": "Public",
+        "subnets": [
+          {
+            "subnetId": "subnet-0eff8447cd49f7ef5",
+            "cidr": "10.0.0.0/24",
+            "availabilityZone": "us-east-1a",
+            "routeTableId": "rtb-04bc694a2bddd994e"
+          },
+          {
+            "subnetId": "subnet-02327faf8c623e1e5",
+            "cidr": "10.0.1.0/24",
+            "availabilityZone": "us-east-1b",
+            "routeTableId": "rtb-06deddd580bc16808"
+          }
+        ]
+      }
+    ]
+  },
+  "load-balancer-listener:account=471507967541:listenerPort=443:listenerProtocol=HTTPS:loadBalancerTags.0.key=aws$:cloudformation$:stack-name:loadBalancerTags.0.value=AwsBootstrapCdkStack:loadBalancerTags.1.key=aws$:cloudformation$:logical-id:loadBalancerTags.1.value=jhalbF96EDEBC:loadBalancerType=application:region=us-east-1": {
+    "listenerArn": "arn:aws:elasticloadbalancing:us-east-1:471507967541:listener/app/jh-alb/682b10404dfc0744/4a8ecc2d65259eba",
+    "listenerPort": 443,
+    "securityGroupIds": ["sg-0aecc330a10fea3a6"]
+  },
+  "security-group:account=471507967541:region=us-east-1:securityGroupName=default:vpcId=vpc-0cfc9ab4141a7edaf": {
+    "securityGroupId": "sg-0fe4cbf2a40d64513",
+    "allowAllOutbound": false
+  },
+  "security-group:account=471507967541:region=us-east-1:securityGroupId=sg-0aecc330a10fea3a6": {
+    "securityGroupId": "sg-0aecc330a10fea3a6",
+    "allowAllOutbound": false
+  }
+}

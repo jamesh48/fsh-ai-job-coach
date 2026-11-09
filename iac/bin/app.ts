@@ -12,15 +12,9 @@ const app = new cdk.App()
 
 new FshJobCoachStack(app, 'FshJobCoachStack', {
   env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
+    account: requireEnv('CDK_DEFAULT_ACCOUNT'),
     region: process.env.CDK_DEFAULT_REGION ?? 'us-east-1',
   },
   databasePassword: requireEnv('POSTGRES_PASSWORD'),
   sessionSecret: requireEnv('SESSION_SECRET'),
-  aws_env: {
-    AWS_CLUSTER_ARN: requireEnv('AWS_CLUSTER_ARN'),
-    AWS_DEFAULT_SG: requireEnv('AWS_DEFAULT_SG'),
-    AWS_VPC_ID: requireEnv('AWS_VPC_ID'),
-    ALB_LISTENER_ARN: requireEnv('ALB_LISTENER_ARN'),
-  },
 })
